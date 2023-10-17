@@ -791,8 +791,14 @@ public class UiccSlot extends Handler {
     @NonNull
     @Override
     public String toString() {
+        Map<Integer,String> printableIccIds = null;
+        try {
+            printableIccIds = getPrintableIccIds();
+        } catch(Throwable t) {
+            android.util.Log.e("PHH", "getPrintableIccIds failed", t);
+        }
         StringBuilder sb = new StringBuilder("[UiccSlot: mActive=" + mActive
-                + ", mIccId=" + getPrintableIccIds() + ", mIsEuicc=" + mIsEuicc
+                + ", mIccId=" + printableIccIds + ", mIsEuicc=" + mIsEuicc
                 + ", MEP=" + isMultipleEnabledProfileSupported() + ", mPortIdxToPhoneId="
                 + mPortIdxToPhoneId + ", mEid=" + Rlog.pii(TelephonyUtils.IS_DEBUGGABLE, mEid)
                 + ", mCardState=" + mCardState + " mSupportedMepMode=" + mSupportedMepMode);
