@@ -594,9 +594,6 @@ public class NetworkTypeController extends StateMachine {
                             log("Reset timers since physical channel config indications are off.");
                         }
                         resetAllTimers();
-                        mRatchetedNrBands.clear();
-                        mRatchetedNrBandwidths = 0;
-                        mLastAnchorNrCellId = PhysicalChannelConfig.PHYSICAL_CELL_ID_UNKNOWN;
                     }
                     transitionToCurrentState();
                     break;
@@ -1361,17 +1358,6 @@ public class NetworkTypeController extends StateMachine {
         if (mServiceState.getDataRoaming() && !mEnableNrAdvancedWhileRoaming) {
             if (DBG) log("isNrAdvanced: false because NR advanced is unavailable while roaming.");
             return false;
-        }
-
-        int bandwidths = 0;
-        if (mPhone.getServiceStateTracker().getPhysicalChannelConfigList() != null) {
-            bandwidths = mPhone.getServiceStateTracker().getPhysicalChannelConfigList()
-                    .stream()
-                    .filter(config -> mIncludeLteForNrAdvancedThresholdBandwidth
-                            || config.getNetworkType() == TelephonyManager.NETWORK_TYPE_NR)
-                    .map(PhysicalChannelConfig::getCellBandwidthDownlinkKhz)
-                    .mapToInt(Integer::intValue)
-                    .sum();
         }
 
         // Check if meeting minimum bandwidth requirement. For most carriers, there is no minimum
