@@ -2415,9 +2415,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
                     + " operatorNumeric = " + operatorNumeric + ", ran = " + ran);
         }
 
+        final String operatorNumericCopy = operatorNumeric;
+
         radioServiceInvokeHelper(HAL_SERVICE_NETWORK, rr, "setNetworkSelectionModeManual", () -> {
             networkProxy.setNetworkSelectionModeManual(rr.mSerial,
-                    RILUtils.convertNullToEmptyString(operatorNumeric), ran);
+                    RILUtils.convertNullToEmptyString(operatorNumericCopy), ran);
         });
     }
 
