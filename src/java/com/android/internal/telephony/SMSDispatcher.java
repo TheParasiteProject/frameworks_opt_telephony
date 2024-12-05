@@ -235,9 +235,6 @@ public abstract class SMSDispatcher extends Handler {
     @VisibleForTesting
     public int mCarrierMessagingTimeout = 10 * 60 * 1000; //10 minutes
 
-    /** Used for storing last TP - Message Reference used*/
-    private int mMessageRef = -1;
-
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected static int getNextConcatenatedRef() {
         sConcatenatedRef += 1;
@@ -450,12 +447,13 @@ public abstract class SMSDispatcher extends Handler {
                    if sim was used on another device and inserted in a new device,
                    that device will start sending the next TPMR after reading from the SIM.
                  */
-                mMessageRef = getTpmrValueFromSIM();
-                if (mMessageRef == -1) {
+                mSmsDispatchersController.setMessageReference(getTpmrValueFromSIM());
+                if (mSmsDispatchersController.getMessageReference() == -1) {
                     SubscriptionInfoInternal subInfo = SubscriptionManagerService.getInstance()
                             .getSubscriptionInfoInternal(msg.arg1);
                     if (subInfo != null) {
-                        mMessageRef = subInfo.getLastUsedTPMessageReference();
+                        mSmsDispatchersController.setMessageReference(
+                                subInfo.getLastUsedTPMessageReference());
                     }
                 }
                 break;
@@ -475,11 +473,12 @@ public abstract class SMSDispatcher extends Handler {
     }
 
     private void updateTPMessageReference() {
-        updateSIMLastTPMRValue(mMessageRef);
+        updateSIMLastTPMRValue(mSmsDispatchersController.getMessageReference());
         final long identity = Binder.clearCallingIdentity();
         try {
             SubscriptionManagerService.getInstance()
-                    .setLastUsedTPMessageReference(getSubId(), mMessageRef);
+                    .setLastUsedTPMessageReference(getSubId(),
+                    mSmsDispatchersController.getMessageReference());
         } catch (SecurityException e) {
             Rlog.e(TAG, "Security Exception caused on messageRef updation to DB " + e.getMessage());
         } finally {
@@ -521,9 +520,10 @@ public abstract class SMSDispatcher extends Handler {
             return 0;
         }
 
-        mMessageRef = (mMessageRef + 1) % 256;
+        int messageRef = mSmsDispatchersController.incrementMessageReference();
+        Rlog.d(TAG, "nextMessageRef: " + messageRef);
         updateTPMessageReference();
-        return mMessageRef;
+        return messageRef;
     }
 
     /**
