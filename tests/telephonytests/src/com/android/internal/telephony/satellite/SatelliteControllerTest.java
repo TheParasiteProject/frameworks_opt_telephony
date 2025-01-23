@@ -134,6 +134,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.hardware.devicestate.DeviceState;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncResult;
 import android.os.Bundle;
@@ -285,6 +286,7 @@ public class SatelliteControllerTest extends TelephonyTest {
     @Mock private SubscriptionManager mSubscriptionManager;
     @Mock private SubscriptionInfo mSubscriptionInfo;
     @Mock private PackageManager mMockPManager;
+    @Mock private Intent mMockLocationIntent;
 
     private Semaphore mIIntegerConsumerSemaphore = new Semaphore(0);
     private IIntegerConsumer mIIntegerConsumer = new IIntegerConsumer.Stub() {
@@ -6003,6 +6005,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         private boolean callOnlySuperMethod = false;
         public boolean isSatelliteEnabledOrBeingEnabled = false;
 
+        private boolean mLocationServiceEnabled = true;
+
         TestSatelliteController(
                 Context context, Looper looper, @NonNull FeatureFlags featureFlags) {
             super(context, looper, featureFlags);
@@ -6124,6 +6128,11 @@ public class SatelliteControllerTest extends TelephonyTest {
             return selectedSatelliteSubId;
         }
 
+        @Override
+        protected boolean isLocationServiceEnabled() {
+            return mLocationServiceEnabled;
+        }
+
         void setSatelliteProvisioned(@Nullable Boolean isProvisioned) {
             synchronized (mDeviceProvisionLock) {
                 mIsDeviceProvisioned = isProvisioned;
@@ -6200,6 +6209,14 @@ public class SatelliteControllerTest extends TelephonyTest {
 
         public void setCallOnlySuperMethod() {
             callOnlySuperMethod = true;
+        }
+
+        public void  setLocationServiceEnabled(boolean locationServiceEnabled) {
+            mLocationServiceEnabled = locationServiceEnabled;
+        }
+
+        public BroadcastReceiver getLocationReceiver() {
+            return mLocationServiceStateChangedReceiver;
         }
     }
 
@@ -6922,5 +6939,66 @@ public class SatelliteControllerTest extends TelephonyTest {
         sendCmdEvaluateCarrierRoamingNtnEligibilityChange();
         processAllMessages();
         verify(mPhone, times(0)).notifyCarrierRoamingNtnEligibleStateChanged(anyBoolean());
+    }
+
+    @Test
+    public void testNotifyNtnEligibilityLocationServiceStatusChanged() {
+        // Enable CarrierRoamingNtn
+        mContextFixture.putBooleanResource(
+                R.bool.config_satellite_should_notify_availability, true);
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
+        when(mServiceState2.getState()).thenReturn(ServiceState.STATE_OUT_OF_SERVICE);
+        when(mServiceState.getState()).thenReturn(ServiceState.STATE_OUT_OF_SERVICE);
+        mSatelliteControllerUT.mIsApplicationSupportsP2P = true;
+        mSatelliteControllerUT.setIsSatelliteSupported(true);
+        mCarrierConfigBundle.putBoolean(KEY_SATELLITE_ATTACH_SUPPORTED_BOOL, true);
+        mCarrierConfigBundle.putInt(KEY_CARRIER_ROAMING_NTN_CONNECT_TYPE_INT,
+                CARRIER_ROAMING_NTN_CONNECT_MANUAL);
+        mCarrierConfigBundle.putInt(
+                KEY_CARRIER_SUPPORTED_SATELLITE_NOTIFICATION_HYSTERESIS_SEC_INT, 1 * 60);
+        mCarrierConfigBundle.putBoolean(KEY_SATELLITE_ROAMING_P2P_SMS_SUPPORTED_BOOL, true);
+        int[] supportedServices2 = {2};
+        int[] supportedServices3 = {1, 3};
+        PersistableBundle carrierSupportedSatelliteServicesPerProvider = new PersistableBundle();
+        carrierSupportedSatelliteServicesPerProvider.putIntArray(
+                "00102", supportedServices2);
+        carrierSupportedSatelliteServicesPerProvider.putIntArray(
+                "00103", supportedServices3);
+        mCarrierConfigBundle.putPersistableBundle(CarrierConfigManager
+                        .KEY_CARRIER_SUPPORTED_SATELLITE_SERVICES_PER_PROVIDER_BUNDLE,
+                carrierSupportedSatelliteServicesPerProvider);
+        for (Pair<Executor, CarrierConfigManager.CarrierConfigChangeListener> pair
+                : mCarrierConfigChangedListenerList) {
+            pair.first.execute(() -> pair.second.onCarrierConfigChanged(
+                    /*slotIndex*/ 0, /*subId*/ SUB_ID, /*carrierId*/ 0, /*specificCarrierId*/ 0)
+            );
+        }
+        mSatelliteControllerUT.setSatellitePhone(1);
+        mSatelliteControllerUT.setSelectedSatelliteSubId(SUB_ID);
+        mSatelliteControllerUT.isSatelliteProvisioned = true;
+        mSatelliteControllerUT.isSatelliteAllowedCallback = null;
+        mSatelliteControllerUT.setIsSatelliteAllowedState(true);
+        processAllMessages();
+        clearInvocations(mPhone);
+
+        doReturn(LocationManager.MODE_CHANGED_ACTION).when(mMockLocationIntent).getAction();
+
+        // Location service off
+        mSatelliteControllerUT.setLocationServiceEnabled(false);
+        BroadcastReceiver receiver = mSatelliteControllerUT.getLocationReceiver();
+        receiver.onReceive(mContext, mMockLocationIntent);
+
+        processAllMessages();
+
+        verify(mPhone, times(1)).notifyCarrierRoamingNtnEligibleStateChanged(eq(false));
+        clearInvocations(mPhone);
+
+        // Location service off
+        mSatelliteControllerUT.setLocationServiceEnabled(true);
+        receiver.onReceive(mContext, mMockLocationIntent);
+
+        processAllMessages();
+
+        verify(mPhone, times(1)).notifyCarrierRoamingNtnEligibleStateChanged(eq(true));
     }
 }
