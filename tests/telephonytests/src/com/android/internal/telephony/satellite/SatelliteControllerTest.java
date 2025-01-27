@@ -1009,6 +1009,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
         when(mFeatureFlags.satelliteStateChangeListener()).thenReturn(true);
         mIsSatelliteEnabledSemaphore.drainPermits();
+        mSatelliteControllerUT.handleSatelliteAccessAllowedStateChanged(true);
 
         // Fail to enable satellite when SatelliteController is not fully loaded yet.
         mIIntegerConsumerResults.clear();
@@ -3577,6 +3578,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mIsSatelliteEnabledSemaphore.drainPermits();
         mIIntegerConsumerResults.clear();
         resetSatelliteControllerUT();
+        mSatelliteControllerUT.handleSatelliteAccessAllowedStateChanged(true);
 
         // Successfully provisioned
         reset(mMockSatelliteModemInterface);
@@ -6809,6 +6811,89 @@ public class SatelliteControllerTest extends TelephonyTest {
     }
 
     @Test
+    public void testExitOutOfP2pSessionIfSatelliteIsNotAllowed() throws Exception {
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
+        when(mFeatureFlags.satelliteExitP2pSessionOutsideGeofence()).thenReturn(true);
+
+        // Enable satellite P2P session
+        setUpResponseForRequestIsSatelliteSupported(true, SATELLITE_RESULT_SUCCESS);
+        verifySatelliteSupported(true, SATELLITE_RESULT_SUCCESS);
+        setUpResponseForRequestIsSatelliteProvisioned(true, SATELLITE_RESULT_SUCCESS);
+        verifySatelliteProvisioned(true, SATELLITE_RESULT_SUCCESS);
+        setUpResponseForRequestSatelliteEnabled(true, false, false, SATELLITE_RESULT_SUCCESS);
+        mSatelliteControllerUT.requestSatelliteEnabled(true, false, false, mIIntegerConsumer);
+        processAllMessages();
+        assertTrue(waitForIIntegerConsumerResult(1));
+        assertEquals(SATELLITE_RESULT_SUCCESS, (long) mIIntegerConsumerResults.get(0));
+        verifySatelliteEnabled(true, SATELLITE_RESULT_SUCCESS);
+
+        ArgumentCaptor<SatelliteModemEnableRequestAttributes> enableSatelliteRequest =
+                ArgumentCaptor.forClass(SatelliteModemEnableRequestAttributes.class);
+        ArgumentCaptor<Message> enableSatelliteResponse = ArgumentCaptor.forClass(Message.class);
+
+        reset(mMockSatelliteModemInterface);
+        doReturn(true).when(mMockSatelliteModemInterface).isSatelliteServiceSupported();
+        // Set access allowed to false
+        final int carrierSubId = SUB_ID;
+        final int oemSubId = SUB_ID1;
+        setSatelliteSubscriberTesting(false);
+        mSatelliteControllerUT.subsInfoListPerPriority().computeIfAbsent(
+                        getKeyPriority(testSubscriptionInfo), k -> new ArrayList<>())
+                .add(testSubscriptionInfo);
+        mSatelliteControllerUT.subsInfoListPerPriority().computeIfAbsent(
+                        getKeyPriority(testSubscriptionInfo2), k -> new ArrayList<>())
+                .add(testSubscriptionInfo2);
+        mSatelliteControllerUT.selectedSatelliteSubId = SUB_ID1;
+        mSatelliteControllerUT.handleSatelliteAccessAllowedStateChanged(false);
+        processAllMessages();
+        verify(mMockSatelliteModemInterface).requestSatelliteEnabled(
+                enableSatelliteRequest.capture(), enableSatelliteResponse.capture());
+
+        // Disable satellite request is sent to modem
+        SatelliteModemEnableRequestAttributes request = enableSatelliteRequest.getValue();
+        assertFalse(request.isEnabled());
+        assertFalse(request.isForDemoMode());
+        assertFalse(request.isForEmergencyMode());
+        // OEM satellite subscription should be selected as current location is not supported
+        assertEquals(oemSubId, mSatelliteControllerUT.getSelectedSatelliteSubId());
+
+        // As current location is allowed, carrier subscription should be selected
+        mSatelliteControllerUT.selectedSatelliteSubId = SUB_ID;
+        mSatelliteControllerUT.handleSatelliteAccessAllowedStateChanged(true);
+        processAllMessages();
+        assertEquals(carrierSubId, mSatelliteControllerUT.getSelectedSatelliteSubId());
+
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
+        when(mServiceState.getState()).thenReturn(ServiceState.STATE_OUT_OF_SERVICE);
+        when(mServiceState2.getState()).thenReturn(ServiceState.STATE_OUT_OF_SERVICE);
+        mSatelliteControllerUT.mIsApplicationSupportsP2P = true;
+        mCarrierConfigBundle.putBoolean(KEY_SATELLITE_ATTACH_SUPPORTED_BOOL, true);
+        mCarrierConfigBundle.putInt(KEY_CARRIER_ROAMING_NTN_CONNECT_TYPE_INT, 1);
+        mCarrierConfigBundle.putBoolean(KEY_SATELLITE_ROAMING_P2P_SMS_SUPPORTED_BOOL, true);
+        int[] supportedServices2 = {2};
+        int[] supportedServices3 = {1, 3};
+        PersistableBundle carrierSupportedSatelliteServicesPerProvider = new PersistableBundle();
+        carrierSupportedSatelliteServicesPerProvider.putIntArray(
+                "00102", supportedServices2);
+        carrierSupportedSatelliteServicesPerProvider.putIntArray(
+                "00103", supportedServices3);
+        mCarrierConfigBundle.putPersistableBundle(CarrierConfigManager
+                        .KEY_CARRIER_SUPPORTED_SATELLITE_SERVICES_PER_PROVIDER_BUNDLE,
+                carrierSupportedSatelliteServicesPerProvider);
+        for (Pair<Executor, CarrierConfigManager.CarrierConfigChangeListener> pair
+                : mCarrierConfigChangedListenerList) {
+            pair.first.execute(() -> pair.second.onCarrierConfigChanged(
+                    /*slotIndex*/ 0, /*subId*/ SUB_ID, /*carrierId*/ 0, /*specificCarrierId*/ 0)
+            );
+        }
+        mSatelliteControllerUT.setSatellitePhone(1);
+        mSatelliteControllerUT.setSelectedSatelliteSubId(SUB_ID);
+        mSatelliteControllerUT.isSatelliteProvisioned = true;
+        processAllMessages();
+
+        assertTrue(mSatelliteControllerUT.isCarrierRoamingNtnEligible(mPhone));
+    }
+
     public void testNotifyNtnEligibilityLocationServiceStatusChanged() {
         // Enable CarrierRoamingNtn
         mContextFixture.putBooleanResource(

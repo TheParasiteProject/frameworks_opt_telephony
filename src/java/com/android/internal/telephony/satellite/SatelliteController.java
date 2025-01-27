@@ -5176,6 +5176,10 @@ public class SatelliteController extends Handler {
                             mSatelliteEnableAttributesUpdateRequest, null);
                 }
                 updateLastNotifiedNtnModeAndNotify(getSatellitePhone());
+
+                if (mFeatureFlags.satelliteExitP2pSessionOutsideGeofence()) {
+                    evaluateDisablingP2pSession();
+                }
             }
         }
     }
@@ -7984,14 +7988,17 @@ public class SatelliteController extends Handler {
             new SatelliteCommunicationAccessStateCallback() {
                 @Override
                 public void onAccessAllowedStateChanged(boolean isAllowed) {
-                    plogd("onAccessStateChanged: isAllowed="
-                        + isAllowed);
-                    synchronized (mSatelliteAccessConfigLock) {
-                        mSatelliteAccessAllowed = isAllowed;
+                    plogd("onAccessStateChanged: isAllowed=" + isAllowed);
+                    if (mFeatureFlags.satelliteExitP2pSessionOutsideGeofence()) {
+                        handleSatelliteAccessAllowedStateChanged(isAllowed);
+                    } else{
+                        synchronized (mSatelliteAccessConfigLock) {
+                            mSatelliteAccessAllowed = isAllowed;
+                        }
+                        evaluateESOSProfilesPrioritization();
+                        evaluateCarrierRoamingNtnEligibilityChange();
+                        handleCarrierRoamingNtnAvailableServicesChanged();
                     }
-                    evaluateESOSProfilesPrioritization();
-                    evaluateCarrierRoamingNtnEligibilityChange();
-                    handleCarrierRoamingNtnAvailableServicesChanged();
                 }
 
                 @Override
@@ -8012,6 +8019,48 @@ public class SatelliteController extends Handler {
             return;
         }
         mRegisteredForSatelliteCommunicationAccessStateChanged.set(true);
+    }
+
+    /** Handle access allowed state changes. */
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    public void handleSatelliteAccessAllowedStateChanged(boolean isAllowed) {
+        plogd("handleSatelliteAccessAllowedStateChanged: isAllowed=" + isAllowed);
+        synchronized (mSatelliteAccessConfigLock) {
+            mSatelliteAccessAllowed = isAllowed;
+        }
+
+        evaluateESOSProfilesPrioritization();
+        selectBindingSatelliteSubscription(false);
+        evaluateCarrierRoamingNtnEligibilityChange();
+        handleCarrierRoamingNtnAvailableServicesChanged();
+        evaluateDisablingP2pSession();
+    }
+
+    private void evaluateDisablingP2pSession() {
+        boolean isAllowed = isSatelliteAccessAllowedAtCurrentLocation();
+        boolean isSatelliteEnabled = isSatelliteEnabled();
+        boolean isEmergency = getRequestIsEmergency();
+
+        plogd("evaluateDisablingP2pSession: isAllowed=" + isAllowed
+                + " isEmergency=" + isEmergency
+                + " isSatelliteEnabled:" + isSatelliteEnabled);
+        if (!isAllowed && isSatelliteEnabled && !isEmergency) {
+            // Disable P2P session if satellite is not allowed in current location
+            disableSatelliteSession(isEmergency);
+        }
+    }
+
+    private void disableSatelliteSession(boolean isEmergency) {
+        plogd("disableSatelliteSession: isEmergency=" + isEmergency);
+        requestSatelliteEnabled(false /* enableSatellite */,
+                false /* enableDemoMode */, isEmergency,
+                new IIntegerConsumer.Stub() {
+                    @Override
+                    public void accept(int result) {
+                        plogd("disableSatelliteSession:"
+                                + " requestSatelliteEnabled result=" + result);
+                    }
+                });
     }
 
     private void handleSatelliteAccessConfigUpdateResult(
