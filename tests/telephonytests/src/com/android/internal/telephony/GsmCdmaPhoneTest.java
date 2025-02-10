@@ -2994,8 +2994,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
     @Test
     public void testSecurityAlgorithmUpdateFlagOn() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
-
         Phone phoneUT = makeNewPhoneUT();
 
         verify(mMockCi, times(1))
@@ -3007,7 +3005,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
     @Test
     public void testSecurityAlgorithm_updateAddedToNotifier() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
         Phone phoneUT = makeNewPhoneUT();
         SecurityAlgorithmUpdate update =
                 new SecurityAlgorithmUpdate(
@@ -3027,22 +3024,7 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
     }
 
     @Test
-    public void testUpdateNullCipherNotifier_flagDisabled() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(false);
-        Phone phoneUT = makeNewPhoneUT();
-        phoneUT.sendMessage(
-                mPhoneUT.obtainMessage(
-                        Phone.EVENT_SUBSCRIPTIONS_CHANGED,
-                        new AsyncResult(null, null, null)));
-        processAllMessages();
-
-        verify(mNullCipherNotifier, never()).setSubscriptionMapping(any(), anyInt(), anyInt());
-    }
-
-    @Test
     public void testUpdateNullCipherNotifier_activeSubscription() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
-
         int subId = 10;
         SubscriptionInfoInternal subInfo = new SubscriptionInfoInternal.Builder().setSimSlotIndex(
                 0).setId(subId).build();
@@ -3063,7 +3045,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
     @Test
     public void testUpdateNullCipherNotifier_inactiveSubscription() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
         int subId = 1;
         SubscriptionInfoInternal subInfo = new SubscriptionInfoInternal.Builder().setSimSlotIndex(
                 -1).setId(subId).build();
@@ -3110,7 +3091,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
     @Test
     public void testNullCipherNotification_preferenceEnabled() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
         GsmCdmaPhone phoneUT = makeNewPhoneUT();
 
         setNullCipherNotificationPreferenceEnabled(true);
@@ -3123,7 +3103,7 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
     @Test
     public void testNullCipherNotification_preferenceDisabled() {
-        when(mFeatureFlags.enableModemCipherTransparencyUnsolEvents()).thenReturn(true);
+        Mockito.reset(mNullCipherNotifier);
         GsmCdmaPhone phoneUT = makeNewPhoneUT();
 
         setNullCipherNotificationPreferenceEnabled(false);
