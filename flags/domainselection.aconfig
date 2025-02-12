@@ -49,3 +49,14 @@ flag {
     description: "This flag controls the addition of EMERGENCY_REDIAL_ON_IMS and EMERGENCY_REDIAL_ON_VOWIFI redial codes for normal routed emergency calls."
     bug:"357980439"
 }
+
+# OWNER=jaesikkong TARGET=25Q2
+flag {
+    name: "disable_ecbm_based_on_rat"
+    namespace: "telephony"
+    description: "Fix bug entering the emergency callback mode in GSM or UMTS network."
+    bug:"389010789"
+    metadata {
+        purpose: PURPOSE_BUGFIX
+    }
+}
