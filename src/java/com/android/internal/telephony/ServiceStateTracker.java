@@ -5691,6 +5691,7 @@ public class ServiceStateTracker extends Handler {
                         .setDomain(NetworkRegistrationInfo.DOMAIN_PS)
                         .setAccessNetworkTechnology(TelephonyManager.NETWORK_TYPE_IWLAN)
                         .setRegistrationState(NetworkRegistrationInfo.REGISTRATION_STATE_HOME)
+                        .setAvailableServices(List.of(NetworkRegistrationInfo.SERVICE_TYPE_DATA))
                         .build();
                 mNewSS.addNetworkRegistrationInfo(nri);
                 mNewSS.setOperatorAlphaLong(operator);
