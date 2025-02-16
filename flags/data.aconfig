@@ -41,14 +41,6 @@ flag {
   bug:"286171724"
 }
 
-# OWNER=qingqi TARGET=24Q3
-flag {
-  name: "vonr_enabled_metric"
-  namespace: "telephony"
-  description: "Collect vonr status in voice call metric"
-  bug:"288449751"
-}
-
 # OWNER=apsankar TARGET=24Q3
 flag {
   name: "data_call_session_stats_captures_cross_sim_calling"
