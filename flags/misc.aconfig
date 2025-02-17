@@ -45,14 +45,6 @@ flag {
 
 # OWNER=sangyun TARGET=24Q2
 flag {
-  name: "reorganize_roaming_notification"
-  namespace: "telephony"
-  description: "Reorganize conditions to show and dismiss roaming notifications."
-  bug: "310594087"
-}
-
-# OWNER=sangyun TARGET=24Q2
-flag {
   name: "dismiss_network_selection_notification_on_sim_disable"
   namespace: "telephony"
   description: "Fix to dismiss network selection notification when disable sim."
