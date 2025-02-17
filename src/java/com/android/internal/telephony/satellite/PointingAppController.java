@@ -45,6 +45,7 @@ import android.telephony.satellite.SatelliteManager;
 import android.text.TextUtils;
 
 import com.android.internal.R;
+import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.flags.FeatureFlags;
 
@@ -70,6 +71,9 @@ public class PointingAppController {
     private boolean mLastNeedFullScreenPointingUI;
     private boolean mLastIsDemoMode;
     private boolean mLastIsEmergency;
+
+    private final Object mListenerForPointingUIRegisteredLock = new Object();
+    @GuardedBy("mListenerForPointingUIRegisteredLock")
     private boolean mListenerForPointingUIRegistered;
     @NonNull private String mPointingUiPackageName = "";
     @NonNull private String mPointingUiClassName = "";
@@ -419,17 +423,20 @@ public class PointingAppController {
         launchIntent.putExtra("isEmergency", isEmergency);
 
         try {
-            if (!mListenerForPointingUIRegistered) {
-                mActivityManager.addOnUidImportanceListener(mUidImportanceListener,
-                        IMPORTANCE_GONE);
-                mListenerForPointingUIRegistered = true;
+            synchronized (mListenerForPointingUIRegisteredLock) {
+                if (!mListenerForPointingUIRegistered) {
+                    mActivityManager.addOnUidImportanceListener(mUidImportanceListener,
+                            IMPORTANCE_GONE);
+                    mListenerForPointingUIRegistered = true;
+                }
             }
             mLastNeedFullScreenPointingUI = needFullScreenPointingUI;
             mLastIsDemoMode = isDemoMode;
             mLastIsEmergency = isEmergency;
             mContext.startActivityAsUser(launchIntent, UserHandle.CURRENT);
-        } catch (ActivityNotFoundException ex) {
-            ploge("startPointingUI: Pointing UI app activity is not found, ex=" + ex);
+        } catch (ActivityNotFoundException | IllegalArgumentException ex) {
+            ploge("startPointingUI: Unable to start Pointing UI activity due to an exception, ex="
+                    + ex);
         }
     }
 
@@ -437,9 +444,11 @@ public class PointingAppController {
      * Remove the Importance Listener For Pointing UI App once the satellite is disabled
      */
     public void removeListenerForPointingUI() {
-        if (mListenerForPointingUIRegistered) {
-            mActivityManager.removeOnUidImportanceListener(mUidImportanceListener);
-            mListenerForPointingUIRegistered = false;
+        synchronized (mListenerForPointingUIRegisteredLock) {
+            if (mListenerForPointingUIRegistered) {
+                mActivityManager.removeOnUidImportanceListener(mUidImportanceListener);
+                mListenerForPointingUIRegistered = false;
+            }
         }
     }
 
