@@ -10,6 +10,14 @@ flag {
   is_fixed_read_only: true
 }
 
+# OWNER=tnd TARGET=24Q1
+flag {
+  name: "log_mms_sms_database_access_info"
+  namespace: "telephony"
+  description: "Whether to log MMS/SMS database access info and report anomaly when getting exception."
+  bug: "275225402"
+}
+
 # OWNER=tjstuart TARGET=24Q3
 flag {
   name: "stop_spamming_emergency_notification"
@@ -33,14 +41,6 @@ flag {
   namespace: "telephony"
   description: "Check if access to mobile network configs restricted before displaying call options"
   bug: "309655251"
-}
-
-# OWNER=nagendranb TARGET=24Q3
-flag {
-  name: "enable_telephony_analytics"
-  namespace: "telephony"
-  description: "Enable Telephony Analytics information of Service State , Sms and Call scenarios"
-  bug: "309896524"
 }
 
 # OWNER=rambowang TARGET=24Q3
