@@ -5345,7 +5345,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
     public void setSatellitePlmn(int simSlot, @NonNull List<String> carrierPlmnList,
             @NonNull List<String> allSatellitePlmnList, Message result) {
         RadioNetworkProxy networkProxy = getRadioServiceProxy(RadioNetworkProxy.class);
-        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_4)) {
+        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_3)) {
             riljLog("setSatellitePlmn: SatelliteModemInterface is used.");
             SatelliteModemInterface.getInstance().setSatellitePlmn(
                     simSlot, carrierPlmnList, allSatellitePlmnList, result);
@@ -5378,7 +5378,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
     public void setSatelliteEnabledForCarrier(int simSlot, boolean satelliteEnabled,
             Message result) {
         RadioNetworkProxy networkProxy = getRadioServiceProxy(RadioNetworkProxy.class);
-        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_4)) {
+        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_3)) {
             riljLog("setSatelliteEnabledForCarrier: SatelliteModemInterface is used.");
             SatelliteModemInterface.getInstance().requestSetSatelliteEnabledForCarrier(
                     simSlot, satelliteEnabled, result);
@@ -5408,7 +5408,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
     @Override
     public void isSatelliteEnabledForCarrier(int simSlot, Message result) {
         RadioNetworkProxy networkProxy = getRadioServiceProxy(RadioNetworkProxy.class);
-        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_4)) {
+        if (getHalVersion(HAL_SERVICE_NETWORK).less(RADIO_HAL_VERSION_2_3)) {
             riljLog("isSatelliteEnabledForCarrier: SatelliteModemInterface is used.");
             SatelliteModemInterface.getInstance().requestIsSatelliteEnabledForCarrier(
                     simSlot, result);
