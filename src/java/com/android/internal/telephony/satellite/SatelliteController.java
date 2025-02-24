@@ -8344,7 +8344,6 @@ public class SatelliteController extends Handler {
      * return {@code true} when the phone does not support P2P SMS over carrier roaming satellite
      *        {@code false} otherwise
      */
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     public boolean isP2PSmsDisallowedOnCarrierRoamingNtn(int subId) {
         int carrierRoamingNtnConnectType = getCarrierRoamingNtnConnectType(subId);
         if (carrierRoamingNtnConnectType == CARRIER_ROAMING_NTN_CONNECT_MANUAL) {
