@@ -5459,6 +5459,9 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     public void setSatellitePlmn(int simSlot,
             @NonNull List<String> carrierPlmnList, @NonNull List<String> allSatellitePlmnList,
             Message result) {
+        logd("setSatellitePlmn: simSlot=" + simSlot
+                + " carrierPlmnList=" + carrierPlmnList.toString()
+                + " allSatellitePlmnList=" + allSatellitePlmnList.toString());
         mCi.setSatellitePlmn(simSlot, carrierPlmnList, allSatellitePlmnList, result);
     }
 
@@ -5472,6 +5475,8 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void setSatelliteEnabledForCarrier(int simSlot, boolean satelliteEnabled,
             Message result) {
+        logd("setSatelliteEnabledForCarrier: simSlot=" + simSlot
+                + " satelliteEnabled=" + satelliteEnabled);
         mCi.setSatelliteEnabledForCarrier(simSlot, satelliteEnabled, result);
     }
 

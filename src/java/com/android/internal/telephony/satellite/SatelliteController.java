@@ -242,6 +242,8 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility =  VisibleForTesting.Visibility.PRIVATE)
     public static final String NTN_SMS_SUPPORTED_BY_MESSAGES_APP_KEY =
             "ntn_sms_supported_by_messages_app_key";
+    public static final String CARRIER_ROAMING_NTN_ALL_SATELLITE_PLMN_SET_KEY =
+            "carrier_roaming_ntn_all_satellite_plmn_set_key";
 
     public static final long DEFAULT_CARRIER_EMERGENCY_CALL_WAIT_FOR_CONNECTION_TIMEOUT_MILLIS =
             TimeUnit.SECONDS.toMillis(30);
@@ -319,6 +321,8 @@ public class SatelliteController extends Handler {
     private static final int CMD_LOCATION_SERVICE_STATE_CHANGED = 62;
     protected static final int
         EVENT_WAIT_FOR_UPDATE_SYSTEM_SELECTION_CHANNELS_RESPONSE_TIMED_OUT = 63;
+    private static final int CMD_GET_SATELLITE_ENABLED_FOR_CARRIER = 64;
+    private static final int EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE = 65;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -693,6 +697,10 @@ public class SatelliteController extends Handler {
     @GuardedBy("mNtnSmsSupportedByMessagesAppLock")
     private Boolean mNtnSmsSupportedByMessagesApp = null;
 
+    private final Object mCarrierRoamingNtnAllSatellitePlmnSetLock = new Object();
+    @GuardedBy("mCarrierRoamingNtnAllSatellitePlmnSetLock")
+    private Set<String> mCarrierRoamingNtnAllSatellitePlmnSet = null;
+
     private final Object mSatelliteModemStateLock = new Object();
     @GuardedBy("mSatelliteModemStateLock")
     @SatelliteManager.SatelliteModemState
@@ -979,9 +987,19 @@ public class SatelliteController extends Handler {
 
         loadSatelliteSharedPreferences();
         if (mSharedPreferences != null) {
-            synchronized (mNtnSmsSupportedByMessagesAppLock) {
-                mNtnSmsSupportedByMessagesApp = mSharedPreferences.getBoolean(
-                        NTN_SMS_SUPPORTED_BY_MESSAGES_APP_KEY, false);
+            try {
+                synchronized (mNtnSmsSupportedByMessagesAppLock) {
+                    mNtnSmsSupportedByMessagesApp = mSharedPreferences.getBoolean(
+                            NTN_SMS_SUPPORTED_BY_MESSAGES_APP_KEY, false);
+                }
+
+                synchronized (mCarrierRoamingNtnAllSatellitePlmnSetLock) {
+                    mCarrierRoamingNtnAllSatellitePlmnSet = mSharedPreferences.getStringSet(
+                            CARRIER_ROAMING_NTN_ALL_SATELLITE_PLMN_SET_KEY, new HashSet<>());
+                }
+            } catch (Exception ex) {
+                plogd("SatelliteController constructor: "
+                        + "cannot get default shared preferences. e" + ex);
             }
         }
 
@@ -1012,6 +1030,11 @@ public class SatelliteController extends Handler {
         mSatelliteOptimizedApplicationsTracker = new SatelliteOptimizedApplicationsTracker(
                 getLooper(), mContext
         );
+
+        for (Phone phoneToSendRequest : PhoneFactory.getPhones()) {
+            sendRequestAsync(CMD_GET_SATELLITE_ENABLED_FOR_CARRIER, null, phoneToSendRequest);
+        }
+
         logd("Satellite Tracker is created");
     }
 
@@ -1895,10 +1918,14 @@ public class SatelliteController extends Handler {
                 int error =  SatelliteServiceUtils.getSatelliteError(ar,
                         "requestSetSatelliteEnabledForCarrier");
 
+                plogd("EVENT_EVALUATE_SATELLITE_ATTACH_RESTRICTION_CHANGE_DONE: subId="
+                        + subId + " error:" + error);
                 synchronized (mIsSatelliteEnabledLock) {
                     if (error == SATELLITE_RESULT_SUCCESS) {
                         boolean enableSatellite = mSatelliteAttachRestrictionForCarrierArray
                                 .getOrDefault(argument.subId, Collections.emptySet()).isEmpty();
+                        plogd("EVENT_EVALUATE_SATELLITE_ATTACH_RESTRICTION_CHANGE_DONE: "
+                                + "satelliteAttachEnabledForCarrier=" + enableSatellite);
                         mIsSatelliteAttachEnabledForCarrierArrayPerSub.put(subId, enableSatellite);
                     } else {
                         mIsSatelliteAttachEnabledForCarrierArrayPerSub.remove(subId);
@@ -2248,6 +2275,43 @@ public class SatelliteController extends Handler {
                         mLastNotifiedNtnEligibility = eligible;
                     }
                     phone.notifyCarrierRoamingNtnEligibleStateChanged(eligible);
+                }
+                break;
+            }
+
+            case CMD_GET_SATELLITE_ENABLED_FOR_CARRIER: {
+                request = (SatelliteControllerHandlerRequest) msg.obj;
+                Phone phone = request.phone;
+                int subId = phone.getSubId();
+                onCompleted = obtainMessage(EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE,
+                        subId);
+                int simSlot = SubscriptionManager.getSlotIndex(subId);
+                plogd("CMD_GET_SATELLITE_ENABLED_FOR_CARRIER: subId=" + subId);
+                phone.isSatelliteEnabledForCarrier(simSlot, onCompleted);
+                break;
+            }
+
+            case EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE: {
+                ar = (AsyncResult) msg.obj;
+
+                if (ar.result == null) {
+                    loge("EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE: result is null");
+                } else {
+                    int subId = (int) ar.userObj;
+                    int error = SatelliteServiceUtils.getSatelliteError(
+                            ar, "isSatelliteEnabledForCarrier");
+                    boolean satelliteEnabled = (boolean) ar.result;
+                    plogd("EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE: subId=" + subId
+                            + " error=" + error + " satelliteEnabled=" + satelliteEnabled);
+
+                    if (error == SATELLITE_RESULT_SUCCESS) {
+                        synchronized (mIsSatelliteEnabledLock) {
+                            mIsSatelliteAttachEnabledForCarrierArrayPerSub.put(
+                                    subId, satelliteEnabled);
+                        }
+                        evaluateEnablingSatelliteForCarrier(subId,
+                                SATELLITE_COMMUNICATION_RESTRICTION_REASON_USER, null);
+                    }
                 }
                 break;
             }
@@ -3832,9 +3896,7 @@ public class SatelliteController extends Handler {
             return new ArrayList<>();
         }
 
-        synchronized (mSupportedSatelliteServicesLock) {
-            return mMergedPlmnListPerCarrier.get(subId, new ArrayList<>()).stream().toList();
-        }
+        return getCarrierPlmnList(subId);
     }
 
     /**
@@ -4358,10 +4420,14 @@ public class SatelliteController extends Handler {
                 updateAndNotifyChangesInCarrierRoamingNtnAvailableServices(subId,
                         plmnServiceTypeMap);
                 updatePlmnListPerCarrier(subId);
+
                 configureSatellitePlmnForCarrier(subId);
+                evaluateEnablingSatelliteForCarrier(subId,
+                        SATELLITE_COMMUNICATION_RESTRICTION_REASON_USER, null);
                 mSubscriptionManagerService.setSatelliteEntitlementInfo(subId, allowedPlmnList,
                         barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap,
                         plmnDataServicePolicyMap, plmnVoiceServicePolicyMap);
+
             } else {
                 loge("onSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
                         + "or invalid barredPlmnList");
@@ -5290,15 +5356,93 @@ public class SatelliteController extends Handler {
             return;
         }
 
+        List<String> allPlmnList = new ArrayList<>(getAllPlmnSet());
+        phone.setSatellitePlmn(phone.getPhoneId(), getCarrierPlmnList(subId), allPlmnList,
+                obtainMessage(EVENT_SET_SATELLITE_PLMN_INFO_DONE));
+    }
+
+    private Set<String> getAllPlmnSet() {
+        Set<String> allPlmnSetFromSubInfo = new HashSet<>();
+        int[] activeSubIdArray = mSubscriptionManagerService.getActiveSubIdList(true);
+        for (int activeSubId : activeSubIdArray) {
+            allPlmnSetFromSubInfo.addAll(getCarrierPlmnList(activeSubId));
+            allPlmnSetFromSubInfo.addAll(getBarredPlmnList(activeSubId));
+        }
+        allPlmnSetFromSubInfo.addAll(mSatellitePlmnListFromOverlayConfig);
+
+        Set<String> allPlmnListFromStorage = getCarrierRoamingNtnAllSatellitePlmnSetFromStorage();
+        if (!allPlmnListFromStorage.containsAll(allPlmnSetFromSubInfo)) {
+            allPlmnListFromStorage.addAll(allPlmnSetFromSubInfo);
+            persistCarrierRoamingNtnAllSatellitePlmnSet(allPlmnListFromStorage);
+        }
+
+        plogd("getAllPlmnList: " + allPlmnListFromStorage);
+        return allPlmnListFromStorage;
+    }
+
+    private List<String> getCarrierPlmnList(int subId) {
         synchronized (mSupportedSatelliteServicesLock) {
-            List<String> carrierPlmnList = mMergedPlmnListPerCarrier.get(subId,
-                    new ArrayList<>()).stream().toList();
-            List<String> barredPlmnList = mEntitlementBarredPlmnListPerCarrier.get(subId,
-                    new ArrayList<>()).stream().toList();
-            int slotId = SubscriptionManager.getSlotIndex(subId);
-            phone.setSatellitePlmn(slotId, carrierPlmnList, SatelliteServiceUtils.mergeStrLists(
-                    carrierPlmnList, mSatellitePlmnListFromOverlayConfig, barredPlmnList),
-                    obtainMessage(EVENT_SET_SATELLITE_PLMN_INFO_DONE));
+            return mMergedPlmnListPerCarrier.get(subId, new ArrayList<>()).stream().toList();
+        }
+    }
+
+    private List<String> getBarredPlmnList(int subId) {
+        synchronized (mSupportedSatelliteServicesLock) {
+            return mEntitlementBarredPlmnListPerCarrier.get(
+                    subId, new ArrayList<>()).stream().toList();
+        }
+    }
+
+    private void persistCarrierRoamingNtnAllSatellitePlmnSet(Set<String> allSatellitePlmnSet) {
+        plogd("persistCarrierRoamingNtnAllSatellitePlmnSet");
+        if (!loadSatelliteSharedPreferences()) return;
+
+        if (mSharedPreferences == null) {
+            ploge("persistCarrierRoamingNtnAllSatellitePlmnSet: mSharedPreferences is null");
+        } else {
+            try {
+                mSharedPreferences.edit().putStringSet(
+                        CARRIER_ROAMING_NTN_ALL_SATELLITE_PLMN_SET_KEY, allSatellitePlmnSet)
+                        .apply();
+            } catch (Exception ex) {
+                plogd("persistCarrierRoamingNtnAllSatellitePlmnSet: ex=" + ex);
+            }
+
+            synchronized (mCarrierRoamingNtnAllSatellitePlmnSetLock) {
+                mCarrierRoamingNtnAllSatellitePlmnSet = allSatellitePlmnSet;
+            }
+        }
+    }
+
+    private Set<String> getCarrierRoamingNtnAllSatellitePlmnSetFromStorage() {
+        synchronized (mCarrierRoamingNtnAllSatellitePlmnSetLock) {
+            if (mCarrierRoamingNtnAllSatellitePlmnSet != null) {
+                plogd("getCarrierRoamingNtnAllSatellitePlmnSetFromStorage: "
+                        + mCarrierRoamingNtnAllSatellitePlmnSet);
+                return mCarrierRoamingNtnAllSatellitePlmnSet;
+            }
+        }
+
+        if (!loadSatelliteSharedPreferences()) return new HashSet<>();
+
+        if (mSharedPreferences == null) {
+            ploge("getCarrierRoamingNtnAllSatellitePlmnSetFromStorage: mSharedPreferences is null");
+            return new HashSet<>();
+        } else {
+            Set<String> allSatellitePlmnSet = new HashSet<>();
+            try {
+                allSatellitePlmnSet = mSharedPreferences.getStringSet(
+                        CARRIER_ROAMING_NTN_ALL_SATELLITE_PLMN_SET_KEY, new HashSet<>());
+            } catch (Exception ex) {
+                plogd("getCarrierRoamingNtnAllSatellitePlmnSetFromStorage: ex=" + ex);
+            }
+
+            synchronized (mCarrierRoamingNtnAllSatellitePlmnSetLock) {
+                mCarrierRoamingNtnAllSatellitePlmnSet = allSatellitePlmnSet;
+                plogd("getCarrierRoamingNtnAllSatellitePlmnSetFromStorage: "
+                        + mCarrierRoamingNtnAllSatellitePlmnSet);
+                return mCarrierRoamingNtnAllSatellitePlmnSet;
+            }
         }
     }
 
@@ -5480,6 +5624,7 @@ public class SatelliteController extends Handler {
             return;
         }
 
+        getSatelliteEnabledForCarrierAtModem(subId);
         updateCarrierConfig(subId);
         updateSatelliteESOSSupported(subId);
         updateSatelliteProvisionedStatePerSubscriberId();
@@ -5493,6 +5638,16 @@ public class SatelliteController extends Handler {
         updateRegionalSatelliteEarfcns(subId);
     }
 
+    private void getSatelliteEnabledForCarrierAtModem(int subId) {
+        Phone phone = SatelliteServiceUtils.getPhone(subId);
+        synchronized (mIsSatelliteEnabledLock) {
+            if (!mIsSatelliteAttachEnabledForCarrierArrayPerSub.containsKey(subId)) {
+                // Get enabled status from modem for new subscription
+                sendRequestAsync(CMD_GET_SATELLITE_ENABLED_FOR_CARRIER, null, phone);
+            }
+        }
+    }
+
     // imsi, msisdn, default sms subId change
     private void handleSubscriptionsChanged() {
         sendMessageDelayed(obtainMessage(CMD_EVALUATE_ESOS_PROFILES_PRIORITIZATION),
@@ -5500,9 +5655,10 @@ public class SatelliteController extends Handler {
     }
 
     private void processNewCarrierConfigData(int subId) {
-        configureSatellitePlmnForCarrier(subId);
-        setSatelliteAttachEnabledForCarrierOnSimLoaded(subId);
         updateRestrictReasonForEntitlementPerCarrier(subId);
+        configureSatellitePlmnForCarrier(subId);
+        evaluateEnablingSatelliteForCarrier(subId,
+                SATELLITE_COMMUNICATION_RESTRICTION_REASON_USER, null);
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
@@ -5609,23 +5765,6 @@ public class SatelliteController extends Handler {
                         + entitlementVoiceServicePolicy);
                 mEntitlementVoiceServicePolicyMapPerCarrier.put(subId,
                         entitlementVoiceServicePolicy);
-            }
-        }
-    }
-
-    /**
-     * When a SIM is loaded, we need to check if users has enabled satellite attach for the carrier
-     * associated with the SIM, and evaluate if satellite should be enabled for the carrier.
-     *
-     * @param subId Subscription ID.
-     */
-    private void setSatelliteAttachEnabledForCarrierOnSimLoaded(int subId) {
-        synchronized (mIsSatelliteEnabledLock) {
-            if (isSatelliteAttachEnabledForCarrierByUser(subId)
-                    && !mIsSatelliteAttachEnabledForCarrierArrayPerSub.getOrDefault(subId,
-                    false)) {
-                evaluateEnablingSatelliteForCarrier(subId,
-                        SATELLITE_COMMUNICATION_RESTRICTION_REASON_USER, null);
             }
         }
     }
@@ -5928,7 +6067,7 @@ public class SatelliteController extends Handler {
     /**
      * Check whether satellite is enabled for carrier at modem.
      *
-     * @param subId Subscription ID to check for.
+     * @param subId subscription ID
      * @return {@code true} if satellite modem is enabled, {@code false} otherwise.
      */
     private boolean isSatelliteEnabledForCarrierAtModem(int subId) {
@@ -5971,7 +6110,13 @@ public class SatelliteController extends Handler {
         state and the current state are different. */
         boolean isSatelliteExpectedToBeEnabled = !isSatelliteRestrictedForCarrier(subId)
                 && isSatelliteSupportedViaCarrier(subId);
-        if (isSatelliteExpectedToBeEnabled != isSatelliteEnabledForCarrierAtModem(subId)) {
+        boolean isSatelliteEnabledForCarrierAtModem = isSatelliteEnabledForCarrierAtModem(
+                phone.getSubId());
+        plogd("evaluateEnablingSatelliteForCarrier: subId=" + subId + " reason=" + reason
+                + " isSatelliteExpectedToBeEnabled=" + isSatelliteExpectedToBeEnabled
+                + " isSatelliteEnabledForCarrierAtModem=" + isSatelliteEnabledForCarrierAtModem);
+
+        if (isSatelliteExpectedToBeEnabled != isSatelliteEnabledForCarrierAtModem) {
             int simSlot = SubscriptionManager.getSlotIndex(subId);
             RequestHandleSatelliteAttachRestrictionForCarrierArgument argument =
                     new RequestHandleSatelliteAttachRestrictionForCarrierArgument(subId,
