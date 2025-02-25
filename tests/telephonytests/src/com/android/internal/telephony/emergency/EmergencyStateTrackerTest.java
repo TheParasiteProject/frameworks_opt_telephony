@@ -38,7 +38,6 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyVararg;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -2529,7 +2528,7 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
         when(phone.getSubId()).thenReturn(1);
         setEcmSupportedConfig(phone, true);
         PersistableBundle bundle = mCarrierConfigManager.getConfigForSubId(phone.getSubId());
-        doReturn(bundle).when(mCarrierConfigManager).getConfigForSubId(anyInt(), anyVararg());
+        doReturn(bundle).when(mCarrierConfigManager).getConfigForSubId(anyInt(), any());
 
         EmergencyStateTracker testEst = setupEmergencyStateTracker(
                 false /* isSuplDdsSwitchRequiredForEmergencyCall */);
@@ -3054,7 +3053,7 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
         PersistableBundle bundle = mCarrierConfigManager.getConfigForSubId(testPhone.getSubId());
         bundle.putBoolean(CarrierConfigManager.KEY_BROADCAST_EMERGENCY_CALL_STATE_CHANGES_BOOL,
                 true);
-        doReturn(bundle).when(mCarrierConfigManager).getConfigForSubId(anyInt(), anyVararg());
+        doReturn(bundle).when(mCarrierConfigManager).getConfigForSubId(anyInt(), any());
         // onCarrierConfigChanged with valid subscription
         carrierConfigChangeListener.onCarrierConfigChanged(
                 testPhone.getPhoneId(), testPhone.getSubId(),
