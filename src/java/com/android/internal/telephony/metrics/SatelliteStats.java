@@ -2115,9 +2115,9 @@ public class SatelliteStats {
         private final int mCountOfEntitlementStatusQueryRequest;
         private final int mCountOfSatelliteConfigUpdateRequest;
         private final int mCountOfSatelliteNotificationDisplayed;
-        private final int mSatelliteSessionGapMinSec;
-        private final int mSatelliteSessionGapAvgSec;
-        private final int mSatelliteSessionGapMaxSec;
+        private static int sSatelliteSessionGapMinSec;
+        private static int sSatelliteSessionGapAvgSec;
+        private static int sSatelliteSessionGapMaxSec;
         private static int sCarrierId;
         private static boolean sIsDeviceEntitled;
 
@@ -2129,9 +2129,17 @@ public class SatelliteStats {
                     builder.mCountOfSatelliteConfigUpdateRequest;
             this.mCountOfSatelliteNotificationDisplayed =
                     builder.mCountOfSatelliteNotificationDisplayed;
-            this.mSatelliteSessionGapMinSec = builder.mSatelliteSessionGapMinSec;
-            this.mSatelliteSessionGapAvgSec = builder.mSatelliteSessionGapAvgSec;
-            this.mSatelliteSessionGapMaxSec = builder.mSatelliteSessionGapMaxSec;
+
+            // Update session gap params only when they are explicitly provided
+            if (builder.mSatelliteSessionGapMinSec.isPresent()) {
+                this.sSatelliteSessionGapMinSec = builder.mSatelliteSessionGapMinSec.get();
+            }
+            if (builder.mSatelliteSessionGapAvgSec.isPresent()) {
+                this.sSatelliteSessionGapAvgSec = builder.mSatelliteSessionGapAvgSec.get();
+            }
+            if (builder.mSatelliteSessionGapMaxSec.isPresent()) {
+                this.sSatelliteSessionGapMaxSec = builder.mSatelliteSessionGapMaxSec.get();
+            }
 
             // Carrier ID value should be updated only when it is meaningful.
             if (builder.mCarrierId.isPresent()) {
@@ -2162,15 +2170,15 @@ public class SatelliteStats {
         }
 
         public int getSatelliteSessionGapMinSec() {
-            return mSatelliteSessionGapMinSec;
+            return sSatelliteSessionGapMinSec;
         }
 
         public int getSatelliteSessionGapAvgSec() {
-            return mSatelliteSessionGapAvgSec;
+            return sSatelliteSessionGapAvgSec;
         }
 
         public int getSatelliteSessionGapMaxSec() {
-            return mSatelliteSessionGapMaxSec;
+            return sSatelliteSessionGapMaxSec;
         }
 
         public int getCarrierId() {
@@ -2190,9 +2198,9 @@ public class SatelliteStats {
             private int mCountOfEntitlementStatusQueryRequest = 0;
             private int mCountOfSatelliteConfigUpdateRequest = 0;
             private int mCountOfSatelliteNotificationDisplayed = 0;
-            private int mSatelliteSessionGapMinSec = 0;
-            private int mSatelliteSessionGapAvgSec = 0;
-            private int mSatelliteSessionGapMaxSec = 0;
+            private Optional<Integer> mSatelliteSessionGapMinSec = Optional.empty();
+            private Optional<Integer> mSatelliteSessionGapAvgSec = Optional.empty();
+            private Optional<Integer> mSatelliteSessionGapMaxSec = Optional.empty();
             private Optional<Integer> mCarrierId = Optional.empty();
             private Optional<Boolean> mIsDeviceEntitled = Optional.empty();
 
@@ -2240,7 +2248,7 @@ public class SatelliteStats {
              * {@link CarrierRoamingSatelliteControllerStats} atom then returns Builder class
              */
             public Builder setSatelliteSessionGapMinSec(int satelliteSessionGapMinSec) {
-                this.mSatelliteSessionGapMinSec = satelliteSessionGapMinSec;
+                this.mSatelliteSessionGapMinSec = Optional.of(satelliteSessionGapMinSec);
                 return this;
             }
 
@@ -2249,7 +2257,7 @@ public class SatelliteStats {
              * {@link CarrierRoamingSatelliteControllerStats} atom then returns Builder class
              */
             public Builder setSatelliteSessionGapAvgSec(int satelliteSessionGapAvgSec) {
-                this.mSatelliteSessionGapAvgSec = satelliteSessionGapAvgSec;
+                this.mSatelliteSessionGapAvgSec = Optional.of(satelliteSessionGapAvgSec);
                 return this;
             }
 
@@ -2258,7 +2266,7 @@ public class SatelliteStats {
              * {@link CarrierRoamingSatelliteControllerStats} atom then returns Builder class
              */
             public Builder setSatelliteSessionGapMaxSec(int satelliteSessionGapMaxSec) {
-                this.mSatelliteSessionGapMaxSec = satelliteSessionGapMaxSec;
+                this.mSatelliteSessionGapMaxSec = Optional.of(satelliteSessionGapMaxSec);
                 return this;
             }
 
@@ -2294,9 +2302,9 @@ public class SatelliteStats {
                     + mCountOfSatelliteConfigUpdateRequest
                     + ", countOfSatelliteNotificationDisplayed="
                     + mCountOfSatelliteNotificationDisplayed
-                    + ", satelliteSessionGapMinSec=" + mSatelliteSessionGapMinSec
-                    + ", satelliteSessionGapAvgSec=" + mSatelliteSessionGapAvgSec
-                    + ", satelliteSessionGapMaxSec=" + mSatelliteSessionGapMaxSec
+                    + ", satelliteSessionGapMinSec=" + sSatelliteSessionGapMinSec
+                    + ", satelliteSessionGapAvgSec=" + sSatelliteSessionGapAvgSec
+                    + ", satelliteSessionGapMaxSec=" + sSatelliteSessionGapMaxSec
                     + ", carrierId=" + sCarrierId
                     + ", isDeviceEntitled=" + sIsDeviceEntitled
                     + ")";
@@ -2952,12 +2960,19 @@ public class SatelliteStats {
         proto.countOfEntitlementStatusQueryRequest = param.mCountOfEntitlementStatusQueryRequest;
         proto.countOfSatelliteConfigUpdateRequest = param.mCountOfSatelliteConfigUpdateRequest;
         proto.countOfSatelliteNotificationDisplayed = param.mCountOfSatelliteNotificationDisplayed;
-        proto.satelliteSessionGapMinSec = param.mSatelliteSessionGapMinSec;
-        proto.satelliteSessionGapAvgSec = param.mSatelliteSessionGapAvgSec;
-        proto.satelliteSessionGapMaxSec = param.mSatelliteSessionGapMaxSec;
+        proto.satelliteSessionGapMinSec = param.getSatelliteSessionGapMinSec();
+        proto.satelliteSessionGapAvgSec = param.getSatelliteSessionGapAvgSec();
+        proto.satelliteSessionGapMaxSec = param.getSatelliteSessionGapMaxSec();
         proto.carrierId = param.getCarrierId();
         proto.isDeviceEntitled = param.isDeviceEntitled();
         mAtomsStorage.addCarrierRoamingSatelliteControllerStats(proto);
+    }
+
+    /** Reset carrier roaming satellite controller stats after atom is pulled. */
+    public synchronized void resetCarrierRoamingSatelliteControllerStats() {
+        com.android.internal.telephony.satellite.metrics
+                .CarrierRoamingSatelliteControllerStats.getOrCreateInstance()
+                .resetSessionGapLists();
     }
 
     /**  Create a new atom for SatelliteEntitlement metrics */
