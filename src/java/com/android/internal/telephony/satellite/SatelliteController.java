@@ -6194,8 +6194,6 @@ public class SatelliteController extends Handler {
 
         if (mOverrideNtnEligibility != null) {
             satellitePhone.notifyCarrierRoamingNtnEligibleStateChanged(currentNtnEligibility);
-            mControllerMetricsStats.reportP2PSmsEligibilityNotificationsCount(
-                    currentNtnEligibility);
             return;
         }
 
