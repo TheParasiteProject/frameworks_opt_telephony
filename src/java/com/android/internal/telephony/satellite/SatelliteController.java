@@ -92,6 +92,7 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.hardware.devicestate.DeviceState;
 import android.hardware.devicestate.DeviceStateManager;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
@@ -315,6 +316,7 @@ public class SatelliteController extends Handler {
     private static final int EVENT_UPDATE_SYSTEM_SELECTION_CHANNELS_DONE = 59;
     private static final int EVENT_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_CHANGED = 60;
     private static final int CMD_EVALUATE_CARRIER_ROAMING_NTN_ELIGIBILITY_CHANGE = 61;
+    private static final int CMD_LOCATION_SERVICE_STATE_CHANGED = 62;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -740,6 +742,17 @@ public class SatelliteController extends Handler {
         }
     };
 
+    protected BroadcastReceiver mLocationServiceStateChangedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // Check whether user has turned on/off location manager from settings menu
+            if (intent.getAction().equals(LocationManager.MODE_CHANGED_ACTION)) {
+                plogd("mLocationServiceStateChangedReceiver");
+                sendRequestAsync(CMD_LOCATION_SERVICE_STATE_CHANGED, null, null);
+            }
+        }
+    };
+
     // List of device states returned from DeviceStateManager to determine if running on a foldable
     // device.
     private List<DeviceState> mDeviceStates = new ArrayList();
@@ -936,6 +949,7 @@ public class SatelliteController extends Handler {
 
         mSatellitePlmnListFromOverlayConfig = readSatellitePlmnsFromOverlayConfig();
         registerApplicationStateChanged();
+        registerLocationServiceStateChanged();
         updateSupportedSatelliteServicesForActiveSubscriptions();
         mCarrierConfigChangeListener =
                 (slotIndex, subId, carrierId, specificCarrierId) ->
@@ -2194,6 +2208,9 @@ public class SatelliteController extends Handler {
                 break;
             }
 
+            case CMD_LOCATION_SERVICE_STATE_CHANGED:
+                plogd("CMD_LOCATION_SERVICE_STATE_CHANGED");
+                // Fall through
             case CMD_EVALUATE_CARRIER_ROAMING_NTN_ELIGIBILITY_CHANGE: {
                 plogd("CMD_EVALUATE_CARRIER_ROAMING_NTN_ELIGIBILITY_CHANGE");
                 evaluateCarrierRoamingNtnEligibilityChange();
@@ -7842,6 +7859,13 @@ public class SatelliteController extends Handler {
             return false;
         }
 
+        // Even if Location service is off, isSatelliteAccessAllowed can be true
+        // when the device is in emergency call and the allowed cache is valid.
+        if (!isLocationServiceEnabled()) {
+            plogd("isCarrierRoamingNtnEligible: Location service is off");
+            return false;
+        }
+
         if (phone == null) {
             plogd("isCarrierRoamingNtnEligible: phone is null");
             return false;
@@ -8470,6 +8494,12 @@ public class SatelliteController extends Handler {
                 mContext.RECEIVER_EXPORTED);
     }
 
+    private void registerLocationServiceStateChanged() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(LocationManager.MODE_CHANGED_ACTION);
+        mContext.registerReceiver(mLocationServiceStateChangedReceiver, intentFilter);
+    }
+
 
     private void notifyEnabledStateChanged(boolean isEnabled) {
         TelephonyRegistryManager trm = mContext.getSystemService(TelephonyRegistryManager.class);
@@ -8708,6 +8738,17 @@ public class SatelliteController extends Handler {
         List<Integer> availableServices = getSupportedSatelliteServicesForPlmn(subId, plmn);
         return availableServices.stream().anyMatch(num -> num
                 == NetworkRegistrationInfo.SERVICE_TYPE_DATA);
+    }
+
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    protected boolean isLocationServiceEnabled() {
+        LocationManager lm = mContext.createAttributionContext("telephony")
+                .getSystemService(LocationManager.class);
+        if (lm != null) {
+            return lm.isLocationEnabled();
+        }
+
+        return true;
     }
 
     /**
