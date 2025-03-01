@@ -22,15 +22,22 @@ import android.util.Log;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class CarrierRoamingSatelliteControllerStats {
     private static final String TAG = CarrierRoamingSatelliteControllerStats.class.getSimpleName();
     private static CarrierRoamingSatelliteControllerStats sInstance = null;
     private static final int ADD_COUNT = 1;
 
     private SatelliteStats mSatelliteStats;
+    private List<Long> mSessionStartTimeList;
+    private List<Long> mSessionEndTimeList;
 
     private CarrierRoamingSatelliteControllerStats() {
         mSatelliteStats = SatelliteStats.getInstance();
+        resetSessionGapLists();
     }
 
     /**
@@ -94,6 +101,76 @@ public class CarrierRoamingSatelliteControllerStats {
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setIsDeviceEntitled(isDeviceEntitled)
                         .build());
+    }
+
+    /** Log carrier roaming satellite session start */
+    public void onSessionStart() {
+        mSessionStartTimeList.add(getCurrentTime());
+    }
+
+    /** Log carrier roaming satellite session end */
+    public void onSessionEnd() {
+        mSessionEndTimeList.add(getCurrentTime());
+
+        int numberOfSatelliteSessions = getNumberOfSatelliteSessions();
+        List<Integer> sessionGapList = getSatelliteSessionGapList(numberOfSatelliteSessions);
+        int satelliteSessionGapMinSec = 0;
+        int satelliteSessionGapMaxSec = 0;
+        if (!sessionGapList.isEmpty()) {
+            satelliteSessionGapMinSec = Collections.min(sessionGapList);
+            satelliteSessionGapMaxSec = Collections.max(sessionGapList);
+        }
+
+        mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
+                new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
+                        .setSatelliteSessionGapMinSec(satelliteSessionGapMinSec)
+                        .setSatelliteSessionGapAvgSec(getAvg(sessionGapList))
+                        .setSatelliteSessionGapMaxSec(satelliteSessionGapMaxSec)
+                        .build());
+    }
+
+    /** Atom is pulled once per day. Reset session gap lists after the atom is pulled. */
+    public void resetSessionGapLists() {
+        mSessionStartTimeList = new ArrayList<>();
+        mSessionEndTimeList = new ArrayList<>();
+    }
+
+    private int getNumberOfSatelliteSessions() {
+        return Math.min(mSessionStartTimeList.size(), mSessionEndTimeList.size());
+    }
+
+    private List<Integer> getSatelliteSessionGapList(int numberOfSatelliteSessions) {
+        if (numberOfSatelliteSessions == 0) {
+            return new ArrayList<>();
+        }
+
+        List<Integer> sessionGapList = new ArrayList<>();
+        for (int i = 1; i < numberOfSatelliteSessions; i++) {
+            long prevSessionEndTime = mSessionEndTimeList.get(i - 1);
+            long currentSessionStartTime = mSessionStartTimeList.get(i);
+            if (currentSessionStartTime > prevSessionEndTime && prevSessionEndTime > 0) {
+                sessionGapList.add((int) (
+                        (currentSessionStartTime - prevSessionEndTime) / 1000));
+            }
+        }
+        return sessionGapList;
+    }
+
+    private int getAvg(@NonNull List<Integer> list) {
+        if (list.isEmpty()) {
+            return 0;
+        }
+
+        int total = 0;
+        for (int num : list) {
+            total += num;
+        }
+
+        return total / list.size();
+    }
+
+    private long getCurrentTime() {
+        return System.currentTimeMillis();
     }
 
     private static void logd(@NonNull String log) {
