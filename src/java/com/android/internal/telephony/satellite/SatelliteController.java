@@ -6121,12 +6121,14 @@ public class SatelliteController extends Handler {
                 sessionStats.onSessionStart(phone.getCarrierId(), phone,
                         supported_satellite_services, dataPolicy);
                 mCarrierRoamingSatelliteSessionStatsMap.put(subId, sessionStats);
+                mCarrierRoamingSatelliteControllerStats.onSessionStart();
             } else if (lastNotifiedNtnMode && !currNtnMode) {
                 // Log satellite session end
                 CarrierRoamingSatelliteSessionStats sessionStats =
                         mCarrierRoamingSatelliteSessionStatsMap.get(subId);
                 sessionStats.onSessionEnd();
                 mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
+                mCarrierRoamingSatelliteControllerStats.onSessionEnd();
             }
         }
     }
