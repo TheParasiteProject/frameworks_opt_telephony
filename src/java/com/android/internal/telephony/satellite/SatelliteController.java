@@ -6075,6 +6075,7 @@ public class SatelliteController extends Handler {
 
     private void updateLastNotifiedNtnModeAndNotify(@Nullable Phone phone) {
         if (phone == null) {
+            plogd("updateLastNotifiedNtnModeAndNotify: phone is null");
             return;
         }
 
@@ -6083,6 +6084,10 @@ public class SatelliteController extends Handler {
             boolean initialized = mInitialized.get(subId);
             boolean lastNotifiedNtnMode = mLastNotifiedNtnMode.get(subId);
             boolean currNtnMode = isInSatelliteModeForCarrierRoaming(phone);
+            plogd("updateLastNotifiedNtnModeAndNotify: subId=" + subId
+                    + " initialized=" + initialized
+                    + " lastNotifiedNtnMode=" + lastNotifiedNtnMode
+                    + " currNtnMode=" + currNtnMode);
             if (!initialized || lastNotifiedNtnMode != currNtnMode) {
                 if (!initialized) mInitialized.put(subId, true);
                 mLastNotifiedNtnMode.put(subId, currNtnMode);
