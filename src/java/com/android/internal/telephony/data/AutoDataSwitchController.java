@@ -312,18 +312,19 @@ public class AutoDataSwitchController extends Handler {
                     (serviceState != null) && serviceState.isUsingNonTerrestrialNetwork();
 
             return switch (mDataRegState) {
-                case NetworkRegistrationInfo.REGISTRATION_STATE_HOME -> {
-                    if (isUsingNonTerrestrialNetwork) {
-                        yield UsableState.NON_TERRESTRIAL;
-                    }
-                    yield UsableState.HOME;
-                }
+                case NetworkRegistrationInfo.REGISTRATION_STATE_HOME ->
+                        isUsingNonTerrestrialNetwork
+                                ? UsableState.NON_TERRESTRIAL : UsableState.HOME;
                 case NetworkRegistrationInfo.REGISTRATION_STATE_ROAMING -> {
+                    // Satellite may bypass User's roaming settings
+                    if (isUsingNonTerrestrialNetwork) {
+                        boolean byPassRoamingSettings = mPhone.getDataNetworkController()
+                                .getDataConfigManager().isIgnoringDataRoamingSettingForSatellite();
+                        if (byPassRoamingSettings) yield UsableState.NON_TERRESTRIAL;
+                    }
                     if (mPhone.getDataRoamingEnabled()) {
-                        if (isUsingNonTerrestrialNetwork) {
-                            yield UsableState.NON_TERRESTRIAL;
-                        }
-                        yield UsableState.ROAMING_ENABLED;
+                        yield isUsingNonTerrestrialNetwork
+                                ? UsableState.NON_TERRESTRIAL : UsableState.ROAMING_ENABLED;
                     }
                     yield UsableState.NOT_USABLE;
                 }
@@ -513,29 +514,29 @@ public class AutoDataSwitchController extends Handler {
         Object obj;
         int phoneId;
         switch (msg.what) {
-            case EVENT_SERVICE_STATE_CHANGED:
+            case EVENT_SERVICE_STATE_CHANGED -> {
                 ar = (AsyncResult) msg.obj;
                 phoneId = (int) ar.userObj;
                 onServiceStateChanged(phoneId);
-                break;
-            case EVENT_DISPLAY_INFO_CHANGED:
+            }
+            case EVENT_DISPLAY_INFO_CHANGED -> {
                 ar = (AsyncResult) msg.obj;
                 phoneId = (int) ar.userObj;
                 onDisplayInfoChanged(phoneId);
-                break;
-            case EVENT_SIGNAL_STRENGTH_CHANGED:
+            }
+            case EVENT_SIGNAL_STRENGTH_CHANGED -> {
                 ar = (AsyncResult) msg.obj;
                 phoneId = (int) ar.userObj;
                 onSignalStrengthChanged(phoneId);
-                break;
-            case EVENT_EVALUATE_AUTO_SWITCH:
+            }
+            case EVENT_EVALUATE_AUTO_SWITCH -> {
                 obj = mScheduledEventsToExtras.get(EVENT_EVALUATE_AUTO_SWITCH);
                 if (obj instanceof EvaluateEventExtra extra) {
                     mScheduledEventsToExtras.remove(EVENT_EVALUATE_AUTO_SWITCH);
                     onEvaluateAutoDataSwitch(extra.evaluateReason);
                 }
-                break;
-            case EVENT_STABILITY_CHECK_PASSED:
+            }
+            case EVENT_STABILITY_CHECK_PASSED -> {
                 obj = mScheduledEventsToExtras.get(EVENT_STABILITY_CHECK_PASSED);
                 if (obj instanceof StabilityEventExtra extra) {
                     int targetPhoneId = extra.targetPhoneId;
@@ -545,12 +546,9 @@ public class AutoDataSwitchController extends Handler {
                     mScheduledEventsToExtras.remove(EVENT_STABILITY_CHECK_PASSED);
                     mPhoneSwitcherCallback.onRequireValidation(targetPhoneId, needValidation);
                 }
-                break;
-            case EVENT_SUBSCRIPTIONS_CHANGED:
-                onSubscriptionsChanged();
-                break;
-            default:
-                loge("Unexpected event " + msg.what);
+            }
+            case EVENT_SUBSCRIPTIONS_CHANGED -> onSubscriptionsChanged();
+            default -> loge("Unexpected event " + msg.what);
         }
     }
 

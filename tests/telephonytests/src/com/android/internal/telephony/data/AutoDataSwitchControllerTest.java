@@ -294,7 +294,7 @@ public class AutoDataSwitchControllerTest extends TelephonyTest {
     }
 
     @Test
-    public void testRoaming_prefer_roam_over_nonTerrestrial() {
+    public void testRoaming_prefer_roam_over_satellite() {
         // DDS -> nDDS: Prefer Roaming over non-terrestrial
         prepareIdealUsesNonDdsCondition();
         mIsNonTerrestrialNetwork = true;
@@ -317,6 +317,23 @@ public class AutoDataSwitchControllerTest extends TelephonyTest {
                 true/*needValidation*/);
         mIsNonTerrestrialNetwork = false;
     }
+
+    @Test
+    public void testRoaming_satellite_bypass_settings() {
+        prepareIdealUsesNonDdsCondition();
+
+        doReturn(true).when(mDataConfigManager).isIgnoringDataRoamingSettingForSatellite();
+        doReturn(false).when(mPhone).getDataRoamingEnabled();
+
+        mIsNonTerrestrialNetwork = true;
+        serviceStateChanged(PHONE_1, NetworkRegistrationInfo.REGISTRATION_STATE_ROAMING);
+        mIsNonTerrestrialNetwork = false;
+        serviceStateChanged(PHONE_2, NetworkRegistrationInfo.REGISTRATION_STATE_ROAMING);
+        processAllFutureMessages();
+
+        verify(mMockedPhoneSwitcherCallback).onRequireValidation(PHONE_2, true/*needValidation*/);
+    }
+
 
     @Test
     public void testRoaming_roaming_but_roam_disabled() {
