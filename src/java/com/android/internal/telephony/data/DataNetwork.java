@@ -1315,6 +1315,8 @@ public class DataNetwork extends StateMachine {
                 mAccessNetworksManager.registerCallback(mAccessNetworksManagerCallback);
             }
 
+            mRil.registerForNotAvailable(getHandler(), EVENT_RADIO_NOT_AVAILABLE, null);
+
             // Only add symmetric code here, for example, registering and unregistering.
             // DefaultState.enter() is the starting point in the life cycle of the DataNetwork,
             // and DefaultState.exit() is the end. For non-symmetric initializing works, put them
@@ -1355,6 +1357,7 @@ public class DataNetwork extends StateMachine {
                     .unregisterCallback(mDataSettingsManagerCallback);
             mRil.unregisterForPcoData(getHandler());
             mDataConfigManager.unregisterCallback(mDataConfigManagerCallback);
+            mRil.unregisterForNotAvailable(getHandler());
         }
 
         @Override
@@ -1455,6 +1458,12 @@ public class DataNetwork extends StateMachine {
                             .transportTypeToString(msg.arg1) + " request.");
                     break;
                 case EVENT_RADIO_NOT_AVAILABLE:
+                    // Ignore this event when it isn't a WWAN data network.
+                    if (mTransport == AccessNetworkConstants.TRANSPORT_TYPE_WLAN) {
+                        loge(eventToString(msg.what)
+                                + ": ignored on IWLAN");
+                        break;
+                    }
                     mFailCause = DataFailCause.RADIO_NOT_AVAILABLE;
                     loge(eventToString(msg.what) + ": transition to disconnected state");
                     transitionTo(mDisconnectedState);
@@ -1878,6 +1887,19 @@ public class DataNetwork extends StateMachine {
                     log("Defer message " + eventToString(msg.what));
                     deferMessage(msg);
                     break;
+                case EVENT_RADIO_NOT_AVAILABLE:
+                    if (mTransport == AccessNetworkConstants.TRANSPORT_TYPE_WWAN) {
+                        // Defer the request until handover to IWLAN succeeds or fails.
+                        log("Defer message " + eventToString(msg.what));
+                        deferMessage(msg);
+                    } else {
+                        // If this is during handover to cellular, always tear down the network as
+                        // we will never get success or failed response from the modem.
+                        mFailCause = DataFailCause.RADIO_NOT_AVAILABLE;
+                        loge(eventToString(msg.what) + ": transition to disconnected state");
+                        transitionTo(mDisconnectedState);
+                    }
+                    break;
                 case EVENT_NOTIFY_HANDOVER_STARTED_RESPONSE:
                     onStartHandover(msg.arg2, (DataHandoverRetryEntry) msg.obj);
                     break;
@@ -2054,7 +2076,6 @@ public class DataNetwork extends StateMachine {
     private void registerForWwanEvents() {
         registerForBandwidthUpdate();
         mKeepaliveTracker.registerForKeepaliveStatus();
-        mRil.registerForNotAvailable(this.getHandler(), EVENT_RADIO_NOT_AVAILABLE, null);
     }
 
     /**
@@ -2063,7 +2084,6 @@ public class DataNetwork extends StateMachine {
     private void unregisterForWwanEvents() {
         unregisterForBandwidthUpdate();
         mKeepaliveTracker.unregisterForKeepaliveStatus();
-        mRil.unregisterForNotAvailable(this.getHandler());
     }
 
     @Override
