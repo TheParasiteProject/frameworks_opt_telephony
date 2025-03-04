@@ -4269,22 +4269,24 @@ public class SatelliteController extends Handler {
      * satellite configuration from the entitlement server. If satellite entitlement is enabled,
      * enable satellite for the carrier. Otherwise, disable satellite.
      *
-     * @param subId              subId
-     * @param entitlementEnabled {@code true} Satellite service enabled
-     * @param allowedPlmnList    plmn allowed list to use the satellite service
-     * @param barredPlmnList    plmn barred list to pass the modem
-     * @param plmnDataPlanMap   data plan map for the plmn with key as plmn and data plan as value
-     *        with possible values {@link SatelliteDataPlan}
-     * @param plmnServiceTypeMap available services map for the plmn with key as plmn and service
-     *        type as list of integer values with possible values
-     *        {@link NetworkRegistrationInfo#ServiceType}
-     * @param plmnDataServicePolicyMap data service policy map for the plmn with key as plmn and
-     *        data service policy as integer value with possible values
-     *        {@link CarrierConfigManager#SATELLITE_DATA_SUPPORT_MODE}
-     * @param plmnVoiceServicePolicyMap voice service policy map for the plmn with key as plmn and
-     *        voice service policy as integer value with possible values
-     *        @link CarrierConfigManager#SATELLITE_DATA_SUPPORT_MODE}
-     * @param callback callback for accept
+     * @param subId                     Subscription ID
+     * @param entitlementEnabled        {@code true} enables Satellite entitlement service.
+     * @param allowedPlmnList           Plmn [MCC+MNC] list of codes to determine if satellite
+     *                                  communication is allowed. Ex : "123123,12310".
+     * @param barredPlmnList            Plmn [MCC+MNC] list of codes to determine if satellite
+     *                                  communication is not allowed.  Ex : "123123,12310".
+     * @param plmnDataPlanMap           data plan per plmn of type {@link SatelliteDataPlan}.
+     *                                  Ex : {"302820":0, "31026":1}.
+     * @param plmnServiceTypeMap        list of supported services per plmn of type
+     *                                  {@link NetworkRegistrationInfo.ServiceType}).
+     *                                  Ex : {"302820":[1,3],"31026":[2,3]}.
+     * @param plmnDataServicePolicyMap  data support mode per plmn map of types
+     *                                  {@link CarrierConfigManager.SATELLITE_DATA_SUPPORT_MODE}.
+     *                                  Ex : {"302820":2, "31026":1}.
+     * @param plmnVoiceServicePolicyMap voice support mode per plmn map of types
+     *                                  {@link CarrierConfigManager.SATELLITE_DATA_SUPPORT_MODE}.
+     *                                  Ex : {"302820":2, "31026":1}.
+     * @param callback                  callback for accept.
      */
     public void onSatelliteEntitlementStatusUpdated(int subId, boolean entitlementEnabled,
             @Nullable List<String> allowedPlmnList, @Nullable List<String> barredPlmnList,
@@ -4358,7 +4360,9 @@ public class SatelliteController extends Handler {
                         plmnServiceTypeMap);
                 updatePlmnListPerCarrier(subId);
                 configureSatellitePlmnForCarrier(subId);
-                mSubscriptionManagerService.setSatelliteEntitlementPlmnList(subId, allowedPlmnList);
+                mSubscriptionManagerService.setSatelliteEntitlementInfo(subId, allowedPlmnList,
+                        barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap,
+                        plmnDataServicePolicyMap, plmnVoiceServicePolicyMap);
             } else {
                 loge("onSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
                         + "or invalid barredPlmnList");
@@ -5529,9 +5533,83 @@ public class SatelliteController extends Handler {
                     plogd("updateEntitlementPlmnListPerCarrier: read empty list");
                     return;
                 }
-                plogd("updateEntitlementPlmnListPerCarrier: entitlementPlmnList="
-                        + String.join(",", entitlementPlmnList));
+                plogd("updateEntitlementPlmnListPerCarrier: entitlementPlmnList=" + String.join(",",
+                        entitlementPlmnList));
                 mEntitlementPlmnListPerCarrier.put(subId, entitlementPlmnList);
+            }
+
+            if (mEntitlementBarredPlmnListPerCarrier.indexOfKey(subId) < 0) {
+                plogd("updateEntitlementBarredPlmnList: no correspondent cache, load from "
+                        + "persist storage");
+                List<String> entitlementBarredPlmnList =
+                        mSubscriptionManagerService.getSatelliteEntitlementBarredPlmnList(subId);
+                if (entitlementBarredPlmnList.isEmpty()) {
+                    plogd("updateEntitlementBarredPlmnList: read empty list");
+                    return;
+                }
+                plogd("updateEntitlementBarredPlmnList: entitlementBarredPlmnList=" + String.join(
+                        ",", entitlementBarredPlmnList));
+                mEntitlementBarredPlmnListPerCarrier.put(subId, entitlementBarredPlmnList);
+            }
+
+            if (mEntitlementDataPlanMapPerCarrier.indexOfKey(subId) < 0) {
+                plogd("updateEntitlementDataPlanForPlmns: no correspondent cache, load from "
+                        + "persist storage");
+                Map<String, Integer> entitlementDataPlanForPlmns =
+                        mSubscriptionManagerService.getSatelliteEntitlementDataPlanForPlmns(subId);
+                if (entitlementDataPlanForPlmns.isEmpty()) {
+                    plogd("updateEntitlementBarredPlmnList: read empty list");
+                    return;
+                }
+                plogd("updateEntitlementDataPlanForPlmns: entitlementDataPlanForPlmns="
+                        + entitlementDataPlanForPlmns);
+                mEntitlementDataPlanMapPerCarrier.put(subId, entitlementDataPlanForPlmns);
+            }
+
+            if (mEntitlementServiceTypeMapPerCarrier.indexOfKey(subId) < 0) {
+                plogd("updateEntitlementTypeMapPerCarrier: no correspondent cache, load from "
+                        + "persist storage");
+                Map<String, List<Integer>> entitlementTypeMapPerCarrier =
+                        mSubscriptionManagerService.getSatelliteEntitlementPlmnServiceTypeMap(
+                                subId);
+                if (entitlementTypeMapPerCarrier.isEmpty()) {
+                    plogd("updateEntitlementTypeMapPerCarrier: read empty list");
+                    return;
+                }
+                plogd("updateEntitlementTypeMapPerCarrier: entitlementTypeMapPerCarrier="
+                        + entitlementTypeMapPerCarrier);
+                mEntitlementServiceTypeMapPerCarrier.put(subId, entitlementTypeMapPerCarrier);
+            }
+
+            if (mEntitlementDataServicePolicyMapPerCarrier.indexOfKey(subId) < 0) {
+                plogd("updateEntitlementDataServicePolicy: no correspondent cache, load from "
+                        + "persist storage");
+                Map<String, Integer> entitlementDataServicePolicy =
+                        mSubscriptionManagerService.getSatelliteEntitlementPlmnDataServicePolicy(
+                                subId);
+                if (entitlementDataServicePolicy.isEmpty()) {
+                    plogd("updateEntitlementDataServicePolicy: read empty list");
+                    return;
+                }
+                plogd("updateEntitlementDataServicePolicy: entitlementDataServicePolicy="
+                        + entitlementDataServicePolicy);
+                mEntitlementDataServicePolicyMapPerCarrier.put(subId, entitlementDataServicePolicy);
+            }
+
+            if (mEntitlementVoiceServicePolicyMapPerCarrier.indexOfKey(subId) < 0) {
+                plogd("updateEntitlementVoiceServicePolicy: no correspondent cache, load from "
+                        + "persist storage");
+                Map<String, Integer> entitlementVoiceServicePolicy =
+                        mSubscriptionManagerService.getSatelliteEntitlementPlmnVoiceServicePolicy(
+                                subId);
+                if (entitlementVoiceServicePolicy.isEmpty()) {
+                    plogd("updateEntitlementVoiceServicePolicy: read empty list");
+                    return;
+                }
+                plogd("updateEntitlementVoiceServicePolicy: entitlementVoiceServicePolicy="
+                        + entitlementVoiceServicePolicy);
+                mEntitlementVoiceServicePolicyMapPerCarrier.put(subId,
+                        entitlementVoiceServicePolicy);
             }
         }
     }
