@@ -4570,6 +4570,10 @@ public class GsmCdmaPhone extends Phone {
 
     protected void phoneObjectUpdater(int newVoiceRadioTech) {
         logd("phoneObjectUpdater: newVoiceRadioTech=" + newVoiceRadioTech);
+        if (mFeatureFlags.phoneTypeCleanup()) {
+            logd("phoneObjectUpdater: no-op as CDMA cleanup flag is set");
+            return;
+        }
 
         // Check for a voice over LTE/NR replacement
         if (ServiceState.isPsOnlyTech(newVoiceRadioTech)
