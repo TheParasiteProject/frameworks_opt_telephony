@@ -467,8 +467,8 @@ public class DataSettingsManager extends Handler {
         if (isStandAloneOpportunistic(mSubId) && !enabled) return;
         boolean changed = GlobalSettingsHelper.setInt(mPhone.getContext(),
                 Settings.Global.MOBILE_DATA, mSubId, (enabled ? 1 : 0));
-        log("Set user data enabled to " + enabled + ", changed=" + changed + ", callingPackage="
-                + callingPackage);
+        logl("Set user data enabled to " + enabled + " on sub " + mSubId + ", changed="
+                + changed + ", callingPackage=" + callingPackage);
         if (changed) {
             logl("UserDataEnabled changed to " + enabled);
             mPhone.notifyUserMobileDataStateChanged(enabled);
@@ -555,8 +555,9 @@ public class DataSettingsManager extends Handler {
         // Will trigger handleDataOnRoamingChange() through observer
         boolean changed = GlobalSettingsHelper.setBoolean(mPhone.getContext(),
                 Settings.Global.DATA_ROAMING, mSubId, enabled);
+        logl("DataRoamingEnabled set to " + enabled + " on sub " + mSubId
+                + ", changed=" + changed);
         if (changed) {
-            logl("DataRoamingEnabled changed to " + enabled);
             mDataSettingsManagerCallbacks.forEach(callback -> callback.invokeFromExecutor(
                     () -> callback.onDataRoamingEnabledChanged(enabled)));
         }
