@@ -1358,6 +1358,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteSession1.countOfOutgoingSms = 4;
         mCarrierRoamingSatelliteSession1.countOfIncomingMms = 1;
         mCarrierRoamingSatelliteSession1.countOfOutgoingMms = 1;
+        mCarrierRoamingSatelliteSession1.isMultiSim = false;
 
         mCarrierRoamingSatelliteSession2 = new CarrierRoamingSatelliteSession();
         mCarrierRoamingSatelliteSession2.carrierId = 2;
@@ -1376,6 +1377,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteSession2.countOfOutgoingSms = 4;
         mCarrierRoamingSatelliteSession2.countOfIncomingMms = 1;
         mCarrierRoamingSatelliteSession2.countOfOutgoingMms = 1;
+        mCarrierRoamingSatelliteSession2.isMultiSim = true;
 
         mCarrierRoamingSatelliteSessions = new CarrierRoamingSatelliteSession[] {
                 mCarrierRoamingSatelliteSession1, mCarrierRoamingSatelliteSession2};
@@ -1391,6 +1393,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats1.satelliteSessionGapMaxSec = 4;
         mCarrierRoamingSatelliteControllerStats1.carrierId = 1;
         mCarrierRoamingSatelliteControllerStats1.isDeviceEntitled = true;
+        mCarrierRoamingSatelliteControllerStats1.isMultiSim = false;
 
         mCarrierRoamingSatelliteControllerStats2 = new CarrierRoamingSatelliteControllerStats();
         mCarrierRoamingSatelliteControllerStats2.configDataSource =
@@ -1403,6 +1406,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats2.satelliteSessionGapMaxSec = 15;
         mCarrierRoamingSatelliteControllerStats2.carrierId = 10;
         mCarrierRoamingSatelliteControllerStats2.isDeviceEntitled = false;
+        mCarrierRoamingSatelliteControllerStats2.isMultiSim = true;
 
         // CarrierRoamingSatelliteController has one data point
         mCarrierRoamingSatelliteControllerStats = new CarrierRoamingSatelliteControllerStats[] {
@@ -5153,6 +5157,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                 mCarrierRoamingSatelliteControllerStats1.satelliteSessionGapMaxSec;
         expected.carrierId = mCarrierRoamingSatelliteControllerStats1.carrierId;
         expected.isDeviceEntitled = mCarrierRoamingSatelliteControllerStats1.isDeviceEntitled;
+        expected.isMultiSim = mCarrierRoamingSatelliteControllerStats1.isMultiSim;
         verifyCurrentStateSavedToFileOnce();
         CarrierRoamingSatelliteControllerStats[] output =
                 mPersistAtomsStorage.getCarrierRoamingSatelliteControllerStats(0L);
@@ -6455,6 +6460,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                 assertEquals(expectedStats.satelliteSessionGapMaxSec,
                         stats.satelliteSessionGapMaxSec);
                 assertEquals(expectedStats.isDeviceEntitled, stats.isDeviceEntitled);
+                assertEquals(expectedStats.isMultiSim, stats.isMultiSim);
                 count++;
             }
         }

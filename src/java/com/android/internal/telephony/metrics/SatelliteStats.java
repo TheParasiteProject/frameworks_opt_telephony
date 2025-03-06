@@ -45,6 +45,7 @@ import java.util.Optional;
 /** Tracks Satellite metrics for each phone */
 public class SatelliteStats {
     private static final String TAG = SatelliteStats.class.getSimpleName();
+    private static final boolean DBG = false;
 
     private final PersistAtomsStorage mAtomsStorage =
             PhoneFactory.getMetricsCollector().getAtomsStorage();
@@ -1765,6 +1766,7 @@ public class SatelliteStats {
         private final int[] mSupportedSatelliteServices;
         private final int mServiceDataPolicy;
         private final long mSatelliteDataConsumedBytes;
+        private final boolean mIsMultiSim;
 
         private CarrierRoamingSatelliteSessionParams(Builder builder) {
             this.mCarrierId = builder.mCarrierId;
@@ -1788,6 +1790,7 @@ public class SatelliteStats {
             this.mServiceDataPolicy = builder.mServiceDataPolicy;
             this.mSatelliteDataConsumedBytes =
                     builder.mSatelliteDataConsumedBytes;
+            this.mIsMultiSim = builder.mIsMultiSim;
         }
 
         public int getCarrierId() {
@@ -1858,13 +1861,16 @@ public class SatelliteStats {
             return mSupportedSatelliteServices;
         }
 
-
         public int getServiceDataPolicy() {
             return mServiceDataPolicy;
         }
 
         public long getSatelliteDataConsumedBytes() {
             return mSatelliteDataConsumedBytes;
+        }
+
+        public boolean isMultiSim() {
+            return mIsMultiSim;
         }
 
         /**
@@ -1892,6 +1898,7 @@ public class SatelliteStats {
             int mServiceDataPolicy =
                     SatelliteConstants.SATELLITE_ENTITLEMENT_SERVICE_POLICY_UNKNOWN;
             long mSatelliteDataConsumedBytes = 0L;
+            private boolean mIsMultiSim = false;
 
             /**
              * Sets carrierId value of {@link CarrierRoamingSatelliteSession} atom
@@ -2069,6 +2076,15 @@ public class SatelliteStats {
             }
 
             /**
+             * Sets isMultiSim value of {@link CarrierRoamingSatelliteSession} atom, which indicates
+             * whether multi sim are activated or not, then returns Builder class
+             */
+            public Builder setIsMultiSim(boolean isMultiSim) {
+                this.mIsMultiSim = isMultiSim;
+                return this;
+            }
+
+            /**
              * Returns CarrierRoamingSatelliteSessionParams, which contains whole component of
              * {@link CarrierRoamingSatelliteSession} atom
              */
@@ -2101,6 +2117,7 @@ public class SatelliteStats {
                     + ", supportedSatelliteServices=" + Arrays.toString(mSupportedSatelliteServices)
                     + ", serviceDataPolicy=" + mServiceDataPolicy
                     + ", SatelliteDataConsumedBytes=" + mSatelliteDataConsumedBytes
+                    + ", isMultiSim=" + mIsMultiSim
                     + ")";
         }
     }
@@ -2120,6 +2137,7 @@ public class SatelliteStats {
         private static int sSatelliteSessionGapMaxSec;
         private static int sCarrierId;
         private static boolean sIsDeviceEntitled;
+        private static boolean sIsMultiSim;
 
         private CarrierRoamingSatelliteControllerStatsParams(Builder builder) {
             this.mConfigDataSource = builder.mConfigDataSource;
@@ -2132,23 +2150,28 @@ public class SatelliteStats {
 
             // Update session gap params only when they are explicitly provided
             if (builder.mSatelliteSessionGapMinSec.isPresent()) {
-                this.sSatelliteSessionGapMinSec = builder.mSatelliteSessionGapMinSec.get();
+                sSatelliteSessionGapMinSec = builder.mSatelliteSessionGapMinSec.get();
             }
             if (builder.mSatelliteSessionGapAvgSec.isPresent()) {
-                this.sSatelliteSessionGapAvgSec = builder.mSatelliteSessionGapAvgSec.get();
+                sSatelliteSessionGapAvgSec = builder.mSatelliteSessionGapAvgSec.get();
             }
             if (builder.mSatelliteSessionGapMaxSec.isPresent()) {
-                this.sSatelliteSessionGapMaxSec = builder.mSatelliteSessionGapMaxSec.get();
+                sSatelliteSessionGapMaxSec = builder.mSatelliteSessionGapMaxSec.get();
             }
 
             // Carrier ID value should be updated only when it is meaningful.
             if (builder.mCarrierId.isPresent()) {
-                this.sCarrierId = builder.mCarrierId.get();
+                sCarrierId = builder.mCarrierId.get();
             }
 
             // isDeviceEntitled value should be updated only when it is meaningful.
             if (builder.mIsDeviceEntitled.isPresent()) {
-                this.sIsDeviceEntitled = builder.mIsDeviceEntitled.get();
+                sIsDeviceEntitled = builder.mIsDeviceEntitled.get();
+            }
+
+            // isMulti value should be updated only when it is meaningful.
+            if (builder.mIsMultiSim.isPresent()) {
+                sIsMultiSim = builder.mIsMultiSim.get();
             }
         }
 
@@ -2189,6 +2212,10 @@ public class SatelliteStats {
             return sIsDeviceEntitled;
         }
 
+        public boolean isMultiSim() {
+            return sIsMultiSim;
+        }
+
         /**
          * A builder class to create {@link CarrierRoamingSatelliteControllerStatsParams}
          * data structure class
@@ -2203,6 +2230,7 @@ public class SatelliteStats {
             private Optional<Integer> mSatelliteSessionGapMaxSec = Optional.empty();
             private Optional<Integer> mCarrierId = Optional.empty();
             private Optional<Boolean> mIsDeviceEntitled = Optional.empty();
+            private Optional<Boolean> mIsMultiSim = Optional.empty();
 
             /**
              * Sets configDataSource value of {@link CarrierRoamingSatelliteControllerStats} atom
@@ -2282,6 +2310,12 @@ public class SatelliteStats {
                 return this;
             }
 
+            /** Sets whether the device is in DSDS state or not. */
+            public Builder setIsMultiSim(boolean isMultiSim) {
+                this.mIsMultiSim = Optional.of(isMultiSim);
+                return this;
+            }
+
             /**
              * Returns CarrierRoamingSatelliteControllerStatsParams, which contains whole component
              * of {@link CarrierRoamingSatelliteControllerStats} atom
@@ -2307,6 +2341,7 @@ public class SatelliteStats {
                     + ", satelliteSessionGapMaxSec=" + sSatelliteSessionGapMaxSec
                     + ", carrierId=" + sCarrierId
                     + ", isDeviceEntitled=" + sIsDeviceEntitled
+                    + ", isMultiSim=" + sIsMultiSim
                     + ")";
         }
     }
@@ -2837,7 +2872,7 @@ public class SatelliteStats {
                 param.getCountOfP2PSmsAvailableNotificationRemoved();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
         proto.versionOfSatelliteAccessConfig = param.getVersionSatelliteAccessConfig();
-
+        if (DBG) logd("onSatelliteControllerMetrics" + param);
         mAtomsStorage.addSatelliteControllerStats(proto);
     }
 
@@ -2866,6 +2901,7 @@ public class SatelliteStats {
         proto.isEmergency = param.getIsEmergency();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
         proto.maxInactivityDurationSec = param.getMaxInactivityDurationSec();
+        if (DBG) logd("onSatelliteSessionMetrics" + param);
         mAtomsStorage.addSatelliteSessionStats(proto);
     }
 
@@ -2879,6 +2915,7 @@ public class SatelliteStats {
         proto.isDemoMode = param.getIsDemoMode();
         proto.carrierId = param.getCarrierId();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
+        if (DBG) logd("onSatelliteIncomingDatagramMetrics" + param);
         mAtomsStorage.addSatelliteIncomingDatagramStats(proto);
     }
 
@@ -2893,6 +2930,7 @@ public class SatelliteStats {
         proto.isDemoMode = param.getIsDemoMode();
         proto.carrierId = param.getCarrierId();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
+        if (DBG) logd("onSatelliteOutgoingDatagramMetrics: " + param);
         mAtomsStorage.addSatelliteOutgoingDatagramStats(proto);
     }
 
@@ -2905,6 +2943,7 @@ public class SatelliteStats {
         proto.isCanceled = param.getIsCanceled();
         proto.carrierId = param.getCarrierId();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
+        if (DBG) logd("onSatelliteProvisionMetrics: " + param);
         mAtomsStorage.addSatelliteProvisionStats(proto);
     }
 
@@ -2923,6 +2962,7 @@ public class SatelliteStats {
         proto.carrierId = param.getCarrierId();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
         proto.count = 1;
+        if (DBG) logd("onSatelliteSosMessageRecommender: " + param);
         mAtomsStorage.addSatelliteSosMessageRecommenderStats(proto);
     }
 
@@ -2949,6 +2989,8 @@ public class SatelliteStats {
         proto.supportedSatelliteServices = param.mSupportedSatelliteServices;
         proto.serviceDataPolicy = param.mServiceDataPolicy;
         proto.satelliteDataConsumedBytes = param.mSatelliteDataConsumedBytes;
+        proto.isMultiSim = param.isMultiSim();
+        if (DBG) logd("onCarrierRoamingSatelliteSessionMetrics: " + param);
         mAtomsStorage.addCarrierRoamingSatelliteSessionStats(proto);
     }
 
@@ -2965,11 +3007,14 @@ public class SatelliteStats {
         proto.satelliteSessionGapMaxSec = param.getSatelliteSessionGapMaxSec();
         proto.carrierId = param.getCarrierId();
         proto.isDeviceEntitled = param.isDeviceEntitled();
+        proto.isMultiSim = param.isMultiSim();
+        if (DBG) logd("onCarrierRoamingSatelliteControllerStatsMetrics: " + param);
         mAtomsStorage.addCarrierRoamingSatelliteControllerStats(proto);
     }
 
     /** Reset carrier roaming satellite controller stats after atom is pulled. */
     public synchronized void resetCarrierRoamingSatelliteControllerStats() {
+        if (DBG) logd("resetCarrierRoamingSatelliteControllerStats:");
         com.android.internal.telephony.satellite.metrics
                 .CarrierRoamingSatelliteControllerStats.getOrCreateInstance()
                 .resetSessionGapLists();
@@ -2986,6 +3031,7 @@ public class SatelliteStats {
         proto.isAllowedServiceEntitlement = param.getIsAllowedServiceEntitlement();
         proto.entitlementServiceType = param.getEntitlementServiceType();
         proto.entitlementDataPolicy = param.getEntitlementDataPolicy();
+        if (DBG) logd("onSatelliteEntitlementMetrics: " + param);
         mAtomsStorage.addSatelliteEntitlementStats(proto);
     }
 
@@ -2996,6 +3042,7 @@ public class SatelliteStats {
         proto.oemConfigResult = param.getOemConfigResult();
         proto.carrierConfigResult = param.getCarrierConfigResult();
         proto.count = param.getCount();
+        if (DBG) logd("onSatelliteConfigUpdaterMetrics: " + param);
         mAtomsStorage.addSatelliteConfigUpdaterStats(proto);
     }
 
@@ -3015,6 +3062,11 @@ public class SatelliteStats {
         proto.carrierId = param.getCarrierId();
         proto.triggeringEvent = param.getTriggeringEvent();
         proto.isNtnOnlyCarrier = param.isNtnOnlyCarrier();
+        if (DBG) logd("onSatelliteAccessControllerMetrics: " + param);
         mAtomsStorage.addSatelliteAccessControllerStats(proto);
+    }
+
+    private static void logd(String msg) {
+        Rlog.d(TAG, msg);
     }
 }
