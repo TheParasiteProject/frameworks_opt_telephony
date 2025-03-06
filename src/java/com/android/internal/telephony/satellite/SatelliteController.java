@@ -3893,25 +3893,28 @@ public class SatelliteController extends Handler {
      * @return The list of services supported by the carrier associated with the
      */
     private List<Integer> getSatelliteSupportedServicesFromConfig(int subId, String plmn) {
-        synchronized (mSupportedSatelliteServicesLock) {
-            if (mSatelliteServicesSupportedByCarriersFromConfig.containsKey(subId)) {
-                Map<String, Set<Integer>> supportedServices =
-                        mSatelliteServicesSupportedByCarriersFromConfig.get(subId);
-                if (supportedServices != null && supportedServices.containsKey(plmn)) {
-                    return new ArrayList<>(supportedServices.get(plmn));
+        if (plmn != null && !plmn.isEmpty()) {
+            synchronized (mSupportedSatelliteServicesLock) {
+                if (mSatelliteServicesSupportedByCarriersFromConfig.containsKey(subId)) {
+                    Map<String, Set<Integer>> supportedServices =
+                            mSatelliteServicesSupportedByCarriersFromConfig.get(subId);
+                    if (supportedServices != null && supportedServices.containsKey(plmn)) {
+                        return new ArrayList<>(supportedServices.get(plmn));
+                    } else {
+                        loge("getSupportedSatelliteServices: subId=" + subId
+                                + ", supportedServices "
+                                + "does not contain key plmn=" + plmn);
+                    }
                 } else {
-                    loge("getSupportedSatelliteServices: subId=" + subId + ", supportedServices "
-                            + "does not contain key plmn=" + plmn);
+                    loge("getSupportedSatelliteServices: "
+                            + "mSatelliteServicesSupportedByCarriersFromConfig does not contain"
+                            + " key subId=" + subId);
                 }
-            } else {
-                loge("getSupportedSatelliteServices: "
-                        + "mSatelliteServicesSupportedByCarriersFromConfig does not contain key "
-                        + "subId=" + subId);
             }
         }
 
-            /* Returns default capabilities when carrier config does not contain service
-               capabilities for the given plmn */
+        /* Returns default capabilities when carrier config does not contain service capabilities
+         for the given plmn */
         PersistableBundle config = getPersistableBundle(subId);
         int [] defaultCapabilities = config.getIntArray(
                 KEY_CARRIER_ROAMING_SATELLITE_DEFAULT_SERVICES_INT_ARRAY);
@@ -3931,25 +3934,35 @@ public class SatelliteController extends Handler {
      * @param subId Subscription ID.
      * @param plmn The satellite plmn.
      * @return The list of services supported by the carrier associated with the {@code subId} for
-     * the satellite network {@code plmn}.
+     * the satellite network {@code plmn}. Returns empty list at invalid sub id.
+     *
      */
     @NonNull
     public List<Integer> getSupportedSatelliteServicesForPlmn(int subId, String plmn) {
+
+        if (!isValidSubscriptionId(subId)) {
+            logd("getSupportedSatelliteServices: invalid sub id");
+            return new ArrayList<>();
+        }
         synchronized (mSupportedSatelliteServicesLock) {
-            Map<String, List<Integer>> allowedServicesList
-                    = mEntitlementServiceTypeMapPerCarrier.get(subId);
-            if (allowedServicesList != null && allowedServicesList.containsKey(plmn)) {
-                List<Integer> allowedServiceValues = new ArrayList<>(allowedServicesList.get(plmn));
-                if (allowedServiceValues != null && !allowedServiceValues.isEmpty()) {
-                    if (isDataServiceUpdateRequired(subId, plmn, allowedServiceValues)) {
-                        logd("getSupportedSatelliteServices: data service added to satellite plmn");
-                        allowedServiceValues.add(NetworkRegistrationInfo.SERVICE_TYPE_DATA);
+            if (plmn != null && !plmn.isEmpty()) {
+                Map<String, List<Integer>> allowedServicesList =
+                        mEntitlementServiceTypeMapPerCarrier.get(subId);
+                if (allowedServicesList != null && allowedServicesList.containsKey(plmn)) {
+                    List<Integer> allowedServiceValues = new ArrayList<>(
+                            allowedServicesList.get(plmn));
+                    if (allowedServiceValues != null && !allowedServiceValues.isEmpty()) {
+                        if (isDataServiceUpdateRequired(subId, plmn, allowedServiceValues)) {
+                            logd("getSupportedSatelliteServices: data service added to satellite"
+                                    + " plmn");
+                            allowedServiceValues.add(NetworkRegistrationInfo.SERVICE_TYPE_DATA);
+                        }
+                        if (allowedServiceValues.contains(NetworkRegistrationInfo.SERVICE_TYPE_DATA)
+                                && isMmsServiceUpdateRequired(subId, plmn, allowedServiceValues)) {
+                            allowedServiceValues.add(NetworkRegistrationInfo.SERVICE_TYPE_MMS);
+                        }
+                        return allowedServiceValues;
                     }
-                    if (allowedServiceValues.contains(NetworkRegistrationInfo.SERVICE_TYPE_DATA)
-                            && isMmsServiceUpdateRequired(subId, plmn, allowedServiceValues)) {
-                        allowedServiceValues.add(NetworkRegistrationInfo.SERVICE_TYPE_MMS);
-                    }
-                    return allowedServiceValues;
                 }
             }
 
@@ -8996,7 +9009,7 @@ public class SatelliteController extends Handler {
      * @return Supported modes {@link CarrierConfigManager.SATELLITE_DATA_SUPPORT_MODE}
      */
     public int getSatelliteDataServicePolicyForPlmn(int subId, String plmn) {
-        if (plmn != null) {
+        if (plmn != null && isValidSubscriptionId(subId)) {
             synchronized (mSupportedSatelliteServicesLock) {
                 Map<String, Integer> dataServicePolicy =
                         mEntitlementDataServicePolicyMapPerCarrier.get(
@@ -9058,5 +9071,24 @@ public class SatelliteController extends Handler {
         } else {
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Method to return the current satellite data service policy supported mode for the
+     * subscription id based on carrier config.
+     *
+     * @param subId current subscription id.
+     *
+     * @return Supported modes {@link SatelliteManager#SatelliteDataSupportMode}
+     *
+     * @hide
+     */
+    @SatelliteManager.SatelliteDataSupportMode
+    public int getSatelliteDataSupportMode(int subId) {
+        if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
+            return SatelliteManager.SATELLITE_DATA_SUPPORT_RESTRICTED;
+        }
+
+        return getSatelliteDataServicePolicyForPlmn(subId, "");
     }
 }
