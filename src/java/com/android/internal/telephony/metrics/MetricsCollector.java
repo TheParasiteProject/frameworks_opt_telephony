@@ -1612,7 +1612,8 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 stats.satelliteSessionGapMaxSec,
                 stats.carrierId,
                 stats.isDeviceEntitled,
-                stats.isMultiSim);
+                stats.isMultiSim,
+                stats.countOfSatelliteSessions);
     }
 
     private static StatsEvent buildStatsEvent(SatelliteEntitlement stats) {

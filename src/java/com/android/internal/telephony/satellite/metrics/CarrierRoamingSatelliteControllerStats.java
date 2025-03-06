@@ -113,6 +113,10 @@ public class CarrierRoamingSatelliteControllerStats {
     /** Log carrier roaming satellite session start */
     public void onSessionStart() {
         mSessionStartTimeList.add(getCurrentTime());
+        mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
+                new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
+                        .increaseCountOfSatelliteSessions()
+                        .build());
     }
 
     /** Log carrier roaming satellite session end */
