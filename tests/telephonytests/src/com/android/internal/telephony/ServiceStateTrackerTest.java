@@ -49,7 +49,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
@@ -307,9 +306,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
 
         int dds = SubscriptionManager.getDefaultDataSubscriptionId();
         doReturn(dds).when(mPhone).getSubId();
-
-        doReturn(true).when(mPackageManager)
-                .hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA);
 
         // Set cellular radio on after boot by default
         mContextFixture.putBooleanResource(
@@ -2940,15 +2936,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
                 sst.mSS.getNetworkRegistrationInfo(2, 1);
         assertEquals(nrVopsSupportInfo,
                 sSnetworkRegistrationInfo.getDataSpecificInfo().getVopsSupportInfo());
-    }
-
-
-    @Test
-    @SmallTest
-    public void testEriLoading() {
-        sst.obtainMessage(GsmCdmaPhone.EVENT_CARRIER_CONFIG_CHANGED, null).sendToTarget();
-        waitForLastHandlerAction(mSSTTestHandler.getThreadHandler());
-        verify(mEriManager, times(1)).loadEriFile();
     }
 
     @Test
