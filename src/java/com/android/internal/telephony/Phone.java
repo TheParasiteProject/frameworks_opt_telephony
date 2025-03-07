@@ -1059,16 +1059,17 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Notify the phone that an SMS has been sent. This will be used determine if the SMS was sent
-     * to an emergency address.
+     * Notify the phone that an SMS has been sent. This will be used to determine if the SMS was
+     * sent to an emergency address.
+     *
      * @param destinationAddress the address that the SMS was sent to.
      */
     public void notifySmsSent(String destinationAddress) {
-        TelephonyManager m = (TelephonyManager) getContext().getSystemService(
-                Context.TELEPHONY_SERVICE);
+        TelephonyManager m =
+                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
         if (mContext.getPackageManager() != null
-                && mContext.getPackageManager().hasSystemFeature(
-                        PackageManager.FEATURE_TELEPHONY_CALLING)) {
+                && mContext.getPackageManager()
+                                .hasSystemFeature(PackageManager.FEATURE_TELEPHONY_MESSAGING)) {
             if (m != null && m.isEmergencyNumber(destinationAddress)) {
                 mLocalLog.log("Emergency SMS detected, recording time.");
                 mTimeLastEmergencySmsSentMs = SystemClock.elapsedRealtime();

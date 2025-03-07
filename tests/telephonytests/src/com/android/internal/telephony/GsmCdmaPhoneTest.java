@@ -748,16 +748,16 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
         doReturn(true).when(mTelephonyManager).isEmergencyNumber(emergencyNumber);
 
         // Feature flag enabled
-        // Device does not have FEATURE_TELEPHONY_CALLING
+        // Device does not have FEATURE_TELEPHONY_MESSAGING
         doReturn(false).when(mPackageManager).hasSystemFeature(
-                eq(PackageManager.FEATURE_TELEPHONY_CALLING));
+                eq(PackageManager.FEATURE_TELEPHONY_MESSAGING));
         mPhoneUT.notifySmsSent(emergencyNumber);
         processAllMessages();
         assertFalse(mPhoneUT.isInEmergencySmsMode());
 
-        // Device has FEATURE_TELEPHONY_CALLING
+        // Device has FEATURE_TELEPHONY_MESSAGING
         doReturn(true).when(mPackageManager).hasSystemFeature(
-                eq(PackageManager.FEATURE_TELEPHONY_CALLING));
+                eq(PackageManager.FEATURE_TELEPHONY_MESSAGING));
         mPhoneUT.notifySmsSent(emergencyNumber);
         processAllMessages();
         assertTrue(mPhoneUT.isInEmergencySmsMode());
