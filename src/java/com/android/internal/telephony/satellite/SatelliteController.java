@@ -2140,7 +2140,8 @@ public class SatelliteController extends Handler {
                     int defaultSubId = mSubscriptionManagerService.getDefaultSubId();
                     boolean isEntitled = mSatelliteEntitlementStatusPerCarrier.get(defaultSubId,
                             false);
-                    mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(isEntitled);
+                    mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(defaultSubId,
+                            isEntitled);
                 }
                 sendMessageDelayed(obtainMessage(
                                 EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT),
@@ -4336,7 +4337,8 @@ public class SatelliteController extends Handler {
             if (mSatelliteEntitlementStatusPerCarrier.get(subId, false) != entitlementEnabled) {
                 logd("update the carrier satellite enabled to " + entitlementEnabled);
                 mSatelliteEntitlementStatusPerCarrier.put(subId, entitlementEnabled);
-                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(entitlementEnabled);
+                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId,
+                        entitlementEnabled);
                 if (hasMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT)) {
                     removeMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT);
                     sendMessageDelayed(obtainMessage(
@@ -5345,7 +5347,7 @@ public class SatelliteController extends Handler {
                 if (!entitlementPlmnList.isEmpty()) {
                     mMergedPlmnListPerCarrier.put(subId, entitlementPlmnList);
                     plogd("mMergedPlmnListPerCarrier is updated by Entitlement");
-                    mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(
+                    mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                             SatelliteConstants.CONFIG_DATA_SOURCE_ENTITLEMENT);
                     return;
                 }
@@ -5360,7 +5362,7 @@ public class SatelliteController extends Handler {
                     plogd("mMergedPlmnListPerCarrier is updated by ConfigUpdater : "
                             + String.join(",", plmnList));
                     mMergedPlmnListPerCarrier.put(subId, plmnList);
-                    mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(
+                    mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                             SatelliteConstants.CONFIG_DATA_SOURCE_CONFIG_UPDATER);
                     return;
                 }
@@ -5373,7 +5375,7 @@ public class SatelliteController extends Handler {
                                 .stream().toList();
                 plogd("mMergedPlmnListPerCarrier is updated by carrier config: "
                         + String.join(",", carrierPlmnList));
-                mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(
+                mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                         SatelliteConstants.CONFIG_DATA_SOURCE_CARRIER_CONFIG);
             } else {
                 carrierPlmnList = new ArrayList<>();
@@ -5869,7 +5871,7 @@ public class SatelliteController extends Handler {
                 }
                 boolean result = entitlementStatus.equals("1");
                 mSatelliteEntitlementStatusPerCarrier.put(subId, result);
-                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(result);
+                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId, result);
                 if (hasMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT)) {
                     removeMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT);
                     sendMessageDelayed(obtainMessage(
@@ -6229,14 +6231,14 @@ public class SatelliteController extends Handler {
                 sessionStats.onSessionStart(phone.getCarrierId(), phone,
                         supported_satellite_services, dataPolicy);
                 mCarrierRoamingSatelliteSessionStatsMap.put(subId, sessionStats);
-                mCarrierRoamingSatelliteControllerStats.onSessionStart();
+                mCarrierRoamingSatelliteControllerStats.onSessionStart(subId);
             } else if (lastNotifiedNtnMode && !currNtnMode) {
                 // Log satellite session end
                 CarrierRoamingSatelliteSessionStats sessionStats =
                         mCarrierRoamingSatelliteSessionStatsMap.get(subId);
                 sessionStats.onSessionEnd();
                 mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
-                mCarrierRoamingSatelliteControllerStats.onSessionEnd();
+                mCarrierRoamingSatelliteControllerStats.onSessionEnd(subId);
             }
         }
     }
@@ -6909,7 +6911,7 @@ public class SatelliteController extends Handler {
                 Context.RECEIVER_EXPORTED);
 
         mIsNotificationShowing = true;
-        mCarrierRoamingSatelliteControllerStats.reportCountOfSatelliteNotificationDisplayed();
+        mCarrierRoamingSatelliteControllerStats.reportCountOfSatelliteNotificationDisplayed(subId);
         mCarrierRoamingSatelliteControllerStats.reportCarrierId(getSatelliteCarrierId());
         mSessionMetricsStats.addCountOfSatelliteNotificationDisplayed();
     }

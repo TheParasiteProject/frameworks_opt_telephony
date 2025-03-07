@@ -40,6 +40,7 @@ import com.android.internal.telephony.satellite.SatelliteConstants;
 import com.android.telephony.Rlog;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Tracks Satellite metrics for each phone */
@@ -2301,7 +2302,6 @@ public class SatelliteStats {
             return mConfigDataSource;
         }
 
-
         public int getCountOfEntitlementStatusQueryRequest() {
             return mCountOfEntitlementStatusQueryRequest;
         }
@@ -2460,6 +2460,37 @@ public class SatelliteStats {
                 return new SatelliteStats()
                         .new CarrierRoamingSatelliteControllerStatsParams(Builder.this);
             }
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            CarrierRoamingSatelliteControllerStatsParams that =
+                    (CarrierRoamingSatelliteControllerStatsParams) obj;
+            return mConfigDataSource == that.getConfigDataSource()
+                    && mCountOfEntitlementStatusQueryRequest
+                    == that.getCountOfEntitlementStatusQueryRequest()
+                    && mCountOfSatelliteConfigUpdateRequest
+                    == that.getCountOfSatelliteConfigUpdateRequest()
+                    && mCountOfSatelliteNotificationDisplayed
+                    == that.getCountOfSatelliteNotificationDisplayed()
+                    && sSatelliteSessionGapMinSec == that.getSatelliteSessionGapMinSec()
+                    && sSatelliteSessionGapAvgSec == that.getSatelliteSessionGapAvgSec()
+                    && sSatelliteSessionGapMaxSec == that.getSatelliteSessionGapMaxSec()
+                    && sCarrierId == that.getCarrierId()
+                    && sIsDeviceEntitled == that.isDeviceEntitled()
+                    && sIsMultiSim == that.isMultiSim()
+                    && mCountOfSatelliteSessions == that.getCountOfSatelliteSessions();
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mConfigDataSource, mCountOfEntitlementStatusQueryRequest,
+                    mCountOfSatelliteConfigUpdateRequest, mCountOfSatelliteNotificationDisplayed,
+                    sSatelliteSessionGapMinSec, sSatelliteSessionGapAvgSec,
+                    sSatelliteSessionGapMaxSec, sCarrierId, sIsDeviceEntitled, sIsMultiSim,
+                    mCountOfSatelliteSessions);
         }
 
         @Override
