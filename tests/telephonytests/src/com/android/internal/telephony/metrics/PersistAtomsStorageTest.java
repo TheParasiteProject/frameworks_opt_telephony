@@ -1394,6 +1394,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats1.carrierId = 1;
         mCarrierRoamingSatelliteControllerStats1.isDeviceEntitled = true;
         mCarrierRoamingSatelliteControllerStats1.isMultiSim = false;
+        mCarrierRoamingSatelliteControllerStats1.countOfSatelliteSessions = 1;
 
         mCarrierRoamingSatelliteControllerStats2 = new CarrierRoamingSatelliteControllerStats();
         mCarrierRoamingSatelliteControllerStats2.configDataSource =
@@ -1407,6 +1408,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats2.carrierId = 10;
         mCarrierRoamingSatelliteControllerStats2.isDeviceEntitled = false;
         mCarrierRoamingSatelliteControllerStats2.isMultiSim = true;
+        mCarrierRoamingSatelliteControllerStats2.countOfSatelliteSessions = 2;
 
         // CarrierRoamingSatelliteController has one data point
         mCarrierRoamingSatelliteControllerStats = new CarrierRoamingSatelliteControllerStats[] {
@@ -5158,6 +5160,8 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         expected.carrierId = mCarrierRoamingSatelliteControllerStats1.carrierId;
         expected.isDeviceEntitled = mCarrierRoamingSatelliteControllerStats1.isDeviceEntitled;
         expected.isMultiSim = mCarrierRoamingSatelliteControllerStats1.isMultiSim;
+        expected.countOfSatelliteSessions =
+                mCarrierRoamingSatelliteControllerStats1.countOfSatelliteSessions * 2;
         verifyCurrentStateSavedToFileOnce();
         CarrierRoamingSatelliteControllerStats[] output =
                 mPersistAtomsStorage.getCarrierRoamingSatelliteControllerStats(0L);
@@ -6461,6 +6465,8 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                         stats.satelliteSessionGapMaxSec);
                 assertEquals(expectedStats.isDeviceEntitled, stats.isDeviceEntitled);
                 assertEquals(expectedStats.isMultiSim, stats.isMultiSim);
+                assertEquals(expectedStats.countOfSatelliteSessions,
+                        stats.countOfSatelliteSessions);
                 count++;
             }
         }

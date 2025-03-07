@@ -460,6 +460,7 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setCarrierId(10)
                         .setIsDeviceEntitled(true)
                         .setIsMultiSim(true)
+                        .increaseCountOfSatelliteSessions()
                         .build();
 
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(param);
@@ -481,6 +482,7 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(param.getCarrierId(), stats.carrierId);
         assertEquals(param.isDeviceEntitled(), stats.isDeviceEntitled);
         assertEquals(param.isMultiSim(), stats.isMultiSim);
+        assertEquals(param.getCountOfSatelliteSessions(), stats.countOfSatelliteSessions);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }
@@ -500,6 +502,7 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setCarrierId(10)
                         .setIsDeviceEntitled(true)
                         .setIsMultiSim(true)
+                        .increaseCountOfSatelliteSessions()
                         .build();
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(param);
 
@@ -545,6 +548,7 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(20, stats.carrierId);
         assertEquals(false, stats.isDeviceEntitled);
         assertEquals(param.isMultiSim(), stats.isMultiSim);
+        assertEquals(param.getCountOfSatelliteSessions(), stats.countOfSatelliteSessions);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }

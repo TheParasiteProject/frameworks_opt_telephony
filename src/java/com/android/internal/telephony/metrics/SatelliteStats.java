@@ -2138,6 +2138,7 @@ public class SatelliteStats {
         private static int sCarrierId;
         private static boolean sIsDeviceEntitled;
         private static boolean sIsMultiSim;
+        private final int mCountOfSatelliteSessions;
 
         private CarrierRoamingSatelliteControllerStatsParams(Builder builder) {
             this.mConfigDataSource = builder.mConfigDataSource;
@@ -2173,6 +2174,8 @@ public class SatelliteStats {
             if (builder.mIsMultiSim.isPresent()) {
                 sIsMultiSim = builder.mIsMultiSim.get();
             }
+
+            this.mCountOfSatelliteSessions = builder.mCountOfSatelliteSessions;
         }
 
         public int getConfigDataSource() {
@@ -2216,6 +2219,10 @@ public class SatelliteStats {
             return sIsMultiSim;
         }
 
+        public int getCountOfSatelliteSessions() {
+            return mCountOfSatelliteSessions;
+        }
+
         /**
          * A builder class to create {@link CarrierRoamingSatelliteControllerStatsParams}
          * data structure class
@@ -2231,6 +2238,7 @@ public class SatelliteStats {
             private Optional<Integer> mCarrierId = Optional.empty();
             private Optional<Boolean> mIsDeviceEntitled = Optional.empty();
             private Optional<Boolean> mIsMultiSim = Optional.empty();
+            private int mCountOfSatelliteSessions = 0;
 
             /**
              * Sets configDataSource value of {@link CarrierRoamingSatelliteControllerStats} atom
@@ -2317,6 +2325,15 @@ public class SatelliteStats {
             }
 
             /**
+             * Increase the countOfSatelliteSession value of
+             * {@link CarrierRoamingSatelliteControllerStats} atom by one then returns Builder class
+             */
+            public Builder increaseCountOfSatelliteSessions() {
+                this.mCountOfSatelliteSessions++;
+                return this;
+            }
+
+            /**
              * Returns CarrierRoamingSatelliteControllerStatsParams, which contains whole component
              * of {@link CarrierRoamingSatelliteControllerStats} atom
              */
@@ -2342,6 +2359,7 @@ public class SatelliteStats {
                     + ", carrierId=" + sCarrierId
                     + ", isDeviceEntitled=" + sIsDeviceEntitled
                     + ", isMultiSim=" + sIsMultiSim
+                    + ", countOfSatelliteSession=" + mCountOfSatelliteSessions
                     + ")";
         }
     }
@@ -3008,6 +3026,7 @@ public class SatelliteStats {
         proto.carrierId = param.getCarrierId();
         proto.isDeviceEntitled = param.isDeviceEntitled();
         proto.isMultiSim = param.isMultiSim();
+        proto.countOfSatelliteSessions = param.getCountOfSatelliteSessions();
         if (DBG) logd("onCarrierRoamingSatelliteControllerStatsMetrics: " + param);
         mAtomsStorage.addCarrierRoamingSatelliteControllerStats(proto);
     }
