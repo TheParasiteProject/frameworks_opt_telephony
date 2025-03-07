@@ -2053,6 +2053,7 @@ public class SatelliteStats {
              */
             public Builder setSupportedSatelliteServices(int[] supportedSatelliteServices) {
                 this.mSupportedSatelliteServices = supportedSatelliteServices;
+                Arrays.sort(this.mSupportedSatelliteServices);
                 return this;
             }
 
@@ -2495,6 +2496,7 @@ public class SatelliteStats {
              */
             public Builder setEntitlementServiceType(int[] entitlementServiceType) {
                 this.mEntitlementServiceType = entitlementServiceType;
+                Arrays.sort(this.mEntitlementServiceType);
                 return this;
             }
 
