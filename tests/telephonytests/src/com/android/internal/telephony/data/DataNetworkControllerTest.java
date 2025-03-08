@@ -3915,6 +3915,13 @@ public class DataNetworkControllerTest extends TelephonyTest {
         processAllMessages();
 
         verify(mMockedDataNetworkControllerCallback).onNrAdvancedCapableByPcoChanged(eq(true));
+
+        // Deactivate the data, verify notify PCO gone.
+        mDataNetworkControllerUT.tearDownAllDataNetworks(
+                DataNetwork.TEAR_DOWN_REASON_AIRPLANE_MODE_ON);
+        processAllFutureMessages();
+
+        verify(mMockedDataNetworkControllerCallback).onNrAdvancedCapableByPcoChanged(eq(false));
     }
 
     @Test

@@ -3398,6 +3398,7 @@ public class DataNetworkController extends Handler {
         mPendingImsDeregDataNetworks.remove(dataNetwork);
         mDataRetryManager.cancelPendingHandoverRetry(dataNetwork);
         if (dataNetwork.isInternetSupported()) updateOverallInternetDataState();
+        onPcoDataChanged(dataNetwork);
 
         if (dataNetwork.getNetworkCapabilities().hasCapability(
                 NetworkCapabilities.NET_CAPABILITY_IMS)) {
