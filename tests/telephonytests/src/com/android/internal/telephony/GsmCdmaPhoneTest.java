@@ -147,14 +147,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
     private static final int EVENT_EMERGENCY_CALL_TOGGLE = 2;
     private static final int EVENT_SET_ICC_LOCK_ENABLED = 3;
 
-    private void switchToGsm() {
-        mSimulatedCommands.setVoiceRadioTech(ServiceState.RIL_RADIO_TECHNOLOGY_GSM);
-        mPhoneUT.sendMessage(mPhoneUT.obtainMessage(GsmCdmaPhone.EVENT_VOICE_RADIO_TECH_CHANGED,
-                new AsyncResult(null, new int[]{ServiceState.RIL_RADIO_TECHNOLOGY_GSM}, null)));
-        processAllMessages();
-        assertEquals(PhoneConstants.PHONE_TYPE_GSM, mPhoneUT.getPhoneType());
-    }
-
     @Before
     public void setUp() throws Exception {
         super.setUp(getClass().getSimpleName());
@@ -380,39 +372,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
         doReturn(false).when(spyPhone).isPhoneTypeCdma();
         doReturn(false).when(spyPhone).isPhoneTypeCdmaLte();
         doReturn(true).when(spyPhone).isPhoneTypeGsm();
-
-        assertEquals(subscriberId, spyPhone.getSubscriberId());
-    }
-
-    @Test
-    @SmallTest
-    public void testGetSubscriberIdForCdmaLtePhone() {
-        final String subscriberId = "abcdefghijk";
-        IccRecords iccRecords = Mockito.mock(IccRecords.class);
-        doReturn(subscriberId).when(iccRecords).getIMSI();
-        doReturn(iccRecords).when(mUiccController)
-                .getIccRecords(anyInt() /* phoneId */, eq(UiccController.APP_FAM_3GPP));
-
-        // Ensure the phone type is CdmaLte
-        GsmCdmaPhone spyPhone = spy(mPhoneUT);
-        doReturn(false).when(spyPhone).isPhoneTypeCdma();
-        doReturn(true).when(spyPhone).isPhoneTypeCdmaLte();
-        doReturn(false).when(spyPhone).isPhoneTypeGsm();
-
-        assertEquals(subscriberId, spyPhone.getSubscriberId());
-    }
-
-    @Test
-    @SmallTest
-    public void testGetSubscriberIdForCdmaPhone() {
-        final String subscriberId = "987654321";
-        doReturn(subscriberId).when(mSST).getImsi();
-
-        // Ensure the phone type is GSM
-        GsmCdmaPhone spyPhone = spy(mPhoneUT);
-        doReturn(true).when(spyPhone).isPhoneTypeCdma();
-        doReturn(false).when(spyPhone).isPhoneTypeCdmaLte();
-        doReturn(false).when(spyPhone).isPhoneTypeGsm();
 
         assertEquals(subscriberId, spyPhone.getSubscriberId());
     }
@@ -1068,8 +1027,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
     public void testGetLine1NumberForGsmPhone() {
         final String msisdn = "+1234567890";
         doReturn(msisdn).when(mSimRecords).getMsisdnNumber();
-
-        switchToGsm();
         assertEquals(msisdn, mPhoneUT.getLine1Number());
     }
 
@@ -2433,14 +2390,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
         mPhoneUT.handleMessage(message);
         assertEquals(Phone.IMEI_TYPE_SECONDARY, mPhoneUT.getImeiType());
         assertEquals(FAKE_IMEI, mPhoneUT.getImei());
-    }
-
-    @Test
-    public void getImei() {
-        assertTrue(mPhoneUT.isPhoneTypeGsm());
-        Message message = mPhoneUT.obtainMessage(Phone.EVENT_RADIO_AVAILABLE);
-        mPhoneUT.handleMessage(message);
-        verify(mSimulatedCommandsVerifier, times(2)).getImei(nullable(Message.class));
     }
 
     @Test

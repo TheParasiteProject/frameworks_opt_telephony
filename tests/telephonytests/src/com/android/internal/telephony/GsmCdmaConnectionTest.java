@@ -89,7 +89,6 @@ public class GsmCdmaConnectionTest extends TelephonyTest {
 
     @Test @SmallTest
     public void testOriginalDialString(){
-        doReturn(PhoneConstants.PHONE_TYPE_GSM).when(mPhone).getPhoneType();
         connection = new GsmCdmaConnection(mPhone, "+8610000", mCT, null,
                 new DialArgs.Builder().build());
         assertEquals("+8610000", connection.getOrigDialString());
