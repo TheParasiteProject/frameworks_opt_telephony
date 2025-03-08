@@ -391,6 +391,7 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     private int mPreferredUsageSetting = SubscriptionManager.USAGE_SETTING_UNKNOWN;
     private int mUsageSettingFromModem = SubscriptionManager.USAGE_SETTING_UNKNOWN;
     private boolean mIsUsageSettingSupported = true;
+    private boolean mIsNetworkScanStarted = false;
 
     //IMS
     /**
@@ -4155,6 +4156,24 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public boolean setOperatorBrandOverride(String brand) {
         return false;
+    }
+
+    /**
+     * Sets the network scan started status.
+     *
+     * @param started {@code true} if the network scan has started, {@code false} otherwise.
+     */
+    public void setNetworkScanStarted(boolean started) {
+        mIsNetworkScanStarted = started;
+    }
+
+    /**
+     * Gets the network scan started status.
+     *
+     * @return {@code true} if the network scan has started, {@code false} otherwise.
+     */
+    public boolean getNetworkScanStarted() {
+        return mIsNetworkScanStarted;
     }
 
     /**
