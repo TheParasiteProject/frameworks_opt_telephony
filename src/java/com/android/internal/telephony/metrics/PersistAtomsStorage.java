@@ -885,6 +885,8 @@ public class PersistAtomsStorage {
             // Does not update configDataSource, carrierId, isDeviceEntitled, due to  they are
             // dimension fields.
             existingStats.isDeviceEntitled = stats.isDeviceEntitled;
+            existingStats.isMultiSim = stats.isMultiSim;
+            existingStats.countOfSatelliteSessions += stats.countOfSatelliteSessions;
         } else {
             mAtoms.carrierRoamingSatelliteControllerStats = insertAtRandomPlace(
                     mAtoms.carrierRoamingSatelliteControllerStats, stats, mMaxNumSatelliteStats);

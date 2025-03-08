@@ -723,7 +723,6 @@ public class SatelliteControllerTest extends TelephonyTest {
                 any(Handler.class),
                 eq(28) /* EVENT_SATELLITE_MODEM_STATE_CHANGED */,
                 eq(null));
-
         doReturn(mMockConfigParser).when(mMockTelephonyConfigUpdateInstallReceiver)
                 .getConfigParser(ConfigProviderAdaptor.DOMAIN_SATELLITE);
         doReturn(mSubscriptionInfo).when(mMockSubscriptionManagerService).getSubscriptionInfo(
@@ -3349,6 +3348,24 @@ public class SatelliteControllerTest extends TelephonyTest {
                 mSatelliteControllerUT.getAttachRestrictionReasonsForCarrier(SUB_ID);
         assertEquals(1, restrictionSet.size());
         assertTrue(restrictionSet.contains(SATELLITE_COMMUNICATION_RESTRICTION_REASON_ENTITLEMENT));
+    }
+
+    @Test
+    public void testVerifyEntitlementDataInPersistenceMemory() throws Exception {
+        // When the entitlement data was not set, verify for not null and empty data sets.
+        assertEquals(new ArrayList<>(),
+                mMockSubscriptionManagerService.getSatelliteEntitlementBarredPlmnList(anyInt()));
+        assertEquals(new HashMap<>(),
+                mMockSubscriptionManagerService.getSatelliteEntitlementDataPlanForPlmns(anyInt()));
+        assertEquals(new HashMap<>(),
+                mMockSubscriptionManagerService.getSatelliteEntitlementPlmnServiceTypeMap(
+                        anyInt()));
+        assertEquals(new HashMap<>(),
+                mMockSubscriptionManagerService.getSatelliteEntitlementPlmnDataServicePolicy(
+                        anyInt()));
+        assertEquals(new HashMap<>(),
+                mMockSubscriptionManagerService.getSatelliteEntitlementPlmnVoiceServicePolicy(
+                        anyInt()));
     }
 
     @Test

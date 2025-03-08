@@ -19,8 +19,10 @@ package com.android.internal.telephony.satellite.metrics;
 import android.annotation.NonNull;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
+import com.android.internal.telephony.subscription.SubscriptionManagerService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +32,6 @@ public class CarrierRoamingSatelliteControllerStats {
     private static final String TAG = CarrierRoamingSatelliteControllerStats.class.getSimpleName();
     private static CarrierRoamingSatelliteControllerStats sInstance = null;
     private static final int ADD_COUNT = 1;
-
     private SatelliteStats mSatelliteStats;
     private List<Long> mSessionStartTimeList;
     private List<Long> mSessionEndTimeList;
@@ -60,6 +61,7 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setConfigDataSource(configDataSource)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -68,6 +70,7 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setCountOfEntitlementStatusQueryRequest(ADD_COUNT)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -76,6 +79,7 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setCountOfSatelliteConfigUpdateRequest(ADD_COUNT)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -84,6 +88,7 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setCountOfSatelliteNotificationDisplayed(ADD_COUNT)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -92,6 +97,7 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setCarrierId(carrierId)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -100,12 +106,17 @@ public class CarrierRoamingSatelliteControllerStats {
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
                 new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
                         .setIsDeviceEntitled(isDeviceEntitled)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
     /** Log carrier roaming satellite session start */
     public void onSessionStart() {
         mSessionStartTimeList.add(getCurrentTime());
+        mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
+                new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
+                        .increaseCountOfSatelliteSessions()
+                        .build());
     }
 
     /** Log carrier roaming satellite session end */
@@ -126,6 +137,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setSatelliteSessionGapMinSec(satelliteSessionGapMinSec)
                         .setSatelliteSessionGapAvgSec(getAvg(sessionGapList))
                         .setSatelliteSessionGapMaxSec(satelliteSessionGapMaxSec)
+                        .setIsMultiSim(isMultiSim())
                         .build());
     }
 
@@ -171,6 +183,11 @@ public class CarrierRoamingSatelliteControllerStats {
 
     private long getCurrentTime() {
         return System.currentTimeMillis();
+    }
+
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    public boolean isMultiSim() {
+        return SubscriptionManagerService.getInstance().getActiveSubIdList(true).length > 1;
     }
 
     private static void logd(@NonNull String log) {
