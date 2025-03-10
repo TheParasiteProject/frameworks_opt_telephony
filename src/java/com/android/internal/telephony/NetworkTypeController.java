@@ -1404,6 +1404,8 @@ public class NetworkTypeController extends StateMachine {
             mRatchetedNrBandwidths = Math.max(mRatchetedNrBandwidths, nrBandwidths);
             mRatchetedNrBands.addAll(nrBands);
         } else {
+            mRatchetedNrBandwidths = nrBandwidths;
+            mRatchetedNrBands = nrBands;
             if (mDoesPccListIndicateIdle
                     && anchorNrCellId != mLastAnchorNrCellId
                     && isUsingPhysicalChannelConfigForRrcDetection()
@@ -1420,8 +1422,6 @@ public class NetworkTypeController extends StateMachine {
                 log("Not ratcheting physical channel config fields since anchor NR cell changed: "
                         + mLastAnchorNrCellId + " -> " + anchorNrCellId);
             }
-            mRatchetedNrBandwidths = nrBandwidths;
-            mRatchetedNrBands = nrBands;
         }
 
         mLastAnchorNrCellId = anchorNrCellId;
