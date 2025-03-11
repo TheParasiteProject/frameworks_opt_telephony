@@ -307,7 +307,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
 
     private void handleSatelliteProvisionStateChangedEvent(boolean provisioned) {
         if (!provisioned
-                && !isSatelliteConnectedViaCarrierWithinHysteresisTime()) {
+                && !isSatelliteEmergencyMessagingViaCarrierAvailable()) {
             cleanUpResources(false);
         }
     }
@@ -347,7 +347,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
             if (!isCellularAvailable
                     && isSatelliteAllowed()
                     && ((isDeviceProvisioned() && isSatelliteAllowedByReasons())
-                    || isSatelliteConnectedViaCarrierWithinHysteresisTime())
+                    || isSatelliteEmergencyMessagingViaCarrierAvailable())
                     && shouldTrackCall(mEmergencyConnection.getState())) {
                 plogd("handleTimeoutEvent: Sent EVENT_DISPLAY_EMERGENCY_MESSAGE to Dialer");
                 Bundle extras = createExtraBundleForEventDisplayEmergencyMessage(
@@ -367,7 +367,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
 
     private boolean isSatelliteAllowed() {
         synchronized (mLock) {
-            if (isSatelliteConnectedViaCarrierWithinHysteresisTime()) return true;
+            if (isSatelliteEmergencyMessagingViaCarrierAvailable()) return true;
             return mIsSatelliteAllowedForCurrentLocation;
         }
     }
@@ -388,7 +388,12 @@ public class SatelliteSOSMessageRecommender extends Handler {
         return satelliteProvisioned != null ? satelliteProvisioned : false;
     }
 
-    private boolean isSatelliteConnectedViaCarrierWithinHysteresisTime() {
+    private boolean isSatelliteEmergencyMessagingViaCarrierAvailable() {
+        if (!mSatelliteController.isSatelliteEmergencyMessagingSupportedViaCarrier()) {
+            plogd("isSatelliteEmergencyMessagingViaCarrierAvailable: false, "
+                    + "device does not support satellite emergency messaging via carrier");
+            return false;
+        }
         return mIsSatelliteConnectedViaCarrierWithinHysteresisTime.get();
     }
 
@@ -567,7 +572,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
     }
 
     private void selectEmergencyCallWaitForConnectionTimeoutDuration() {
-        if (isSatelliteConnectedViaCarrierWithinHysteresisTime()) {
+        if (isSatelliteEmergencyMessagingViaCarrierAvailable()) {
             int satelliteSubId = mSubIdOfSatelliteConnectedViaCarrierWithinHysteresisTime.get();
             mTimeoutMillis =
                     mSatelliteController.getCarrierEmergencyCallWaitForConnectionTimeoutMillis(
@@ -769,7 +774,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     public int getEmergencyCallToSatelliteHandoverType() {
-        if (isSatelliteConnectedViaCarrierWithinHysteresisTime()) {
+        if (isSatelliteEmergencyMessagingViaCarrierAvailable()) {
             int satelliteSubId = mSubIdOfSatelliteConnectedViaCarrierWithinHysteresisTime.get();
             return mSatelliteController.getCarrierRoamingNtnEmergencyCallToSatelliteHandoverType(
                     satelliteSubId);
@@ -841,6 +846,8 @@ public class SatelliteSOSMessageRecommender extends Handler {
     private void updateSatelliteConnectedViaCarrierWithinHysteresisTimeState() {
         Pair<Boolean, Integer> satelliteConnectedState =
                 mSatelliteController.isSatelliteConnectedViaCarrierWithinHysteresisTime();
+        plogd("updateSatelliteConnectedViaCarrierWithinHysteresisTimeState: subId="
+                  + satelliteConnectedState.second + ", connected="+ satelliteConnectedState.first);
         mIsSatelliteConnectedViaCarrierWithinHysteresisTime.set(satelliteConnectedState.first);
         if (satelliteConnectedState.first) {
             mSubIdOfSatelliteConnectedViaCarrierWithinHysteresisTime.set(
