@@ -1967,6 +1967,13 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
+     * @return true if this device supports messaging, false otherwise.
+     */
+    public boolean hasMessaging() {
+        return TelephonyCapabilities.supportsTelephonyMessaging(mFeatureFlags, mContext);
+    }
+
+    /**
      * Retrieves the EmergencyNumberTracker of the phone instance.
      */
     public EmergencyNumberTracker getEmergencyNumberTracker() {
