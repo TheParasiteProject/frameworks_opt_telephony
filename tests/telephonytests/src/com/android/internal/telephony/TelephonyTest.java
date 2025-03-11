@@ -21,8 +21,8 @@ import static com.android.internal.telephony.TelephonyStatsLog.CELLULAR_SERVICE_
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.nullable;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
