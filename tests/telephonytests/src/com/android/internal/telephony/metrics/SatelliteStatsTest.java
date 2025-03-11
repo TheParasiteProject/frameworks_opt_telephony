@@ -48,6 +48,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class SatelliteStatsTest extends TelephonyTest {
@@ -634,6 +635,40 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(param.getResultCode(), stats.resultCode);
         assertEquals(param.getCountryCodes(), stats.countryCodes);
         assertEquals(param.getConfigDataSource(), stats.configDataSource);
+        verifyNoMoreInteractions(mPersistAtomsStorage);
+    }
+
+    @Test
+    public void testReportRepeatedDataWithAscendingOrder() {
+        int[] supportedSatelliteServicesArray = {3, 2, 1};
+        SatelliteStats.CarrierRoamingSatelliteSessionParams sessionParams =
+                new SatelliteStats.CarrierRoamingSatelliteSessionParams.Builder()
+                        .setSupportedSatelliteServices(supportedSatelliteServicesArray)
+                        .build();
+        mSatelliteStats.onCarrierRoamingSatelliteSessionMetrics(sessionParams);
+        ArgumentCaptor<CarrierRoamingSatelliteSession> sessionArgumentCaptor =
+                ArgumentCaptor.forClass(CarrierRoamingSatelliteSession.class);
+        verify(mPersistAtomsStorage).addCarrierRoamingSatelliteSessionStats(
+                sessionArgumentCaptor.capture());
+        CarrierRoamingSatelliteSession sessionStats = sessionArgumentCaptor.getValue();
+
+        Arrays.sort(supportedSatelliteServicesArray);
+        assertEquals(supportedSatelliteServicesArray, sessionStats.supportedSatelliteServices);
+        verifyNoMoreInteractions(mPersistAtomsStorage);
+
+        int[] entitlementServiceTypeArray = {2, 3, 1};
+        SatelliteStats.SatelliteEntitlementParams entitlementParams =
+                new SatelliteStats.SatelliteEntitlementParams.Builder()
+                        .setEntitlementServiceType(entitlementServiceTypeArray)
+                        .build();
+        mSatelliteStats.onSatelliteEntitlementMetrics(entitlementParams);
+        ArgumentCaptor<SatelliteEntitlement> entitlementArgumentCaptor =
+                ArgumentCaptor.forClass(SatelliteEntitlement.class);
+        verify(mPersistAtomsStorage).addSatelliteEntitlementStats(
+                entitlementArgumentCaptor.capture());
+        SatelliteEntitlement entitlementStats = entitlementArgumentCaptor.getValue();
+        Arrays.sort(entitlementServiceTypeArray);
+        assertEquals(entitlementServiceTypeArray, entitlementStats.entitlementServiceType);
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }
 }
