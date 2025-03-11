@@ -175,23 +175,6 @@ public abstract class TelephonyTest {
             new ArrayList<String>(), EmergencyNumber.EMERGENCY_NUMBER_SOURCE_NETWORK_SIGNALING,
             EmergencyNumber.EMERGENCY_CALL_ROUTING_NORMAL);
 
-    private static final Field MESSAGE_QUEUE_FIELD;
-    private static final Field MESSAGE_WHEN_FIELD;
-    private static final Field MESSAGE_NEXT_FIELD;
-
-    static {
-        try {
-            MESSAGE_QUEUE_FIELD = MessageQueue.class.getDeclaredField("mMessages");
-            MESSAGE_QUEUE_FIELD.setAccessible(true);
-            MESSAGE_WHEN_FIELD = Message.class.getDeclaredField("when");
-            MESSAGE_WHEN_FIELD.setAccessible(true);
-            MESSAGE_NEXT_FIELD = Message.class.getDeclaredField("next");
-            MESSAGE_NEXT_FIELD.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException("Failed to initialize TelephonyTest", e);
-        }
-    }
-
     // Mocked classes
     protected FeatureFlags mFeatureFlags;
     protected GsmCdmaPhone mPhone;
@@ -1349,36 +1332,12 @@ public abstract class TelephonyTest {
     }
 
     /**
-     * @return The longest delay from all the message queues.
-     */
-    private long getLongestDelay() {
-        long delay = 0;
-        for (TestableLooper looper : mTestableLoopers) {
-            MessageQueue queue = looper.getLooper().getQueue();
-            try {
-                Message msg = (Message) MESSAGE_QUEUE_FIELD.get(queue);
-                while (msg != null) {
-                    delay = Math.max(msg.getWhen(), delay);
-                    msg = (Message) MESSAGE_NEXT_FIELD.get(msg);
-                }
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException("Access failed in TelephonyTest", e);
-            }
-        }
-        return delay;
-    }
-
-    /**
      * @return {@code true} if there are any messages in the queue.
      */
     private boolean messagesExist() {
         for (TestableLooper looper : mTestableLoopers) {
-            MessageQueue queue = looper.getLooper().getQueue();
-            try {
-                Message msg = (Message) MESSAGE_QUEUE_FIELD.get(queue);
-                if (msg != null) return true;
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException("Access failed in TelephonyTest", e);
+            if (looper.peekWhen() > 0) {
+                return true;
             }
         }
         return false;
@@ -1388,8 +1347,14 @@ public abstract class TelephonyTest {
      * Handle all messages including the delayed messages.
      */
     public void processAllFutureMessages() {
+        final long now = SystemClock.uptimeMillis();
         while (messagesExist()) {
-            moveTimeForward(getLongestDelay());
+            for (TestableLooper looper : mTestableLoopers) {
+                long nextDelay = looper.peekWhen() - now;
+                if (nextDelay > 0) {
+                    looper.moveTimeForward(nextDelay);
+                }
+            }
             processAllMessages();
         }
     }
@@ -1414,20 +1379,7 @@ public abstract class TelephonyTest {
      */
     public void moveTimeForward(long milliSeconds) {
         for (TestableLooper looper : mTestableLoopers) {
-            MessageQueue queue = looper.getLooper().getQueue();
-            try {
-                Message msg = (Message) MESSAGE_QUEUE_FIELD.get(queue);
-                while (msg != null) {
-                    long updatedWhen = msg.getWhen() - milliSeconds;
-                    if (updatedWhen < 0) {
-                        updatedWhen = 0;
-                    }
-                    MESSAGE_WHEN_FIELD.set(msg, updatedWhen);
-                    msg = (Message) MESSAGE_NEXT_FIELD.get(msg);
-                }
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException("Access failed in TelephonyTest", e);
-            }
+            looper.moveTimeForward(milliSeconds);
         }
     }
 }
