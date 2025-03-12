@@ -3810,6 +3810,9 @@ public class SatelliteController extends Handler {
         } else {
             logd("onSmsReceived: DatagramController is not initialized");
         }
+
+        mControllerMetricsStats.reportIncomingNtnSmsCount(
+                SatelliteManager.SATELLITE_RESULT_SUCCESS);
     }
 
     /**

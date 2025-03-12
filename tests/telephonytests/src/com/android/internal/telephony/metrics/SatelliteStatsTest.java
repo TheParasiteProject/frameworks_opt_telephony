@@ -111,6 +111,13 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setCountOfP2PSmsAvailableNotificationShown(3)
                         .setCountOfP2PSmsAvailableNotificationRemoved(3)
                         .setIsNtnOnlyCarrier(false)
+                        .setVersionOfSatelliteAccessControl(10)
+                        .setCountOfIncomingDatagramTypeSosSmsSuccess(1)
+                        .setCountOfIncomingDatagramTypeSmsFail(2)
+                        .setCountOfOutgoingDatagramTypeSmsSuccess(3)
+                        .setCountOfOutgoingDatagramTypeSmsFail(4)
+                        .setCountOfIncomingDatagramTypeSmsSuccess(5)
+                        .setCountOfIncomingDatagramTypeSmsFail(6)
                         .build();
 
         mSatelliteStats.onSatelliteControllerMetrics(param);
@@ -182,6 +189,20 @@ public class SatelliteStatsTest extends TelephonyTest {
                 stats.countOfP2PSmsAvailableNotificationRemoved);
         assertEquals(SatelliteStats.SatelliteControllerParams.isNtnOnlyCarrier(),
                 stats.isNtnOnlyCarrier);
+        assertEquals(SatelliteStats.SatelliteControllerParams.getVersionSatelliteAccessConfig(),
+                stats.versionOfSatelliteAccessConfig);
+        assertEquals(param.getCountOfIncomingDatagramTypeSosSmsSuccess(),
+                stats.countOfIncomingDatagramTypeSosSmsSuccess);
+        assertEquals(param.getCountOfIncomingDatagramTypeSosSmsFail(),
+                stats.countOfIncomingDatagramTypeSosSmsFail);
+        assertEquals(param.getCountOfOutgoingDatagramTypeSmsSuccess(),
+                stats.countOfOutgoingDatagramTypeSmsSuccess);
+        assertEquals(param.getCountOfOutgoingDatagramTypeSmsFail(),
+                stats.countOfOutgoingDatagramTypeSmsFail);
+        assertEquals(param.getCountOfIncomingDatagramTypeSmsSuccess(),
+                stats.countOfIncomingDatagramTypeSmsSuccess);
+        assertEquals(param.getCountOfIncomingDatagramTypeSmsSuccess(),
+                stats.countOfIncomingDatagramTypeSmsSuccess);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }
