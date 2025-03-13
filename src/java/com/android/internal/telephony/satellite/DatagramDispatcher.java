@@ -767,9 +767,11 @@ public class DatagramDispatcher extends Handler {
         if (resultCode == SATELLITE_RESULT_SUCCESS) {
             long smsTransmissionTime = mSmsTransmissionStartTime > 0
                     ? (System.currentTimeMillis() - mSmsTransmissionStartTime) : 0;
+            mControllerMetricsStats.reportOutgoingDatagramSuccessCount(datagramType, false);
             mSessionMetricsStats.addCountOfSuccessfulOutgoingDatagram(
                     datagramType, smsTransmissionTime);
         } else {
+            mControllerMetricsStats.reportOutgoingDatagramFailCount(datagramType, false);
             mSessionMetricsStats.addCountOfFailedOutgoingDatagram(
                     datagramType, resultCode);
         }
