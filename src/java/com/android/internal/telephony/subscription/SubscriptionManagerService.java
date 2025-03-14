@@ -159,6 +159,12 @@ public class SubscriptionManagerService extends ISub.Stub {
     private static final int CHECK_BOOTSTRAP_TIMER_IN_MS = 20 * 60 * 1000; // 20 minutes
     private static CountDownTimer bootstrapProvisioningTimer;
 
+    /** Whether enabling verbose debugging message or not. */
+    private static final boolean VDBG = false;
+
+    // Compile-time debug flag for controlling worker thread behavior
+    private static final boolean USE_WORKER_THREAD = false;
+
     /**
      * The columns in {@link SimInfo} table that can be directly accessed through
      * {@link #getSubscriptionProperty(int, String, String, String)} or
@@ -572,7 +578,7 @@ public class SubscriptionManagerService extends ISub.Stub {
 
         Looper dbLooper = null;
 
-        if (mFeatureFlags.threadShred()) {
+        if (mFeatureFlags.threadShred() && SubscriptionManagerService.USE_WORKER_THREAD) {
             dbLooper = WorkerThread.get().getLooper();
         } else {
             // Create a separate thread for subscription database manager.
