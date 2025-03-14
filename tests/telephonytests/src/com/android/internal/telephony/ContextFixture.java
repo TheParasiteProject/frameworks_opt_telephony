@@ -828,8 +828,10 @@ public class ContextFixture implements TestFixture<Context> {
         lenient().doReturn(mBundle).when(mCarrierConfigManager).getConfigForSubId(anyInt(),
                 anyString());
         lenient().doAnswer(invocation -> mNetworkId++).when(mNetwork).getNetId();
-        lenient().doReturn(mNetwork).when(mConnectivityManager).registerNetworkAgent(
-                any(), any(), any(), any(), any(), any(), anyInt());
+        lenient().doReturn(
+                ConnectivityManager.MockHelpers.registerNetworkAgentResult(mNetwork, null))
+                        .when(mConnectivityManager).registerNetworkAgent(
+                                any(), any(), any(), any(), any(), any(), anyInt());
 
         lenient().doReturn(true).when(mEuiccManager).isEnabled();
 
