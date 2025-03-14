@@ -2627,7 +2627,7 @@ public class SatelliteController extends Handler {
      *
      * @return {@code true} if the satellite modem is enabled and {@code false} otherwise.
      */
-    private boolean isSatelliteEnabled() {
+    public boolean isSatelliteEnabled() {
         synchronized (mIsSatelliteEnabledLock) {
             if (mIsSatelliteEnabled == null) return false;
             return mIsSatelliteEnabled;
@@ -2639,7 +2639,7 @@ public class SatelliteController extends Handler {
      *
      * @return {@code true} if the satellite modem is being enabled and {@code false} otherwise.
      */
-    private boolean isSatelliteBeingEnabled() {
+    public boolean isSatelliteBeingEnabled() {
         if (mSatelliteSessionController != null
                 && mSatelliteSessionController.isInEnablingState()) {
             return true;

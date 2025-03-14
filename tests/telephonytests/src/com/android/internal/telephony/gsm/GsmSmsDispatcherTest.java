@@ -56,6 +56,7 @@ import android.provider.Settings;
 import android.service.carrier.CarrierMessagingService;
 import android.service.carrier.ICarrierMessagingCallback;
 import android.service.carrier.ICarrierMessagingService;
+import android.telephony.NetworkRegistrationInfo;
 import android.telephony.ServiceState;
 import android.telephony.SmsManager;
 import android.testing.AndroidTestingRunner;
@@ -75,6 +76,7 @@ import com.android.internal.telephony.TelephonyTest;
 import com.android.internal.telephony.TelephonyTestUtils;
 import com.android.internal.telephony.TestApplication;
 import com.android.internal.telephony.flags.Flags;
+import com.android.internal.telephony.satellite.SatelliteController;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
 
@@ -103,6 +105,7 @@ public class GsmSmsDispatcherTest extends TelephonyTest {
     private SMSDispatcher.SmsTracker mSmsTracker;
     private ISub.Stub mISubStub;
     private ICarrierMessagingService.Stub mICarrierAppMessagingService;
+    private SatelliteController mMockSatelliteController;
 
     private Object mLock = new Object();
     private boolean mReceivedTestIntent;
@@ -150,6 +153,9 @@ public class GsmSmsDispatcherTest extends TelephonyTest {
         mSmsTracker = mock(SMSDispatcher.SmsTracker.class);
         mISubStub = mock(ISub.Stub.class);
         mICarrierAppMessagingService = mock(ICarrierMessagingService.Stub.class);
+        mMockSatelliteController = mock(SatelliteController.class);
+        replaceInstance(SatelliteController.class, "sInstance", null,
+                mMockSatelliteController);
 
         // Note that this replaces only cached services in ServiceManager. If a service is not found
         // in the cache, a real instance is used.
@@ -702,5 +708,28 @@ public class GsmSmsDispatcherTest extends TelephonyTest {
         boolean isMtSmsPollingMessage = tracker.isMtSmsPollingMessage(mContext);
 
         assertFalse(isMtSmsPollingMessage);
+    }
+
+    @Test
+    public void testShouldBlockPremiumSmsInSatelliteMode() {
+        doReturn(true).when(mMockSatelliteController).isSatelliteBeingEnabled();
+        assertTrue(mGsmSmsDispatcher.shouldBlockPremiumSmsInSatelliteMode());
+
+        int subId = mPhone.getSubId();
+        doReturn(subId).when(mMockSatelliteController).getSelectedSatelliteSubId();
+        doReturn(false).when(mMockSatelliteController).isSatelliteBeingEnabled();
+        doReturn(true).when(mMockSatelliteController).isSatelliteEnabled();
+        doReturn(new int[]{NetworkRegistrationInfo.SERVICE_TYPE_DATA}).when(
+                mMockSatelliteController).getSupportedServicesOnCarrierRoamingNtn(anyInt());
+        assertTrue(mGsmSmsDispatcher.shouldBlockPremiumSmsInSatelliteMode());
+
+        doReturn(true).when(mMockSatelliteController).isSatelliteEnabled();
+        doReturn(new int[]{NetworkRegistrationInfo.SERVICE_TYPE_DATA,
+                NetworkRegistrationInfo.SERVICE_TYPE_SMS}).when(
+                mMockSatelliteController).getSupportedServicesOnCarrierRoamingNtn(anyInt());
+        assertFalse(mGsmSmsDispatcher.shouldBlockPremiumSmsInSatelliteMode());
+
+        doReturn(false).when(mMockSatelliteController).isSatelliteEnabled();
+        assertFalse(mGsmSmsDispatcher.shouldBlockPremiumSmsInSatelliteMode());
     }
 }
