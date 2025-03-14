@@ -312,8 +312,24 @@ public class EmergencyStateTracker {
                     maybeNotifyTransportChangeCompleted(emergencyType, false);
 
                     if (emergencyType == EMERGENCY_TYPE_CALL) {
-                        setIsInEmergencyCall(true);
-                        completeEmergencyMode(emergencyType);
+                        // If the emergency registration result(mLastEmergencyRegistrationResult) is
+                        // null, it means that the emergency mode is not set properly on the modem.
+                        // Therefore, based on the emergency registration result and current
+                        // subscription status, the current phone is not available for an emergency
+                        // call, so we check if an emergency call is possible through cross stack.
+                        if (mFeatureFlags.performCrossStackRedialCheckForEmergencyCall()
+                                && mLastEmergencyRegistrationResult == null
+                                && mPhone != null
+                                && !SubscriptionManager.isValidSubscriptionId(mPhone.getSubId())
+                                && needToSwitchPhone(mPhone)) {
+                            Rlog.i(TAG, "setEmergencyMode failed: need to switch stacks.");
+                            mEmergencyMode = MODE_EMERGENCY_NONE;
+                            completeEmergencyMode(emergencyType,
+                                    DisconnectCause.EMERGENCY_PERM_FAILURE);
+                        } else {
+                            setIsInEmergencyCall(true);
+                            completeEmergencyMode(emergencyType);
+                        }
 
                         // Case 1) When the emergency call is setting the emergency mode and
                         // the emergency SMS is being sent, completes the SMS future also.
@@ -861,22 +877,24 @@ public class EmergencyStateTracker {
 
     private void completeEmergencyMode(@EmergencyType int emergencyType,
             @DisconnectCauses int result) {
+        CompletableFuture<Integer> emergencyModeFuture = null;
+
         if (emergencyType == EMERGENCY_TYPE_CALL) {
-            if (mCallEmergencyModeFuture != null && !mCallEmergencyModeFuture.isDone()) {
-                mCallEmergencyModeFuture.complete(result);
-            }
+            emergencyModeFuture = mCallEmergencyModeFuture;
 
             if (result != DisconnectCause.NOT_DISCONNECTED) {
                 clearEmergencyCallInfo();
             }
         } else if (emergencyType == EMERGENCY_TYPE_SMS) {
-            if (mSmsEmergencyModeFuture != null && !mSmsEmergencyModeFuture.isDone()) {
-                mSmsEmergencyModeFuture.complete(result);
-            }
+            emergencyModeFuture = mSmsEmergencyModeFuture;
 
             if (result != DisconnectCause.NOT_DISCONNECTED) {
                 clearEmergencySmsInfo();
             }
+        }
+
+        if (emergencyModeFuture != null && !emergencyModeFuture.isDone()) {
+            emergencyModeFuture.complete(result);
         }
     }
 
