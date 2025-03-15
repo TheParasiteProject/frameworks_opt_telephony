@@ -107,7 +107,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.anyVararg;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
@@ -648,7 +647,7 @@ public class SatelliteControllerTest extends TelephonyTest {
 
         mCarrierConfigBundle = mContextFixture.getCarrierConfigBundle();
         doReturn(mCarrierConfigBundle)
-                .when(mCarrierConfigManager).getConfigForSubId(anyInt(), anyVararg());
+                .when(mCarrierConfigManager).getConfigForSubId(anyInt(), any());
         doAnswer(invocation -> {
             Executor executor = invocation.getArgument(0);
             CarrierConfigManager.CarrierConfigChangeListener listener = invocation.getArgument(1);
@@ -3911,7 +3910,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                 KEY_EMERGENCY_CALL_TO_SATELLITE_T911_HANDOVER_TIMEOUT_MILLIS_INT,
                 timeoutMillisForCarrier1);
         doReturn(carrierConfigBundle1)
-                .when(mCarrierConfigManager).getConfigForSubId(eq(SUB_ID), anyVararg());
+                .when(mCarrierConfigManager).getConfigForSubId(eq(SUB_ID), any());
 
         int timeoutMillisForCarrier2 = 2000;
         PersistableBundle carrierConfigBundle2 = new PersistableBundle();
@@ -3923,7 +3922,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                 KEY_EMERGENCY_CALL_TO_SATELLITE_T911_HANDOVER_TIMEOUT_MILLIS_INT,
                 timeoutMillisForCarrier2);
         doReturn(carrierConfigBundle2)
-                .when(mCarrierConfigManager).getConfigForSubId(eq(SUB_ID1), anyVararg());
+                .when(mCarrierConfigManager).getConfigForSubId(eq(SUB_ID1), any());
 
         for (Pair<Executor, CarrierConfigManager.CarrierConfigChangeListener> pair
                 : mCarrierConfigChangedListenerList) {

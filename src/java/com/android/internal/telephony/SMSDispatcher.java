@@ -63,6 +63,7 @@ import android.service.carrier.CarrierMessagingServiceWrapper;
 import android.service.carrier.CarrierMessagingServiceWrapper.CarrierMessagingCallback;
 import android.telephony.AnomalyReporter;
 import android.telephony.CarrierConfigManager;
+import android.telephony.NetworkRegistrationInfo;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 import android.telephony.SmsManager;
@@ -90,9 +91,11 @@ import com.android.internal.telephony.analytics.TelephonyAnalytics;
 import com.android.internal.telephony.analytics.TelephonyAnalytics.SmsMmsAnalytics;
 import com.android.internal.telephony.cdma.sms.UserData;
 import com.android.internal.telephony.flags.Flags;
+import com.android.internal.telephony.satellite.SatelliteController;
 import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.util.ArrayUtils;
 import com.android.internal.telephony.util.TelephonyUtils;
 import com.android.telephony.Rlog;
 
@@ -2226,6 +2229,7 @@ public abstract class SMSDispatcher extends Handler {
         if (mContext.checkCallingOrSelfPermission(SEND_SMS_NO_CONFIRMATION)
                 == PackageManager.PERMISSION_GRANTED || trackers[0].mIsForVvm
                 || trackers[0].mSkipShortCodeDestAddrCheck) {
+            Rlog.d(TAG, "checkDestination: app pre-approved");
             return true;            // app is pre-approved to send to short codes
         } else {
             int rule = mPremiumSmsRule.get();
@@ -2245,6 +2249,7 @@ public abstract class SMSDispatcher extends Handler {
                         mSmsDispatchersController
                                 .getUsageMonitor()
                                 .checkDestination(trackers[0].mDestAddress, simCountryIso);
+                Rlog.d(TAG, "checkDestination: simCountryIso=" + simCountryIso);
             }
             if (rule == PREMIUM_RULE_USE_NETWORK || rule == PREMIUM_RULE_USE_BOTH) {
                 String networkCountryIso =
@@ -2264,7 +2269,9 @@ public abstract class SMSDispatcher extends Handler {
                                         .getUsageMonitor()
                                         .checkDestination(
                                                 trackers[0].mDestAddress, networkCountryIso));
+                Rlog.d(TAG, "checkDestination: networkCountryIso=" + networkCountryIso);
             }
+            Rlog.d(TAG, "checkDestination: smsCategory=" + smsCategory);
 
             if (smsCategory != SmsManager.SMS_CATEGORY_NOT_SHORT_CODE) {
                 int xmlVersion = mSmsDispatchersController.getUsageMonitor()
@@ -2282,6 +2289,14 @@ public abstract class SMSDispatcher extends Handler {
             if (Settings.Global.getInt(mResolver, Settings.Global.DEVICE_PROVISIONED, 0) == 0) {
                 Rlog.e(TAG, "Can't send premium sms during Setup Wizard "
                         + SmsController.formatCrossStackMessageId(
+                                getMultiTrackermessageId(trackers)));
+                return false;
+            }
+
+            // Check whether to block premium sms in satellite mode.
+            if (shouldBlockPremiumSmsInSatelliteMode()) {
+                Rlog.d(TAG, "Block premium SMS in satellite mode."
+                        + " messageId=" + SmsController.formatCrossStackMessageId(
                                 getMultiTrackermessageId(trackers)));
                 return false;
             }
@@ -2323,6 +2338,32 @@ public abstract class SMSDispatcher extends Handler {
                     return false;   // wait for user confirmation
             }
         }
+    }
+
+    /** Block premium sms in satellite mode. */
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    public boolean shouldBlockPremiumSmsInSatelliteMode() {
+        SatelliteController sc = SatelliteController.getInstance();
+
+        if (sc.isSatelliteBeingEnabled()) {
+            Rlog.d(TAG, "shouldBlockPremiumSmsInSatelliteMode: block premium sms when "
+                    + "satellite is being enabled");
+            return true;
+        }
+
+        if (sc.isSatelliteEnabled()) {
+            int satelliteSubId = sc.getSelectedSatelliteSubId();
+            int[] services = sc.getSupportedServicesOnCarrierRoamingNtn(satelliteSubId);
+            boolean isSmsSupported = ArrayUtils.contains(
+                    services, NetworkRegistrationInfo.SERVICE_TYPE_SMS);
+            Rlog.d(TAG, "shouldBlockPremiumSmsInSatelliteMode: satelliteSubId="
+                    + satelliteSubId + " isSmsSupported=" + isSmsSupported
+                    + " services=" + Arrays.toString(services));
+            return !isSmsSupported;
+        }
+
+        Rlog.d(TAG, "shouldBlockPremiumSmsInSatelliteMode: return false.");
+        return false;
     }
 
     /**

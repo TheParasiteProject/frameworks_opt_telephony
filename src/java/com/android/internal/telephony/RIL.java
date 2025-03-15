@@ -1331,7 +1331,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     private boolean canMakeRequest(String request, RadioServiceProxy proxy, Message result,
-            HalVersion version) {
+            HalVersion minVersion) {
+        return canMakeRequest(request, proxy, result, minVersion, null /* maxVersion */);
+    }
+
+    private boolean canMakeRequest(String request, RadioServiceProxy proxy, Message result,
+            HalVersion minVersion, @Nullable HalVersion maxVersion) {
         int service = HAL_SERVICE_RADIO;
         if (proxy instanceof RadioDataProxy) {
             service = HAL_SERVICE_DATA;
@@ -1358,9 +1363,20 @@ public class RIL extends BaseCommands implements CommandsInterface {
             }
             return false;
         }
-        if (mHalVersion.get(service).less(version)) {
+        if (mHalVersion.get(service).less(minVersion)) {
             riljLoge(String.format("%s not supported on service %s < %s.",
-                    request, serviceToString(service), version));
+                    request, serviceToString(service), minVersion));
+            if (result != null) {
+                AsyncResult.forMessage(result, null,
+                        CommandException.fromRilErrno(REQUEST_NOT_SUPPORTED));
+                result.sendToTarget();
+            }
+            return false;
+        }
+
+        if (maxVersion != null && mHalVersion.get(service).greater(maxVersion)) {
+            riljLoge(String.format("%s not supported on service %s > %s.",
+                    request, serviceToString(service), maxVersion));
             if (result != null) {
                 AsyncResult.forMessage(result, null,
                         CommandException.fromRilErrno(REQUEST_NOT_SUPPORTED));
@@ -3627,7 +3643,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
     @Override
     public void getDeviceIdentity(Message result) {
         RadioModemProxy modemProxy = getRadioServiceProxy(RadioModemProxy.class);
-        if (!canMakeRequest("getDeviceIdentity", modemProxy, result, RADIO_HAL_VERSION_1_4)) {
+        if (!canMakeRequest("getDeviceIdentity", modemProxy, result, RADIO_HAL_VERSION_1_4,
+                RADIO_HAL_VERSION_2_2)) {
             return;
         }
 
@@ -3882,7 +3899,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
     public void getImsRegistrationState(Message result) {
         RadioNetworkProxy networkProxy = getRadioServiceProxy(RadioNetworkProxy.class);
         if (!canMakeRequest("getImsRegistrationState", networkProxy, result,
-                RADIO_HAL_VERSION_1_4)) {
+                RADIO_HAL_VERSION_1_4, RADIO_HAL_VERSION_2_2)) {
             return;
         }
 

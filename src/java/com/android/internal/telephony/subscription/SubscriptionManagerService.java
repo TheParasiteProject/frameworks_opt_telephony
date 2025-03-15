@@ -4158,8 +4158,7 @@ public class SubscriptionManagerService extends ISub.Stub {
         }
 
         UserHandle myUserHandle = UserHandle.of(UserHandle.getCallingUserId());
-        return mFeatureFlags.subscriptionUserAssociationQuery()
-            && isSubscriptionAssociatedWithUserNoCheck(subscriptionId, myUserHandle);
+        return isSubscriptionAssociatedWithUserNoCheck(subscriptionId, myUserHandle);
     }
 
     /**

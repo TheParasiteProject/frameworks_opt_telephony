@@ -1485,7 +1485,13 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 satelliteController.countOfP2PSmsAvailableNotificationShown,
                 satelliteController.countOfP2PSmsAvailableNotificationRemoved,
                 satelliteController.isNtnOnlyCarrier,
-                satelliteController.versionOfSatelliteAccessConfig);
+                satelliteController.versionOfSatelliteAccessConfig,
+                satelliteController.countOfIncomingDatagramTypeSosSmsSuccess,
+                satelliteController.countOfIncomingDatagramTypeSosSmsFail,
+                satelliteController.countOfOutgoingDatagramTypeSmsSuccess,
+                satelliteController.countOfOutgoingDatagramTypeSmsFail,
+                satelliteController.countOfIncomingDatagramTypeSmsSuccess,
+                satelliteController.countOfIncomingDatagramTypeSmsFail);
     }
 
     private static StatsEvent buildStatsEvent(SatelliteSession satelliteSession) {
