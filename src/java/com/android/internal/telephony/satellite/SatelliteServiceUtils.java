@@ -533,8 +533,17 @@ public class SatelliteServiceUtils {
             ServiceState serviceState = phone.getServiceState();
             if (serviceState != null) {
                 int state = serviceState.getState();
+                NetworkRegistrationInfo dataNri = serviceState.getNetworkRegistrationInfo(
+                        NetworkRegistrationInfo.DOMAIN_PS,
+                        AccessNetworkConstants.TRANSPORT_TYPE_WWAN);
+                boolean isCellularDataInService = dataNri != null && dataNri.isInService();
+                logd("isCellularAvailable: phoneId=" + phone.getPhoneId() + " state=" + state
+                        + " isEmergencyOnly=" + serviceState.isEmergencyOnly()
+                        + " isCellularDataInService=" + isCellularDataInService);
+
                 if ((state == STATE_IN_SERVICE || state == STATE_EMERGENCY_ONLY
-                        || serviceState.isEmergencyOnly())
+                        || serviceState.isEmergencyOnly()
+                        || isCellularDataInService)
                         && !isSatellitePlmn(phone.getSubId(), serviceState)) {
                     logd("isCellularAvailable true");
                     return true;

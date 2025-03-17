@@ -175,6 +175,8 @@ public class SatelliteSOSMessageRecommenderTest extends TelephonyTest {
                 mTestSatelliteController, mTestImsManager);
         when(mServiceState.getState()).thenReturn(STATE_OUT_OF_SERVICE);
         when(mServiceState2.getState()).thenReturn(STATE_OUT_OF_SERVICE);
+        when(mServiceState.getNetworkRegistrationInfo(anyInt(), anyInt())).thenReturn(null);
+        when(mServiceState2.getNetworkRegistrationInfo(anyInt(), anyInt())).thenReturn(null);
         when(mPhone.isImsRegistered()).thenReturn(false);
         when(mPhone2.isImsRegistered()).thenReturn(false);
         replaceInstance(SatelliteStats.class, "sInstance", null,
