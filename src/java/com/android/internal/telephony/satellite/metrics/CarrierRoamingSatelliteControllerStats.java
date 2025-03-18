@@ -17,6 +17,7 @@
 package com.android.internal.telephony.satellite.metrics;
 
 import android.annotation.NonNull;
+import android.os.SystemClock;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -128,7 +129,7 @@ public class CarrierRoamingSatelliteControllerStats {
     public void onSessionStart(int subId) {
         List<Long> sessionStartTimeListForSubscription = mSessionStartTimeMap.getOrDefault(subId,
                 new ArrayList<>());
-        sessionStartTimeListForSubscription.add(getCurrentTime());
+        sessionStartTimeListForSubscription.add(getElapsedRealtime());
         mSessionStartTimeMap.put(subId, sessionStartTimeListForSubscription);
 
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
@@ -142,7 +143,7 @@ public class CarrierRoamingSatelliteControllerStats {
     public void onSessionEnd(int subId) {
         List<Long> sessionEndTimeListForSubscription = mSessionEndTimeMap.getOrDefault(subId,
                 new ArrayList<>());
-        sessionEndTimeListForSubscription.add(getCurrentTime());
+        sessionEndTimeListForSubscription.add(getElapsedRealtime());
         mSessionEndTimeMap.put(subId, sessionEndTimeListForSubscription);
 
         int numberOfSatelliteSessions = getNumberOfSatelliteSessions(subId);
@@ -209,8 +210,8 @@ public class CarrierRoamingSatelliteControllerStats {
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    protected long getCurrentTime() {
-        return System.currentTimeMillis();
+    protected long getElapsedRealtime() {
+        return SystemClock.elapsedRealtime();
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)

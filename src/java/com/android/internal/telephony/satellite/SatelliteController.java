@@ -1567,7 +1567,7 @@ public class SatelliteController extends Handler {
                     mSessionMetricsStats.setInitializationResult(error)
                             .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                             .setInitializationProcessingTime(
-                                    System.currentTimeMillis() - mSessionProcessingTimeStamp)
+                                    getElapsedRealtime() - mSessionProcessingTimeStamp)
                             .setIsDemoMode(mIsDemoModeEnabled)
                             .setCarrierId(getSatelliteCarrierId())
                             .setIsEmergency(argument.isEmergency);
@@ -1583,7 +1583,7 @@ public class SatelliteController extends Handler {
                     }
                 } else {
                     mSessionMetricsStats.setTerminationResult(error)
-                            .setTerminationProcessingTime(System.currentTimeMillis()
+                            .setTerminationProcessingTime(getElapsedRealtime()
                                     - mSessionProcessingTimeStamp)
                             .setSessionDurationSec(calculateSessionDurationTimeSec())
                             .reportSessionMetrics();
@@ -4664,9 +4664,9 @@ public class SatelliteController extends Handler {
         startWaitForSatelliteEnablingResponseTimer(argument);
         // Logs satellite session timestamps for session metrics
         if (argument.enableSatellite) {
-            mSessionStartTimeStamp = System.currentTimeMillis();
+            mSessionStartTimeStamp = getElapsedRealtime();
         }
-        mSessionProcessingTimeStamp = System.currentTimeMillis();
+        mSessionProcessingTimeStamp = getElapsedRealtime();
     }
 
     /** Get the request attributes that modem needs to enable/disable satellite */
@@ -6813,7 +6813,7 @@ public class SatelliteController extends Handler {
             mSessionMetricsStats.setInitializationResult(SATELLITE_RESULT_MODEM_TIMEOUT)
                     .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                     .setInitializationProcessingTime(
-                            System.currentTimeMillis() - mSessionProcessingTimeStamp)
+                            getElapsedRealtime() - mSessionProcessingTimeStamp)
                     .setIsDemoMode(mIsDemoModeEnabled)
                     .setCarrierId(getSatelliteCarrierId())
                     .reportSessionMetrics();
@@ -6823,7 +6823,7 @@ public class SatelliteController extends Handler {
             mSessionMetricsStats.setTerminationResult(SATELLITE_RESULT_MODEM_TIMEOUT)
                     .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                     .setTerminationProcessingTime(
-                            System.currentTimeMillis() - mSessionProcessingTimeStamp)
+                            getElapsedRealtime() - mSessionProcessingTimeStamp)
                     .setSessionDurationSec(calculateSessionDurationTimeSec())
                     .reportSessionMetrics();
         }
@@ -7183,7 +7183,7 @@ public class SatelliteController extends Handler {
     // Should be invoked only when session termination done or session termination failed.
     private int calculateSessionDurationTimeSec() {
         return (int) (
-                (System.currentTimeMillis() - mSessionStartTimeStamp
+                (getElapsedRealtime() - mSessionStartTimeStamp
                 - mSessionMetricsStats.getSessionInitializationProcessingTimeMillis()
                 - mSessionMetricsStats.getSessionTerminationProcessingTimeMillis()) / 1000);
     }

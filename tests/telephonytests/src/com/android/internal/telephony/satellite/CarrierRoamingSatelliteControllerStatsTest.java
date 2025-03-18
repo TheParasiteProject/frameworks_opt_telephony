@@ -580,7 +580,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
         }
 
         @Override
-        public long getCurrentTime() {
+        public long getElapsedRealtime() {
             return mCurrentTime;
         }
 
