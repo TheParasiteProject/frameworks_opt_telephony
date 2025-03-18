@@ -107,7 +107,7 @@ public class WapPushOverSmsTest extends TelephonyTest {
                 eq(android.Manifest.permission.RECEIVE_WAP_PUSH),
                 eq(AppOpsManager.OPSTR_RECEIVE_WAP_PUSH),
                 nullable(Bundle.class),
-                isNull(InboundSmsHandler.SmsBroadcastReceiver.class),
+                isNull(),
                 eq(MOCKED_MAIN_USER),
                 anyInt());
         Intent intent = intentArgumentCaptor.getValue();
