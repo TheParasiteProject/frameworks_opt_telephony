@@ -643,6 +643,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         mContextFixture.putIntArrayResource(
                 R.array.config_foldedDeviceStates,
                 new int[0]);
+        mContextFixture.putBooleanResource(
+            R.bool.config_support_disable_satellite_while_enable_in_progress, true);
         doReturn(ACTIVE_SUB_IDS).when(mMockSubscriptionManagerService).getActiveSubIdList(true);
 
         mCarrierConfigBundle = mContextFixture.getCarrierConfigBundle();
@@ -4613,6 +4615,8 @@ public class SatelliteControllerTest extends TelephonyTest {
                 eq(R.string.config_satellite_gateway_service_package));
         doReturn("className").when(mResources).getString(
                 eq(R.string.config_satellite_carrier_roaming_esos_provisioned_class));
+        doReturn(true).when(mResources).getBoolean(
+                eq(R.bool.config_support_disable_satellite_while_enable_in_progress));
     }
 
     private List<SatelliteSubscriberInfo> getExpectedSatelliteSubscriberInfoList() {
