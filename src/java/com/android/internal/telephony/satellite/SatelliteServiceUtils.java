@@ -711,6 +711,23 @@ public class SatelliteServiceUtils {
         return null;
     }
 
+    /** Determines whether the subscription is in carrier roaming NB-IoT NTN or not. */
+    public static boolean isNbIotNtn(int subId) {
+        Phone phone = PhoneFactory.getPhone(SubscriptionManager.getPhoneId(subId));
+        if (phone == null) {
+            logd("isNbIotNtn(): phone is null");
+            return false;
+        }
+
+        SatelliteController satelliteController = SatelliteController.getInstance();
+        if (satelliteController == null) {
+            logd("isNbIotNtn(): satelliteController is null");
+            return false;
+        }
+
+        return satelliteController.isInCarrierRoamingNbIotNtn(phone);
+    }
+
     private static void logd(@NonNull String log) {
         Rlog.d(TAG, log);
     }

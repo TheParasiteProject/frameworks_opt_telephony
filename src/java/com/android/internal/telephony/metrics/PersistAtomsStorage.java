@@ -899,6 +899,7 @@ public class PersistAtomsStorage {
             existingStats.isDeviceEntitled = stats.isDeviceEntitled;
             existingStats.isMultiSim = stats.isMultiSim;
             existingStats.countOfSatelliteSessions += stats.countOfSatelliteSessions;
+            existingStats.isNbIotNtn = stats.isNbIotNtn;
         } else {
             mAtoms.carrierRoamingSatelliteControllerStats = insertAtRandomPlace(
                     mAtoms.carrierRoamingSatelliteControllerStats, stats, mMaxNumSatelliteStats);
@@ -2011,7 +2012,8 @@ public class PersistAtomsStorage {
                     && state.overrideVoiceService == key.overrideVoiceService
                     && state.isDataEnabled == key.isDataEnabled
                     && state.isIwlanCrossSim == key.isIwlanCrossSim
-                    && state.isNtn == key.isNtn) {
+                    && state.isNtn == key.isNtn
+                    && state.isNbIotNtn == key.isNbIotNtn) {
                 return state;
             }
         }
@@ -2442,9 +2444,7 @@ public class PersistAtomsStorage {
             CarrierRoamingSatelliteControllerStats key) {
         for (CarrierRoamingSatelliteControllerStats stats :
                 mAtoms.carrierRoamingSatelliteControllerStats) {
-            if (stats.carrierId == key.carrierId
-                    && stats.configDataSource == key.configDataSource
-                    && stats.isDeviceEntitled == key.isDeviceEntitled) {
+            if (stats.carrierId == key.carrierId) {
                 return stats;
             }
         }

@@ -1373,6 +1373,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteSession1.countOfIncomingMms = 1;
         mCarrierRoamingSatelliteSession1.countOfOutgoingMms = 1;
         mCarrierRoamingSatelliteSession1.isMultiSim = false;
+        mCarrierRoamingSatelliteSession1.isNbIotNtn = false;
 
         mCarrierRoamingSatelliteSession2 = new CarrierRoamingSatelliteSession();
         mCarrierRoamingSatelliteSession2.carrierId = 2;
@@ -1392,6 +1393,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteSession2.countOfIncomingMms = 1;
         mCarrierRoamingSatelliteSession2.countOfOutgoingMms = 1;
         mCarrierRoamingSatelliteSession2.isMultiSim = true;
+        mCarrierRoamingSatelliteSession2.isNbIotNtn = true;
 
         mCarrierRoamingSatelliteSessions = new CarrierRoamingSatelliteSession[] {
                 mCarrierRoamingSatelliteSession1, mCarrierRoamingSatelliteSession2};
@@ -1409,6 +1411,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats1.isDeviceEntitled = true;
         mCarrierRoamingSatelliteControllerStats1.isMultiSim = false;
         mCarrierRoamingSatelliteControllerStats1.countOfSatelliteSessions = 1;
+        mCarrierRoamingSatelliteControllerStats1.isNbIotNtn = false;
 
         mCarrierRoamingSatelliteControllerStats2 = new CarrierRoamingSatelliteControllerStats();
         mCarrierRoamingSatelliteControllerStats2.configDataSource =
@@ -1423,6 +1426,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
         mCarrierRoamingSatelliteControllerStats2.isDeviceEntitled = false;
         mCarrierRoamingSatelliteControllerStats2.isMultiSim = true;
         mCarrierRoamingSatelliteControllerStats2.countOfSatelliteSessions = 2;
+        mCarrierRoamingSatelliteControllerStats2.isNbIotNtn = true;
 
         // CarrierRoamingSatelliteController has one data point
         mCarrierRoamingSatelliteControllerStats = new CarrierRoamingSatelliteControllerStats[] {
@@ -6499,7 +6503,9 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                     && stats.countOfIncomingSms == expectedStats.countOfIncomingSms
                     && stats.countOfOutgoingSms == expectedStats.countOfOutgoingSms
                     && stats.countOfIncomingMms == expectedStats.countOfIncomingMms
-                    && stats.countOfOutgoingMms == expectedStats.countOfOutgoingMms) {
+                    && stats.countOfOutgoingMms == expectedStats.countOfOutgoingMms
+                    && stats.isMultiSim == expectedStats.isMultiSim
+                    && stats.isNbIotNtn == expectedStats.isNbIotNtn) {
                 actualCount++;
             }
         }
@@ -6529,6 +6535,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                 assertEquals(expectedStats.isMultiSim, stats.isMultiSim);
                 assertEquals(expectedStats.countOfSatelliteSessions,
                         stats.countOfSatelliteSessions);
+                assertEquals(expectedStats.isNbIotNtn, stats.isNbIotNtn);
                 count++;
             }
         }
