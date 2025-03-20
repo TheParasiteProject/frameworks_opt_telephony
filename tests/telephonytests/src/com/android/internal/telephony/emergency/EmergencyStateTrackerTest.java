@@ -84,6 +84,7 @@ import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.TelephonyTest;
 import com.android.internal.telephony.data.PhoneSwitcher;
+import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
 
 import org.junit.After;
 import org.junit.Before;
@@ -91,6 +92,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
@@ -149,8 +151,10 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
             EmergencyStateTracker.getInstance();
         });
 
-        EmergencyStateTracker
-                .make(mContext, true, TEST_WAIT_FOR_IN_SERVICE_TIMEOUT_MS, mFeatureFlags);
+        EmergencyStateTracker.make(mContext, true, TEST_WAIT_FOR_IN_SERVICE_TIMEOUT_MS,
+                true, /* turnOffOemEnabledSatelliteDuringEmergencyCall */
+                true, /* turnOffNonEmergencyNbIotNtnSatelliteForEmergencyCall */
+                mFeatureFlags);
 
         assertNotNull(EmergencyStateTracker.getInstance());
     }
@@ -158,8 +162,10 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
     @Test
     @SmallTest
     public void getInstance_returnsSameInstance() {
-        EmergencyStateTracker
-                .make(mContext, true, TEST_WAIT_FOR_IN_SERVICE_TIMEOUT_MS, mFeatureFlags);
+        EmergencyStateTracker.make(mContext, true, TEST_WAIT_FOR_IN_SERVICE_TIMEOUT_MS,
+                true, /* turnOffOemEnabledSatelliteDuringEmergencyCall */
+                true, /* turnOffNonEmergencyNbIotNtnSatelliteForEmergencyCall */
+                mFeatureFlags);
         EmergencyStateTracker instance1 = EmergencyStateTracker.getInstance();
         EmergencyStateTracker instance2 = EmergencyStateTracker.getInstance();
 
@@ -3300,6 +3306,91 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
                 anyBoolean(), eq(0));
     }
 
+    @Test
+    @SmallTest
+    public void testShouldExitSatelliteModeWhenSatelliteModeNotEnabled() {
+        // Satellite mode is not enabled.
+        doReturn(false).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
+        EmergencyStateTracker emergencyStateTracker = setupEmergencyStateTracker(true);
+
+        assertFalse(emergencyStateTracker.shouldExitSatelliteMode());
+    }
+
+    @Test
+    @SmallTest
+    public void testShouldExitSatelliteModeWhenConfigTurnOffNonEmergencyNbIotNtnSessionDisabled() {
+        doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
+        // Config for turning off non-emergency NB-IOT NTN session for emergency call: false
+        EmergencyStateTracker emergencyStateTracker = setupEmergencyStateTracker(true, true, false);
+
+        assertFalse(emergencyStateTracker.shouldExitSatelliteMode());
+    }
+
+    @Test
+    @SmallTest
+    public void testShouldExitSatelliteModeWhenSatelliteDemoModeEnabled() {
+        doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
+        // Satellite demo mode is enabled
+        doReturn(true).when(mSatelliteController).isDemoModeEnabled();
+        EmergencyStateTracker emergencyStateTracker = setupEmergencyStateTracker(true, true, true);
+
+        assertTrue(emergencyStateTracker.shouldExitSatelliteMode());
+    }
+
+    @Test
+    @SmallTest
+    public void testShouldExitSatelliteModeWhenCarrierRoamingNbIotNtnEnabledAndNtnNonEmergency() {
+        // carrierRoamingNbIotNtn feature enabled
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
+        doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
+        doReturn(false).when(mSatelliteController).isDemoModeEnabled();
+        // NTN non-emergency session is in progress
+        doReturn(false).when(mSatelliteController).getRequestIsEmergency();
+
+        EmergencyStateTracker emergencyStateTracker = setupEmergencyStateTracker(true, true, true);
+
+        assertTrue(emergencyStateTracker.shouldExitSatelliteMode());
+    }
+
+    @Test
+    @SmallTest
+    public void testShouldExitSatelliteModeWhenNtnEmergency() {
+        // carrierRoamingNbIotNtn feature enabled
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
+        doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
+        doReturn(false).when(mSatelliteController).isDemoModeEnabled();
+        doReturn(true).when(mSatelliteController).getRequestIsEmergency();
+        doReturn(null).when(mSubscriptionManagerService).getSubscriptionInfoInternal(anyInt());
+
+        boolean turnOffOemEnabledSatelliteDuringEmergencyCall = true;
+        EmergencyStateTracker emergencyStateTracker = setupEmergencyStateTracker(
+                true, turnOffOemEnabledSatelliteDuringEmergencyCall, true);
+
+        // No valid subscription
+        assertFalse(emergencyStateTracker.shouldExitSatelliteMode());
+
+        SubscriptionInfoInternal subInfo = Mockito.mock(SubscriptionInfoInternal.class);
+        doReturn(1).when(subInfo).getOnlyNonTerrestrialNetwork();
+        doReturn(subInfo).when(mSubscriptionManagerService).getSubscriptionInfoInternal(anyInt());
+
+        // Only non-terrestrial networks
+        assertEquals(turnOffOemEnabledSatelliteDuringEmergencyCall,
+                emergencyStateTracker.shouldExitSatelliteMode());
+
+        doReturn(0).when(subInfo).getOnlyNonTerrestrialNetwork();
+
+        // Not only non-terrestrial networks
+        emergencyStateTracker.shouldExitSatelliteMode();
+
+        verify(mSatelliteController).shouldTurnOffCarrierSatelliteForEmergencyCall();
+
+        // carrierRoamingNbIotNtn feature disabled
+        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(false);
+
+        assertEquals(turnOffOemEnabledSatelliteDuringEmergencyCall,
+                emergencyStateTracker.shouldExitSatelliteMode());
+    }
+
     /**
      * Test Phone selection.
      * SIM absent and SIM ready on the other Phone.
@@ -3571,11 +3662,20 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
 
     private EmergencyStateTracker setupEmergencyStateTracker(
             boolean isSuplDdsSwitchRequiredForEmergencyCall) {
+        return setupEmergencyStateTracker(isSuplDdsSwitchRequiredForEmergencyCall, true, true);
+    }
+
+    private EmergencyStateTracker setupEmergencyStateTracker(
+            boolean isSuplDdsSwitchRequiredForEmergencyCall,
+            boolean turnOffOemEnabledSatelliteDuringEmergencyCall,
+            boolean turnOffNonEmergencyNbIotNtnSatelliteForEmergencyCall) {
         doReturn(mPhoneSwitcher).when(mPhoneSwitcherProxy).getPhoneSwitcher();
         doNothing().when(mPhoneSwitcher).overrideDefaultDataForEmergency(
                 anyInt(), anyInt(), any());
         return new EmergencyStateTracker(mContext, mTestableLooper.getLooper(),
                 isSuplDdsSwitchRequiredForEmergencyCall, TEST_WAIT_FOR_IN_SERVICE_TIMEOUT_MS,
+                turnOffOemEnabledSatelliteDuringEmergencyCall,
+                turnOffNonEmergencyNbIotNtnSatelliteForEmergencyCall,
                 mPhoneFactoryProxy, mPhoneSwitcherProxy, mTelephonyManagerProxy, mRadioOnHelper,
                 TEST_ECM_EXIT_TIMEOUT_MS, mFeatureFlags);
     }
