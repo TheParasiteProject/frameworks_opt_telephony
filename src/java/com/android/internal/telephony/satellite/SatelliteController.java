@@ -4210,7 +4210,7 @@ public class SatelliteController extends Handler {
      * @return {@code true} if phone is in carrier roaming nb iot ntn mode,
      * else {@return false}
      */
-    private boolean isInCarrierRoamingNbIotNtn(@Nullable Phone phone) {
+    public boolean isInCarrierRoamingNbIotNtn(@Nullable Phone phone) {
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             plogd("isInCarrierRoamingNbIotNtn: carrier roaming nb iot ntn "
                     + "feature flag is disabled");
@@ -6394,7 +6394,7 @@ public class SatelliteController extends Handler {
                 // Log satellite session end
                 CarrierRoamingSatelliteSessionStats sessionStats =
                         mCarrierRoamingSatelliteSessionStatsMap.get(subId);
-                sessionStats.onSessionEnd();
+                sessionStats.onSessionEnd(subId);
                 mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
                 mCarrierRoamingSatelliteControllerStats.onSessionEnd(subId);
             }

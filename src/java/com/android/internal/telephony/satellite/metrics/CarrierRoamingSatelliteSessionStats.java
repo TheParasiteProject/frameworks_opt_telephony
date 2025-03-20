@@ -37,6 +37,7 @@ import com.android.internal.telephony.MccTable;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
+import com.android.internal.telephony.satellite.SatelliteServiceUtils;
 import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 
@@ -138,7 +139,7 @@ public class CarrierRoamingSatelliteSessionStats {
     }
 
     /** Log carrier roaming satellite session end */
-    public void onSessionEnd() {
+    public void onSessionEnd(int subId) {
         onConnectionEnd();
         long dataUsageOnSessionEndBytes = getDataUsage();
         logd("update data consumed: " + dataUsageOnSessionEndBytes);
@@ -148,7 +149,7 @@ public class CarrierRoamingSatelliteSessionStats {
                     dataUsageOnSessionEndBytes - mDataUsageOnSessionStartBytes;
         }
         logd("satellite data consumed at session: " + mSatelliteDataConsumedBytes);
-        reportMetrics();
+        reportMetrics(subId);
         mIsNtnRoamingInHomeCountry = false;
         mSupportedSatelliteServices = new int[0];
         mServiceDataPolicy = SatelliteConstants.SATELLITE_ENTITLEMENT_SERVICE_POLICY_UNKNOWN;
@@ -223,7 +224,7 @@ public class CarrierRoamingSatelliteSessionStats {
         }
     }
 
-    private void reportMetrics() {
+    private void reportMetrics(int subId) {
         int totalSatelliteModeTimeSec = mSessionStartTimeSec > 0
                 ? getElapsedRealtimeInSec() - mSessionStartTimeSec : 0;
         int numberOfSatelliteConnections = getNumberOfSatelliteConnections();
@@ -261,6 +262,7 @@ public class CarrierRoamingSatelliteSessionStats {
                         .setServiceDataPolicy(mServiceDataPolicy)
                         .setSatelliteDataConsumedBytes(mSatelliteDataConsumedBytes)
                         .setIsMultiSim(isMultiSim)
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build();
         SatelliteStats.getInstance().onCarrierRoamingSatelliteSessionMetrics(params);
         logd("Supported satellite services: " + Arrays.toString(mSupportedSatelliteServices));

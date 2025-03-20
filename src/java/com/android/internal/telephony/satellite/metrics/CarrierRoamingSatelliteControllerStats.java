@@ -27,6 +27,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
+import com.android.internal.telephony.satellite.SatelliteServiceUtils;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 
 import java.util.ArrayList;
@@ -74,6 +75,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setConfigDataSource(configDataSource)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -84,6 +86,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setCountOfEntitlementStatusQueryRequest(ADD_COUNT)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -103,6 +106,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setCountOfSatelliteNotificationDisplayed(ADD_COUNT)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -122,6 +126,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setIsDeviceEntitled(isDeviceEntitled)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -162,6 +167,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setSatelliteSessionGapMaxSec(satelliteSessionGapMaxSec)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
