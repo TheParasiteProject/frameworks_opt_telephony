@@ -692,6 +692,7 @@ public class SatelliteController extends Handler {
     private AtomicBoolean mOverrideNtnEligibility;
     private String mDefaultSmsPackageName = "";
     private String mSatelliteGatewayServicePackageName = "";
+    private Boolean mOverriddenDisableSatelliteWhileEnableInProgressSupported = null;
 
     private final Object mNtnSmsSupportedByMessagesAppLock = new Object();
     @GuardedBy("mNtnSmsSupportedByMessagesAppLock")
@@ -2503,6 +2504,13 @@ public class SatelliteController extends Handler {
                                 SatelliteManager.SATELLITE_RESULT_ENABLE_IN_PROGRESS, result);
                         return;
                     }
+                    if (!isDisableSatelliteWhileEnableInProgressSupported()) {
+                        plogd("requestSatelliteEnabled: disable satellite while enable in progress"
+                                + " is not supported");
+                        sendErrorAndReportSessionMetrics(
+                                SatelliteManager.SATELLITE_RESULT_ENABLE_IN_PROGRESS, result);
+                        return;
+                    }
                     mSatelliteDisabledRequest = request;
                 }
             }
@@ -2521,6 +2529,14 @@ public class SatelliteController extends Handler {
         } else {
             sendRequestAsync(CMD_SET_SATELLITE_ENABLED, request, null);
         }
+    }
+
+    private boolean isDisableSatelliteWhileEnableInProgressSupported() {
+        if (mOverriddenDisableSatelliteWhileEnableInProgressSupported != null) {
+            return mOverriddenDisableSatelliteWhileEnableInProgressSupported;
+        }
+        return mContext.getResources().getBoolean(
+            R.bool.config_support_disable_satellite_while_enable_in_progress);
     }
 
     private void checkNetworkSelectionModeAuto(RequestSatelliteEnabledArgument argument) {
@@ -3585,6 +3601,31 @@ public class SatelliteController extends Handler {
             return false;
         }
         return mSatelliteSessionController.setSatelliteIgnoreCellularServiceState(enabled);
+    }
+
+    /**
+     * This API can be used by only CTS to control the feature
+     * {@code config_support_disable_satellite_while_enable_in_progress}.
+     *
+     * @param reset Whether to reset the override.
+     * @param supported Whether to support the feature.
+     * @return {@code true} if the value is set successfully, {@code false} otherwise.
+     */
+    public boolean setSupportDisableSatelliteWhileEnableInProgress(
+        boolean reset, boolean supported) {
+        if (!isMockModemAllowed()) {
+            plogd("setSupportDisableSatelliteWhileEnableInProgress: mock modem not allowed");
+            return false;
+        }
+
+        plogd("setSupportDisableSatelliteWhileEnableInProgress - reset=" + reset
+                  + ", supported=" + supported);
+        if (reset) {
+            mOverriddenDisableSatelliteWhileEnableInProgressSupported = null;
+        } else {
+            mOverriddenDisableSatelliteWhileEnableInProgressSupported = supported;
+        }
+        return true;
     }
 
     /**
