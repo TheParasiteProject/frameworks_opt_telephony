@@ -2365,6 +2365,7 @@ public class DataNetwork extends StateMachine {
 
         if (mIsSatellite && mDataConfigManager.getForcedCellularTransportCapabilities().stream()
                 .noneMatch(this::hasNetworkCapabilityInNetworkRequests)) {
+            logd("transport satellite is set");
             builder.addTransportType(NetworkCapabilities.TRANSPORT_SATELLITE);
         } else {
             builder.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
