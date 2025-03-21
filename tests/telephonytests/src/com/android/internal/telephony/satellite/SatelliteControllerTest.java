@@ -6593,6 +6593,13 @@ public class SatelliteControllerTest extends TelephonyTest {
                 .getSatelliteDataServicePolicyForPlmn(SUB_ID, "00102");
         assertEquals(SATELLITE_DATA_SUPPORT_ALL, dataSupportModeForPlmn);
 
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, "");
+        assertEquals(SATELLITE_DATA_SUPPORT_ALL, dataSupportModeForPlmn);
+
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, null);
+        assertEquals(SATELLITE_DATA_SUPPORT_ALL, dataSupportModeForPlmn);
     }
 
     @Test
@@ -6626,6 +6633,14 @@ public class SatelliteControllerTest extends TelephonyTest {
                 .getSatelliteDataServicePolicyForPlmn(SUB_ID, "00101");
         assertEquals(SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED, dataSupportModeForPlmn);
 
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, "");
+        assertEquals(SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED, dataSupportModeForPlmn);
+
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, null);
+        assertEquals(SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED, dataSupportModeForPlmn);
+
         setConfigData(new ArrayList<>());
         PersistableBundle carrierSupportedSatelliteServicesPerProvider =
                 new PersistableBundle();
@@ -6642,6 +6657,13 @@ public class SatelliteControllerTest extends TelephonyTest {
                 .getSatelliteDataServicePolicyForPlmn(SUB_ID, "00101");
         assertEquals(SATELLITE_DATA_SUPPORT_BANDWIDTH_CONSTRAINED, dataSupportModeForPlmn);
 
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, "");
+        assertEquals(SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED, dataSupportModeForPlmn);
+
+        dataSupportModeForPlmn = mSatelliteControllerUT
+                .getSatelliteDataServicePolicyForPlmn(SUB_ID, null);
+        assertEquals(SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED, dataSupportModeForPlmn);
     }
 
     @Test

@@ -9195,23 +9195,42 @@ public class SatelliteController extends Handler {
      * @return Supported modes {@link CarrierConfigManager.SATELLITE_DATA_SUPPORT_MODE}
      */
     public int getSatelliteDataServicePolicyForPlmn(int subId, String plmn) {
-        if (plmn != null && isValidSubscriptionId(subId)) {
+        plogd("getSatelliteDataServicePolicyForPlmn: subId=" + subId + " plmn=" + plmn);
+        if (isValidSubscriptionId(subId)) {
+            Map<String, Integer> dataServicePolicy;
             synchronized (mSupportedSatelliteServicesLock) {
-                Map<String, Integer> dataServicePolicy =
-                        mEntitlementDataServicePolicyMapPerCarrier.get(
-                        subId);
-                logd("data policy available for sub id:" + dataServicePolicy);
-                if (dataServicePolicy != null && dataServicePolicy.containsKey(plmn)
-                        && !plmn.isEmpty()) {
+                dataServicePolicy = mEntitlementDataServicePolicyMapPerCarrier.get(subId);
+            }
+            plogd("getSatelliteDataServicePolicyForPlmn: dataServicePolicy=" + dataServicePolicy);
+
+            if (dataServicePolicy != null) {
+                if (!TextUtils.isEmpty(plmn) && dataServicePolicy.containsKey(plmn)) {
+                    plogd("getSatelliteDataServicePolicyForPlmn: "
+                            + "return policy using dataServicePolicy map");
                     return dataServicePolicy.get(plmn);
+                } else if (TextUtils.isEmpty(plmn)) {
+                    int preferredPolicy =
+                            CarrierConfigManager.SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED;
+                    for (String plmnKey : dataServicePolicy.keySet()) {
+                        int policy = dataServicePolicy.get(plmnKey);
+                        // higher value has higher preference
+                        if (policy > preferredPolicy) {
+                            preferredPolicy = policy;
+                        }
+                    }
+                    plogd("getSatelliteDataServicePolicyForPlmn: "
+                            + "return preferredPolicy=" + preferredPolicy);
+                    return preferredPolicy;
                 }
             }
 
             if (isSatelliteDataServicesAllowed(subId, plmn)) {
+                plogd("getSatelliteDataServicePolicyForPlmn: return data support mode from config");
                 return getCarrierSatelliteDataSupportedModeFromConfig(subId);
             }
         }
 
+        plogd("getSatelliteDataServicePolicyForPlmn: return data support only restricted");
         return CarrierConfigManager.SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED;
     }
 
