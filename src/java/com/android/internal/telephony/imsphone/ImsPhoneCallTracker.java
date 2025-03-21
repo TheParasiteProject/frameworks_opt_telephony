@@ -259,6 +259,8 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
     private Optional<Integer> mCurrentlyConnectedSubId = Optional.empty();
 
     private final MmTelFeatureListener mMmTelFeatureListener = new MmTelFeatureListener();
+    private com.android.server.telecom.flags.FeatureFlags mTelecomFlags =
+            new com.android.server.telecom.flags.FeatureFlagsImpl();
     private class MmTelFeatureListener extends MmTelFeature.Listener {
 
         private IImsCallSessionListener processIncomingCall(@NonNull IImsCallSession c,
@@ -4082,6 +4084,13 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
                     Rlog.w(LOG_TAG, "onCallResumeFailed: got a resume failed for a different call"
                             + " in the single call unhold case");
                 }
+            }
+            ImsPhoneConnection conn = findConnection(imsCall);
+            // Send connection event so that Telecom can unhold the call the bg call that was held
+            // for calls across phone accounts.
+            if (mTelecomFlags.enableCallSequencing() && conn != null
+                    && conn.getState() != ImsPhoneCall.State.DISCONNECTED) {
+                conn.onConnectionEvent(android.telecom.Connection.EVENT_CALL_RESUME_FAILED, null);
             }
             mPhone.notifySuppServiceFailed(Phone.SuppService.RESUME);
             mMetrics.writeOnImsCallResumeFailed(mPhone.getPhoneId(), imsCall.getCallSession(),
