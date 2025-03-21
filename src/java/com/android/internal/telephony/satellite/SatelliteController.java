@@ -7337,44 +7337,44 @@ public class SatelliteController extends Handler {
     }
 
     private static void logv(@NonNull String log) {
-        Rlog.v(TAG, log);
+        Log.v(TAG, log);
     }
 
     private static void logd(@NonNull String log) {
-        Rlog.d(TAG, log);
+        Log.d(TAG, log);
     }
 
     private static void logw(@NonNull String log) {
-        Rlog.w(TAG, log);
+        Log.w(TAG, log);
     }
 
     private static void loge(@NonNull String log) {
-        Rlog.e(TAG, log);
+        Log.e(TAG, log);
     }
 
     private void plogd(@NonNull String log) {
-        Rlog.d(TAG, log);
+        Log.d(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.debug(TAG, log);
         }
     }
 
     private void plogw(@NonNull String log) {
-        Rlog.w(TAG, log);
+        Log.w(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.warn(TAG, log);
         }
     }
 
     private void ploge(@NonNull String log) {
-        Rlog.e(TAG, log);
+        Log.e(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.error(TAG, log);
         }
     }
 
     private void plogv(@NonNull String log) {
-        Rlog.v(TAG, log);
+        Log.v(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.debug(TAG, log);
         }
@@ -7865,6 +7865,8 @@ public class SatelliteController extends Handler {
         if (preSelectedSatelliteSubId != getSelectedSatelliteSubId()) {
             plogd("selectBindingSatelliteSubscription: SelectedSatelliteSubId changed");
             mSatelliteSubIdChangedRegistrants.notifyRegistrants();
+            handleEventSelectedNbIotSatelliteSubscriptionChanged(selectedSubId);
+            handleCarrierRoamingNtnAvailableServicesChanged();
             evaluateCarrierRoamingNtnEligibilityChange();
         }
 
@@ -7879,8 +7881,6 @@ public class SatelliteController extends Handler {
             mControllerMetricsStats.setIsNtnOnlyCarrier(isNtnOnlyCarrier());
         }
         plogd("selectBindingSatelliteSubscription: SelectedSatelliteSubId=" + selectedSubId);
-        handleEventSelectedNbIotSatelliteSubscriptionChanged(selectedSubId);
-        handleCarrierRoamingNtnAvailableServicesChanged();
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
@@ -8563,6 +8563,7 @@ public class SatelliteController extends Handler {
         }
         mCtsSatelliteAccessAllowedSubIds.clear();
         mCtsSatelliteAccessAllowedSubIds.addAll(subIdList);
+        selectBindingSatelliteSubscription(false);
         return true;
     }
 
