@@ -22,6 +22,7 @@ import static com.android.internal.telephony.satellite.SatelliteConstants.CONFIG
 import static com.android.internal.telephony.satellite.SatelliteConstants.CONFIG_DATA_SOURCE_ENTITLEMENT;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
@@ -63,6 +64,8 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
     private SatelliteStats mMockSatelliteStats;
     @Mock
     private SubscriptionManagerService mMockSubscriptionManagerService;
+    @Mock
+    private SatelliteController mMockSatellitecontroller;
 
     @Before
     public void setUp() throws Exception {
@@ -75,6 +78,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new TestCarrierRoamingSatelliteControllerStats();
         replaceInstance(SubscriptionManagerService.class, "sInstance", null,
                 mMockSubscriptionManagerService);
+        replaceInstance(SatelliteController.class, "sInstance", null, mMockSatellitecontroller);
     }
 
     @After
@@ -90,12 +94,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(false).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
 
         initializeStaticParams();
         expected.initializeParams();
         expected.setConfigDataSource(CONFIG_DATA_SOURCE_ENTITLEMENT);
         expected.setCarrierId(TEST_CARRIER_ID_0);
         expected.setIsMultiSim(false);
+        expected.setIsNbIotNtn(false);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportConfigDataSource(TEST_SUB_ID_0,
                 CONFIG_DATA_SOURCE_ENTITLEMENT);
@@ -104,11 +110,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(true).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setConfigDataSource(CONFIG_DATA_SOURCE_CONFIG_UPDATER);
         expected.setCarrierId(TEST_CARRIER_ID_1);
         expected.setIsMultiSim(true);
+        expected.setIsNbIotNtn(true);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportConfigDataSource(TEST_SUB_ID_1,
                 CONFIG_DATA_SOURCE_CONFIG_UPDATER);
@@ -122,12 +131,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(false).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
 
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfEntitlementStatusQueryRequest(1);
         expected.setCarrierId(TEST_CARRIER_ID_0);
         expected.setIsMultiSim(false);
+        expected.setIsNbIotNtn(false);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportCountOfEntitlementStatusQueryRequest(
                 TEST_SUB_ID_0);
@@ -136,11 +147,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(true).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfEntitlementStatusQueryRequest(1);
         expected.setCarrierId(TEST_CARRIER_ID_1);
         expected.setIsMultiSim(true);
+        expected.setIsNbIotNtn(true);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportCountOfEntitlementStatusQueryRequest(
                 TEST_SUB_ID_1);
@@ -154,6 +168,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfSatelliteConfigUpdateRequest(1);
@@ -167,6 +182,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfSatelliteConfigUpdateRequest(1);
@@ -185,11 +201,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(false).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfSatelliteNotificationDisplayed(1);
         expected.setCarrierId(TEST_CARRIER_ID_0);
         expected.setIsMultiSim(false);
+        expected.setIsNbIotNtn(false);
 
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportCountOfSatelliteNotificationDisplayed(
@@ -199,11 +218,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(true).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCountOfSatelliteNotificationDisplayed(1);
         expected.setCarrierId(TEST_CARRIER_ID_1);
         expected.setIsMultiSim(true);
+        expected.setIsNbIotNtn(true);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportCountOfSatelliteNotificationDisplayed(
                 TEST_SUB_ID_1);
@@ -217,6 +239,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCarrierId(TEST_CARRIER_ID_0);
@@ -229,6 +252,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCarrierId(TEST_CARRIER_ID_1);
@@ -245,11 +269,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(false).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setIsDeviceEntitled(true);
         expected.setCarrierId(TEST_CARRIER_ID_0);
         expected.setIsMultiSim(false);
+        expected.setIsNbIotNtn(false);
 
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(TEST_SUB_ID_0, true);
@@ -258,11 +285,14 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
 
         doReturn(new int[]{TEST_SUB_ID_0, TEST_SUB_ID_1}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(true).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setIsDeviceEntitled(false);
         expected.setCarrierId(TEST_CARRIER_ID_1);
         expected.setIsMultiSim(true);
+        expected.setIsNbIotNtn(true);
         clearInvocations(mMockSatelliteStats);
         mTestCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(TEST_SUB_ID_1, false);
         verify(mMockSatelliteStats, times(1)).onCarrierRoamingSatelliteControllerStatsMetrics(
@@ -275,10 +305,13 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                 new ExpectedCarrierRoamingSatelliteControllerStatsParam();
         doReturn(new int[]{TEST_SUB_ID_0}).when(
                 mMockSubscriptionManagerService).getActiveSubIdList(anyBoolean());
+        doReturn(false).when(mMockSatellitecontroller).isInCarrierRoamingNbIotNtn(any());
+
         initializeStaticParams();
         expected.initializeParams();
         expected.setCarrierId(TEST_CARRIER_ID_0);
         expected.setIsMultiSim(false);
+        expected.setIsNbIotNtn(false);
         clearInvocations(mMockSatelliteStats);
         // first satellite session starts
         mTestCarrierRoamingSatelliteControllerStats.setCurrentTime(0L);
@@ -379,6 +412,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
         private static int sCarrierId;
         private static boolean sIsDeviceEntitled;
         private static boolean sIsMultiSim;
+        private static boolean sIsNbIotNtn;
 
         public static void backUpStaticParams() {
             SatelliteStats.CarrierRoamingSatelliteControllerStatsParams param =
@@ -390,6 +424,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
             sCarrierId = param.getCarrierId();
             sIsDeviceEntitled = param.isDeviceEntitled();
             sIsMultiSim = param.isMultiSim();
+            sIsNbIotNtn = param.isNbIotNtn();
         }
 
         public static void restoreStaticParams() {
@@ -401,6 +436,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                             .setCarrierId(sCarrierId)
                             .setIsDeviceEntitled(sIsDeviceEntitled)
                             .setIsMultiSim(sIsMultiSim)
+                            .setIsNbIotNtn(sIsNbIotNtn)
                             .build());
         }
     }
@@ -414,6 +450,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
                         .setCarrierId(UNKNOWN_CARRIER_ID)
                         .setIsDeviceEntitled(false)
                         .setIsMultiSim(false)
+                        .setIsNbIotNtn(false)
                         .build());
     }
 
@@ -436,6 +473,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
         assertEquals(expected.isDeviceEntitled(), actual.isDeviceEntitled());
         assertEquals(expected.isMultiSim(), actual.isMultiSim());
         assertEquals(expected.getCountOfSatelliteSessions(), actual.getCountOfSatelliteSessions());
+        assertEquals(expected.isNbIotNtn(), actual.isNbIotNtn());
         return true;
     }
 
@@ -451,6 +489,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
         private boolean mIsDeviceEntitled;
         private boolean mIsMultiSim;
         private int mCountOfSatelliteSessions;
+        private boolean mIsNbIotNtn;
 
         public int getConfigDataSource() {
             return mConfigDataSource;
@@ -496,6 +535,9 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
             return mCountOfSatelliteSessions;
         }
 
+        public boolean isNbIotNtn() {
+            return mIsNbIotNtn;
+        }
 
         public void setConfigDataSource(int configDataSource) {
             mConfigDataSource = configDataSource;
@@ -544,6 +586,10 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
             mCountOfSatelliteSessions = countOfSatelliteSessions;
         }
 
+        public void setIsNbIotNtn(boolean isNbIotNtn) {
+            mIsNbIotNtn = isNbIotNtn;
+        }
+
         public void initializeParams() {
             mConfigDataSource = SatelliteConstants.CONFIG_DATA_SOURCE_UNKNOWN;
             mCountOfEntitlementStatusQueryRequest = 0;
@@ -556,6 +602,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
             mIsDeviceEntitled = false;
             mIsMultiSim = false;
             mCountOfSatelliteSessions = 0;
+            mIsNbIotNtn = false;
         }
     }
 
@@ -580,7 +627,7 @@ public class CarrierRoamingSatelliteControllerStatsTest extends TelephonyTest {
         }
 
         @Override
-        public long getCurrentTime() {
+        public long getElapsedRealtime() {
             return mCurrentTime;
         }
 

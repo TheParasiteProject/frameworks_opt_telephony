@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.SystemClock;
 import android.telephony.satellite.SatelliteManager;
 import android.util.Log;
 
@@ -45,7 +46,7 @@ public class ControllerMetricsStats {
     private int mBatteryLevelWhenServiceOn;
     private boolean mIsSatelliteModemOn;
     private Boolean mIsBatteryCharged = null;
-    private int mBatteryChargedStartTimeSec;
+    private long mBatteryChargedStartTime;
     private int mTotalBatteryChargeTimeSec;
 
     /**
@@ -291,7 +292,7 @@ public class ControllerMetricsStats {
     /** Return the total service up time for satellite service */
     @VisibleForTesting
     public int captureTotalServiceUpTimeSec() {
-        long totalTimeMillis = getCurrentTime() - mSatelliteOnTimeMillis;
+        long totalTimeMillis = getElapsedRealtime() - mSatelliteOnTimeMillis;
         mSatelliteOnTimeMillis = 0;
         return (int) (totalTimeMillis / 1000);
     }
@@ -312,7 +313,7 @@ public class ControllerMetricsStats {
             startCaptureBatteryLevel();
 
             // log the timestamp of the satellite modem power on
-            mSatelliteOnTimeMillis = getCurrentTime();
+            mSatelliteOnTimeMillis = getElapsedRealtime();
 
             // register broadcast receiver for monitoring battery status change
             IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
@@ -355,13 +356,12 @@ public class ControllerMetricsStats {
 
             // When charged, log the start time of battery charging
             if (isCharged) {
-                mBatteryChargedStartTimeSec = (int) (getCurrentTime() / 1000);
+                mBatteryChargedStartTime = getElapsedRealtime();
                 // When discharged, log the accumulated total battery charging time.
             } else {
                 mTotalBatteryChargeTimeSec +=
-                        (int) (getCurrentTime() / 1000)
-                                - mBatteryChargedStartTimeSec;
-                mBatteryChargedStartTimeSec = 0;
+                        (int) ((getElapsedRealtime() - mBatteryChargedStartTime) / 1000);
+                mBatteryChargedStartTime = 0;
             }
         }
     }
@@ -485,9 +485,9 @@ public class ControllerMetricsStats {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            long currentTime = getCurrentTime();
-            if (currentTime - mLastUpdatedTime > UPDATE_INTERVAL) {
-                mLastUpdatedTime = currentTime;
+            long elapsedTimeSinceBoot = getElapsedRealtime();
+            if (elapsedTimeSinceBoot - mLastUpdatedTime > UPDATE_INTERVAL) {
+                mLastUpdatedTime = elapsedTimeSinceBoot;
                 int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
                 boolean isCharged = (status == BatteryManager.BATTERY_STATUS_CHARGING);
                 logd("Battery is charged(" + isCharged + ")");
@@ -502,8 +502,8 @@ public class ControllerMetricsStats {
     }
 
     @VisibleForTesting
-    public long getCurrentTime() {
-        return System.currentTimeMillis();
+    public long getElapsedRealtime() {
+        return SystemClock.elapsedRealtime();
     }
 
     private static void logd(@NonNull String log) {

@@ -218,7 +218,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
         processAllFutureMessages();
 
         // Mock validation failed, expect retry attempt
-        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
         mPhoneSwitcherUT.mValidationCallback.onValidationDone(false, 2/*Phone2*/);
         processAllMessages();
@@ -227,6 +227,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
 
         // Test clear failed count upon switch succeeded.
         mAutoDataSwitchCallback.onRequireValidation(1/*Phone2*/, true);
+        moveTimeForward(5100);
         processAllFutureMessages();
         mPhoneSwitcherUT.mValidationCallback.onValidationDone(true, 2/*Phone2*/);
         processAllMessages();
@@ -623,7 +624,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
         // Set sub 2 as preferred sub should make phone 1 activated and phone 0 deactivated.
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(2, true, null);
         processAllMessages();
-        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
         // Validation failed. Preferred data sub should remain 1, data phone should remain 0.
         mPhoneSwitcherUT.mValidationCallback.onValidationDone(false, 2);
@@ -644,7 +645,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(
                 SubscriptionManager.DEFAULT_SUBSCRIPTION_ID, true, null);
         processAllMessages();
-        verify(mCellularNetworkValidator).validate(eq(1), eq(timeout), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(1), eq(timeout), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
         mPhoneSwitcherUT.mValidationCallback.onValidationDone(true, 1);
         processAllMessages();
@@ -874,7 +875,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
 
         // verify the attempt to do auto data switch to Phone2(nDDS)
         processAllFutureMessages();
-        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
 
         // Phone2 has holding call on VoWifi, no need to switch data
@@ -1258,7 +1259,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
         clearInvocations(mCellularNetworkValidator);
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(2, true, mSetOpptDataCallback1);
         processAllMessages();
-        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
         doReturn(true).when(mCellularNetworkValidator).isValidating();
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(2, true, mSetOpptDataCallback2);
@@ -1282,7 +1283,7 @@ public class PhoneSwitcherTest extends TelephonyTest {
         // Back to back call, call 1 to switch to subId 2, call 2 to switch back.
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(2, true, mSetOpptDataCallback1);
         processAllMessages();
-        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(false),
+        verify(mCellularNetworkValidator).validate(eq(2), anyLong(), eq(true),
                 eq(mPhoneSwitcherUT.mValidationCallback));
         doReturn(true).when(mCellularNetworkValidator).isValidating();
         mPhoneSwitcherUT.trySetOpportunisticDataSubscription(

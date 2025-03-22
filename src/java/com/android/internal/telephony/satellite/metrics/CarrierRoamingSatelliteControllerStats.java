@@ -17,6 +17,7 @@
 package com.android.internal.telephony.satellite.metrics;
 
 import android.annotation.NonNull;
+import android.os.SystemClock;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -26,6 +27,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
+import com.android.internal.telephony.satellite.SatelliteServiceUtils;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 
 import java.util.ArrayList;
@@ -73,6 +75,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setConfigDataSource(configDataSource)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -83,6 +86,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setCountOfEntitlementStatusQueryRequest(ADD_COUNT)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -102,6 +106,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setCountOfSatelliteNotificationDisplayed(ADD_COUNT)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -121,6 +126,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setIsDeviceEntitled(isDeviceEntitled)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -128,7 +134,7 @@ public class CarrierRoamingSatelliteControllerStats {
     public void onSessionStart(int subId) {
         List<Long> sessionStartTimeListForSubscription = mSessionStartTimeMap.getOrDefault(subId,
                 new ArrayList<>());
-        sessionStartTimeListForSubscription.add(getCurrentTime());
+        sessionStartTimeListForSubscription.add(getElapsedRealtime());
         mSessionStartTimeMap.put(subId, sessionStartTimeListForSubscription);
 
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
@@ -142,7 +148,7 @@ public class CarrierRoamingSatelliteControllerStats {
     public void onSessionEnd(int subId) {
         List<Long> sessionEndTimeListForSubscription = mSessionEndTimeMap.getOrDefault(subId,
                 new ArrayList<>());
-        sessionEndTimeListForSubscription.add(getCurrentTime());
+        sessionEndTimeListForSubscription.add(getElapsedRealtime());
         mSessionEndTimeMap.put(subId, sessionEndTimeListForSubscription);
 
         int numberOfSatelliteSessions = getNumberOfSatelliteSessions(subId);
@@ -161,6 +167,7 @@ public class CarrierRoamingSatelliteControllerStats {
                         .setSatelliteSessionGapMaxSec(satelliteSessionGapMaxSec)
                         .setCarrierId(getCarrierIdFromSubscription(subId))
                         .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
                         .build());
     }
 
@@ -209,8 +216,8 @@ public class CarrierRoamingSatelliteControllerStats {
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    protected long getCurrentTime() {
-        return System.currentTimeMillis();
+    protected long getElapsedRealtime() {
+        return SystemClock.elapsedRealtime();
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)

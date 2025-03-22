@@ -533,8 +533,17 @@ public class SatelliteServiceUtils {
             ServiceState serviceState = phone.getServiceState();
             if (serviceState != null) {
                 int state = serviceState.getState();
+                NetworkRegistrationInfo dataNri = serviceState.getNetworkRegistrationInfo(
+                        NetworkRegistrationInfo.DOMAIN_PS,
+                        AccessNetworkConstants.TRANSPORT_TYPE_WWAN);
+                boolean isCellularDataInService = dataNri != null && dataNri.isInService();
+                logd("isCellularAvailable: phoneId=" + phone.getPhoneId() + " state=" + state
+                        + " isEmergencyOnly=" + serviceState.isEmergencyOnly()
+                        + " isCellularDataInService=" + isCellularDataInService);
+
                 if ((state == STATE_IN_SERVICE || state == STATE_EMERGENCY_ONLY
-                        || serviceState.isEmergencyOnly())
+                        || serviceState.isEmergencyOnly()
+                        || isCellularDataInService)
                         && !isSatellitePlmn(phone.getSubId(), serviceState)) {
                     logd("isCellularAvailable true");
                     return true;
@@ -709,6 +718,23 @@ public class SatelliteServiceUtils {
             loge("getPersistentLogger: RuntimeException ex=" + ex);
         }
         return null;
+    }
+
+    /** Determines whether the subscription is in carrier roaming NB-IoT NTN or not. */
+    public static boolean isNbIotNtn(int subId) {
+        Phone phone = PhoneFactory.getPhone(SubscriptionManager.getPhoneId(subId));
+        if (phone == null) {
+            logd("isNbIotNtn(): phone is null");
+            return false;
+        }
+
+        SatelliteController satelliteController = SatelliteController.getInstance();
+        if (satelliteController == null) {
+            logd("isNbIotNtn(): satelliteController is null");
+            return false;
+        }
+
+        return satelliteController.isInCarrierRoamingNbIotNtn(phone);
     }
 
     private static void logd(@NonNull String log) {

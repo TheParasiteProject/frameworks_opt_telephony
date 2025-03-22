@@ -342,11 +342,10 @@ public class CellularNetworkValidator {
         if (mState == STATE_VALIDATING) {
             mValidationCallback.onValidationDone(passed, mSubId);
             mState = STATE_VALIDATED;
-            boolean keepRequest = mFlags.keepPingRequest()
-                    ? (passed || !mRequireTestPass) : (!mRequireTestPass && passed);
+            boolean keepRequest = passed || !mRequireTestPass;
             // If validation passed and per request to NOT release after validation, delay cleanup.
             if (keepRequest) {
-                mHandler.postDelayed(this::stopValidation, 500);
+                mHandler.postDelayed(this::stopValidation, 5000);
             } else {
                 stopValidation();
             }

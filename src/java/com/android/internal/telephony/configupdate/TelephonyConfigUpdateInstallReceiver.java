@@ -258,8 +258,6 @@ public class TelephonyConfigUpdateInstallReceiver extends ConfigUpdateInstallRec
     public ConfigParser getNewConfigParser(String domain, @Nullable byte[] data) {
         if (data == null) {
             Log.d(TAG, "content data is null");
-            mConfigUpdaterMetricsStats.reportOemAndCarrierConfigError(
-                    SatelliteConstants.CONFIG_UPDATE_RESULT_NO_DATA);
             return null;
         }
         switch (domain) {

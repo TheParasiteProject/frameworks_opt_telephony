@@ -439,6 +439,8 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setCountOfOutgoingSms(11)
                         .setCountOfIncomingMms(9)
                         .setCountOfOutgoingMms(14)
+                        .setIsMultiSim(false)
+                        .setIsNbIotNtn(false)
                         .build();
 
         mSatelliteStats.onCarrierRoamingSatelliteSessionMetrics(param);
@@ -464,6 +466,8 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(param.getCountOfOutgoingSms(), stats.countOfOutgoingSms);
         assertEquals(param.getCountOfIncomingMms(), stats.countOfIncomingMms);
         assertEquals(param.getCountOfOutgoingMms(), stats.countOfOutgoingMms);
+        assertEquals(param.isMultiSim(), stats.isMultiSim);
+        assertEquals(param.isNbIotNtn(), stats.isNbIotNtn);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }
@@ -483,6 +487,7 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setIsDeviceEntitled(true)
                         .setIsMultiSim(true)
                         .increaseCountOfSatelliteSessions()
+                        .setIsNbIotNtn(true)
                         .build();
 
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(param);
@@ -505,6 +510,7 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(param.isDeviceEntitled(), stats.isDeviceEntitled);
         assertEquals(param.isMultiSim(), stats.isMultiSim);
         assertEquals(param.getCountOfSatelliteSessions(), stats.countOfSatelliteSessions);
+        assertEquals(param.isNbIotNtn(), stats.isNbIotNtn);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }
@@ -525,6 +531,7 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setIsDeviceEntitled(true)
                         .setIsMultiSim(true)
                         .increaseCountOfSatelliteSessions()
+                        .setIsNbIotNtn(true)
                         .build();
         mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(param);
 
