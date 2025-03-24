@@ -1064,7 +1064,8 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 serviceSwitch.simSlotIndex,
                 serviceSwitch.isMultiSim,
                 serviceSwitch.carrierId,
-                serviceSwitch.switchCount);
+                serviceSwitch.switchCount,
+                serviceSwitch.isOpportunistic);
     }
 
     private static StatsEvent buildStatsEvent(CellularServiceState state) {
@@ -1087,7 +1088,8 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 state.isDataEnabled,
                 state.isIwlanCrossSim,
                 state.isNtn,
-                state.isNbIotNtn);
+                state.isNbIotNtn,
+                state.isOpportunistic);
     }
 
     private static StatsEvent buildStatsEvent(VoiceCallRatUsage usage) {

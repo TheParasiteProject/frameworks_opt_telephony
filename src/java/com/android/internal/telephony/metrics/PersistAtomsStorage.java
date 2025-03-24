@@ -2013,7 +2013,8 @@ public class PersistAtomsStorage {
                     && state.isDataEnabled == key.isDataEnabled
                     && state.isIwlanCrossSim == key.isIwlanCrossSim
                     && state.isNtn == key.isNtn
-                    && state.isNbIotNtn == key.isNbIotNtn) {
+                    && state.isNbIotNtn == key.isNbIotNtn
+                    && state.isOpportunistic == key.isOpportunistic) {
                 return state;
             }
         }
@@ -2030,7 +2031,8 @@ public class PersistAtomsStorage {
                     && serviceSwitch.ratTo == key.ratTo
                     && serviceSwitch.simSlotIndex == key.simSlotIndex
                     && serviceSwitch.isMultiSim == key.isMultiSim
-                    && serviceSwitch.carrierId == key.carrierId) {
+                    && serviceSwitch.carrierId == key.carrierId
+                    && serviceSwitch.isOpportunistic == key.isOpportunistic) {
                 return serviceSwitch;
             }
         }

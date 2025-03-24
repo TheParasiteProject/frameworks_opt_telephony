@@ -441,6 +441,7 @@ message CellularServiceState {
     optional bool is_iwlan_cross_sim = 15;
     optional bool is_ntn = 16;
     optional bool is_nb_iot_ntn = 17;
+    optional bool is_opportunistic = 18;
 
     // Internal use only
     optional int64 last_used_millis = 10001;
@@ -453,6 +454,7 @@ message CellularDataServiceSwitch {
     optional bool is_multi_sim = 4;
     optional int32 carrier_id = 5;
     optional int32 switch_count = 6;
+    optional bool is_opportunistic = 7;
 
     // Internal use only
     optional int64 last_used_millis = 10001;
