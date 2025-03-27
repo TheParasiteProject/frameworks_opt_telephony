@@ -7925,12 +7925,35 @@ public class SatelliteController extends Handler {
         }
 
         if(carrierTagIds == null) {
-            plogd("isSatelliteAvailableAtCurrentLocation: tagids for carrier satellite enabled " +
-                    "are not available");
-            return false;
+            String satelliteAccessConfigFile =
+                getSatelliteAccessConfigurationFileFromOverlayConfig();
+            if (TextUtils.isEmpty(satelliteAccessConfigFile)) {
+                plogd("isSatelliteAvailableAtCurrentLocation: device does not support"
+                          + " custom satellite access configuration per location");
+                return true;
+            } else {
+                plogd("isSatelliteAvailableAtCurrentLocation: tagids for carrier "
+                          + info.getCarrierName() + ", subId=" + info.getSubscriptionId()
+                          + " are not available");
+                return false;
+            }
         }
 
         return isCarrierSatelliteAvailableAtCurrentLocation(carrierTagIds);
+    }
+
+    @Nullable
+    private String getSatelliteAccessConfigurationFileFromOverlayConfig() {
+        String satelliteAccessConfigFile = null;
+        try {
+            satelliteAccessConfigFile = mContext.getResources().getString(
+                    com.android.internal.R.string.satellite_access_config_file);
+        } catch (Resources.NotFoundException ex) {
+            loge("getSatelliteAccessConfigurationFileFromOverlayConfig: got ex=" + ex);
+        }
+
+        logd("satelliteAccessConfigFile =" + satelliteAccessConfigFile);
+        return satelliteAccessConfigFile;
     }
 
     /**

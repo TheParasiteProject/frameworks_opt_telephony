@@ -6040,6 +6040,11 @@ public class SatelliteControllerTest extends TelephonyTest {
             return mLocationServiceEnabled;
         }
 
+        @Override
+        protected boolean isSatelliteAvailableAtCurrentLocation(@Nullable SubscriptionInfo info) {
+            return super.isSatelliteAvailableAtCurrentLocation(info);
+        }
+
         void setSatelliteProvisioned(@Nullable Boolean isProvisioned) {
             synchronized (mDeviceProvisionLock) {
                 mIsDeviceProvisioned = isProvisioned;
@@ -6948,6 +6953,61 @@ public class SatelliteControllerTest extends TelephonyTest {
         processAllMessages();
 
         assertTrue(mSatelliteControllerUT.isCarrierRoamingNtnEligible(mPhone));
+    }
+
+    @Test
+    public void testIsSatelliteAvailableAtCurrentLocation() throws Exception {
+        SubscriptionInfo ntnOnlySubscriptionInfo = new SubscriptionInfo.Builder()
+                .setOnlyNonTerrestrialNetwork(true)
+                .build();
+        SubscriptionInfo esosSubscriptionInfo = new SubscriptionInfo.Builder()
+                .setSatelliteESOSSupported(true)
+                .build();
+        Field currentLocationTagIdsField = SatelliteController.class.getDeclaredField(
+                "mCurrentLocationTagIds");
+        currentLocationTagIdsField.setAccessible(true);
+
+        // Null subscription info
+        assertFalse(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(null));
+
+        // Satellite is not allowed
+        mSatelliteControllerUT.setIsSatelliteAllowedState(false);
+        assertFalse(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                ntnOnlySubscriptionInfo));
+        assertFalse(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                esosSubscriptionInfo));
+
+        // Satellite is allowed
+        mSatelliteControllerUT.setIsSatelliteAllowedState(true);
+        assertTrue(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                ntnOnlySubscriptionInfo));
+
+        // Both config_verizon_satellite_enabled_tagids and satellite_access_config_file
+        // are not configured
+        assertTrue(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                esosSubscriptionInfo));
+
+        // config_verizon_satellite_enabled_tagids is not configured whereas
+        // satellite_access_config_file is configured
+        mContextFixture.putResource(
+                com.android.internal.R.string.satellite_access_config_file,
+                "test_satellite_access_config_file");
+        assertFalse(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                esosSubscriptionInfo));
+
+        // Both config_verizon_satellite_enabled_tagids and satellite_access_config_file
+        // are configured, but mCurrentLocationTagIds is empty
+        mContextFixture.putIntArrayResource(
+                R.array.config_verizon_satellite_enabled_tagids,
+                new int[]{1001});
+        assertFalse(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                esosSubscriptionInfo));
+
+        // Both config_verizon_satellite_enabled_tagids and satellite_access_config_file
+        // are configured, and mCurrentLocationTagIds contains the carrier tag id
+        currentLocationTagIdsField.set(mSatelliteControllerUT, Arrays.asList(1001));
+        assertTrue(mSatelliteControllerUT.isSatelliteAvailableAtCurrentLocation(
+                esosSubscriptionInfo));
     }
 
     public void testNotifyNtnEligibilityLocationServiceStatusChanged() {
