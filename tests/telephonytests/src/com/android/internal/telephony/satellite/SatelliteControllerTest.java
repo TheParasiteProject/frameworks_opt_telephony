@@ -5693,6 +5693,22 @@ public class SatelliteControllerTest extends TelephonyTest {
                 61 /* CMD_EVALUATE_CARRIER_ROAMING_NTN_ELIGIBILITY_CHANGE */).sendToTarget();
     }
 
+    private void sendCmdGetSatelliteEnabledForCarrier(Phone phone) {
+        SatelliteController.SatelliteControllerHandlerRequest request =
+                new SatelliteController.SatelliteControllerHandlerRequest(null, phone);
+        Message msg = mSatelliteControllerUT.obtainMessage(
+                64 /* CMD_GET_SATELLITE_ENABLED_FOR_CARRIER */, request);
+        msg.sendToTarget();
+    }
+
+    private void sendEventGetSatelliteEnabledForCarrierDone(int subId, Boolean result,
+            Throwable exception) {
+        Message msg = mSatelliteControllerUT.obtainMessage(
+                65 /* EVENT_GET_SATELLITE_ENABLED_FOR_CARRIER_DONE */, subId);
+        msg.obj = new AsyncResult(subId, result, exception);
+        msg.sendToTarget();
+    }
+
     private void setRadioPower(boolean on) {
         mSimulatedCommands.setRadioPower(on, false, false, null);
     }
@@ -7009,4 +7025,27 @@ public class SatelliteControllerTest extends TelephonyTest {
 
         verify(mPhone, times(1)).notifyCarrierRoamingNtnEligibleStateChanged(eq(true));
     }
+
+    @Test
+    public void testGetSatelliteEnabledForCarrier() {
+        reset(mPhone);
+        sendCmdGetSatelliteEnabledForCarrier(mPhone);
+        processAllMessages();
+        verify(mPhone, times(1)).isSatelliteEnabledForCarrier(anyInt(), any());
+        reset(mPhone);
+
+        sendEventGetSatelliteEnabledForCarrierDone(mPhone.getSubId(), false,
+                new SatelliteException(SATELLITE_RESULT_ERROR));
+        processAllMessages();
+        assertFalse(mSatelliteControllerUT.isSatelliteEnabledForCarrierAtModem(mPhone.getSubId()));
+
+        sendEventGetSatelliteEnabledForCarrierDone(mPhone.getSubId(), true, null);
+        processAllMessages();
+        assertTrue(mSatelliteControllerUT.isSatelliteEnabledForCarrierAtModem(mPhone.getSubId()));
+
+        sendEventGetSatelliteEnabledForCarrierDone(mPhone.getSubId(), false, null);
+        processAllMessages();
+        assertFalse(mSatelliteControllerUT.isSatelliteEnabledForCarrierAtModem(mPhone.getSubId()));
+    }
+
 }
