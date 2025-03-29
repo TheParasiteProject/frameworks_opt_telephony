@@ -357,7 +357,7 @@ public class ServiceStateTracker extends Handler {
     private final LocalLog mRadioPowerLog = new LocalLog(16);
     private final LocalLog mCdnrLogs = new LocalLog(64);
 
-    private Pattern mOperatorNameStringPattern;
+    @Nullable private Pattern mOperatorNameStringPattern;
     private PersistableBundle mCarrierConfig;
 
     @NonNull
@@ -5842,8 +5842,10 @@ public class ServiceStateTracker extends Handler {
         if (!TextUtils.isEmpty(operatorNamePattern)) {
             mOperatorNameStringPattern = Pattern.compile(operatorNamePattern);
             if (DBG) {
-                log("mOperatorNameStringPattern: " + mOperatorNameStringPattern.toString());
+                log("mOperatorNameStringPattern: " + mOperatorNameStringPattern);
             }
+        } else {
+            mOperatorNameStringPattern = null;
         }
     }
 

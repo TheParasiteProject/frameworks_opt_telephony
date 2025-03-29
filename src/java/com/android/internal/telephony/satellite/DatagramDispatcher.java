@@ -40,7 +40,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.telephony.PersistentLogger;
-import android.telephony.Rlog;
 import android.telephony.satellite.SatelliteDatagram;
 import android.telephony.satellite.SatelliteManager;
 import android.telephony.satellite.SatelliteSessionStats;
@@ -1383,8 +1382,6 @@ public class DatagramDispatcher extends Handler {
     }
 
     private boolean allowMtSmsPolling() {
-        if (!mFeatureFlags.carrierRoamingNbIotNtn()) return false;
-
         SatelliteController satelliteController = SatelliteController.getInstance();
         int subId = satelliteController.getSelectedSatelliteSubId();
         boolean isP2PSmsDisallowed =
@@ -1395,20 +1392,33 @@ public class DatagramDispatcher extends Handler {
         }
 
         boolean isModemStateConnectedOrTransferring;
+        boolean isAligned;
+        boolean isMtSmsPollingThrottled;
         synchronized (mLock) {
-            if (!mIsAligned) return false;
-
+            isMtSmsPollingThrottled = mIsMtSmsPollingThrottled;
+            isAligned = mIsAligned;
             isModemStateConnectedOrTransferring =
                     mModemState == SATELLITE_MODEM_STATE_CONNECTED
                             || mModemState == SATELLITE_MODEM_STATE_DATAGRAM_TRANSFERRING;
         }
 
-        if (!isModemStateConnectedOrTransferring && !allowCheckMessageInNotConnected()) {
-            plogd("EVENT_MT_SMS_POLLING_THROTTLE_TIMED_OUT:"
-                    + " allow_check_message_in_not_connected is disabled");
+        if (isMtSmsPollingThrottled) {
+            plogd("allowMtSmsPolling: polling is throttled");
             return false;
         }
 
+        if (!isAligned) {
+            plogd("allowMtSmsPolling: not aligned");
+            return false;
+        }
+
+        if (!isModemStateConnectedOrTransferring && !allowCheckMessageInNotConnected()) {
+            plogd("allowMtSmsPolling: not in service and "
+                    + "allow_check_message_in_not_connected is disabled");
+            return false;
+        }
+
+        plogd("allowMtSmsPolling: return true");
         return true;
     }
 
@@ -1418,31 +1428,31 @@ public class DatagramDispatcher extends Handler {
     }
 
     private static void logd(@NonNull String log) {
-        Rlog.d(TAG, log);
+        Log.d(TAG, log);
     }
 
     private static void loge(@NonNull String log) {
-        Rlog.e(TAG, log);
+        Log.e(TAG, log);
     }
 
-    private static void logw(@NonNull String log) { Rlog.w(TAG, log); }
+    private static void logw(@NonNull String log) { Log.w(TAG, log); }
 
     private void plogd(@NonNull String log) {
-        Rlog.d(TAG, log);
+        Log.d(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.debug(TAG, log);
         }
     }
 
     private void plogw(@NonNull String log) {
-        Rlog.w(TAG, log);
+        Log.w(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.warn(TAG, log);
         }
     }
 
     private void ploge(@NonNull String log) {
-        Rlog.e(TAG, log);
+        Log.e(TAG, log);
         if (mPersistentLogger != null) {
             mPersistentLogger.error(TAG, log);
         }
