@@ -447,6 +447,27 @@ public class ApduSenderTest {
     }
 
     @Test
+    public void testSend_euiccSession_sendFailure_shouldCloseChannel() throws Exception {
+        int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
+        // Send failure: `sw1:0x6f sw2:0x0 Error: technical problem with no diagnostic given`
+        LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "6F00");
+        LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
+        EuiccSession.get(mContext).startSession(SESSION_ID);
+
+        mSender.send((selectResponse, requestBuilder) -> requestBuilder.addApdu(
+                10, 1, 2, 3, 0, "a"), mResponseCaptor, mHandler);
+        mLooper.processAllMessages();
+
+        assertEquals(0x6F00, ((ApduException) mResponseCaptor.exception).getApduStatus());
+        InOrder inOrder = inOrder(mMockCi);
+        inOrder.verify(mMockCi).iccOpenLogicalChannel(eq(ApduSender.ISD_R_AID), anyInt(), any());
+        inOrder.verify(mMockCi).iccTransmitApduLogicalChannel(eq(channel), eq(channel | 10),
+                eq(1), eq(2), eq(3), eq(0), eq("a"), anyBoolean(), any());
+        inOrder.verify(mMockCi).iccCloseLogicalChannel(eq(channel), eq(true /*isEs10*/), any());
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
     public void testSendTwice_euiccSession_shouldOpenChannelOnceNotCloseChannel()
             throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
