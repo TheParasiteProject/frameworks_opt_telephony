@@ -33,6 +33,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.platform.test.flag.junit.SetFlagsRule;
@@ -41,9 +42,10 @@ import android.telephony.IccOpenLogicalChannelResponse;
 import android.testing.AndroidTestingRunner;
 import android.testing.TestableLooper;
 
+import androidx.test.InstrumentationRegistry;
+
 import com.android.internal.telephony.CommandException;
 import com.android.internal.telephony.CommandsInterface;
-import com.android.internal.telephony.TelephonyTest;
 import com.android.internal.telephony.euicc.EuiccSession;
 import com.android.internal.telephony.flags.Flags;
 import com.android.internal.telephony.uicc.IccIoResult;
@@ -59,7 +61,7 @@ import org.mockito.Mockito;
 
 @RunWith(AndroidTestingRunner.class)
 @TestableLooper.RunWithLooper
-public class ApduSenderTest extends TelephonyTest {
+public class ApduSenderTest {
     @Rule public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
 
     private static class ResponseCaptor extends ApduSenderResultCallback {
@@ -105,14 +107,13 @@ public class ApduSenderTest extends TelephonyTest {
     private ResponseCaptor mResponseCaptor;
     private byte[] mSelectResponse;
     private ApduSender mSender;
+    private Context mContext;
 
     @Before
-    public void setUp() throws Exception {
-        super.setUp(getClass().getSimpleName());
+    public void setUp() {
         mSetFlagsRule.enableFlags(Flags.FLAG_OPTIMIZATION_APDU_SENDER);
-        mContextFixture.putBooleanResource(
-                com.android.internal.R.bool.euicc_optimize_apdu_sender, true);
 
+        mContext = InstrumentationRegistry.getContext();
         mMockCi = mock(CommandsInterface.class);
         mLooper = TestableLooper.get(this);
         mHandler = new Handler(mLooper.getLooper());
@@ -124,7 +125,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() throws InterruptedException {
         // Send an APDU to verify that the channel lock is not stuck (b/382549728).
         // Sameas testSend(), but not verifying mMockCi interactions.
         checkChannelLock();
@@ -141,17 +142,17 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testWrongAid_throwsIllegalArgumentException() throws Exception {
+    public void testWrongAid_throwsIllegalArgumentException() {
         String wrongAid = "-1";
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new ApduSender(mContext, 0 /* phoneId= */,
+            new ApduSender(InstrumentationRegistry.getContext(), 0 /* phoneId= */,
                             mMockCi, wrongAid, false /* supportExtendedApdu */);
         });
     }
 
     @Test
-    public void testSendEmptyCommands() throws Exception {
+    public void testSendEmptyCommands() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "A1A1A19000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
 
@@ -167,7 +168,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testOpenChannelErrorStatus() throws Exception {
+    public void testOpenChannelErrorStatus() throws InterruptedException {
         LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi,
                 new CommandException(CommandException.Error.NO_SUCH_ELEMENT));
 
@@ -182,7 +183,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSend() throws Exception {
+    public void testSend() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A1A1A19000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
@@ -200,7 +201,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendMultiApdus() throws Exception {
+    public void testSendMultiApdus() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A19000", "A29000",
                 "A39000", "A49000");
@@ -229,7 +230,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendMultiApdusStopEarly() throws Exception {
+    public void testSendMultiApdusStopEarly() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A19000", "A29000",
                 "A39000", "A49000");
@@ -254,7 +255,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendLongResponse() throws Exception {
+    public void testSendLongResponse() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A1A1A16104",
                 "B2B2B2B26102", "C3C39000");
@@ -274,7 +275,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendStoreDataLongDataLongResponse() throws Exception {
+    public void testSendStoreDataLongDataLongResponse() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A19000", "9000", "9000",
                 "B22B6103", "B2222B9000", "C39000");
@@ -306,7 +307,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendStoreDataLongDataMod0() throws Exception {
+    public void testSendStoreDataLongDataMod0() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "9000", "B2222B9000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
@@ -328,7 +329,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendStoreDataLen0() throws Exception {
+    public void testSendStoreDataLen0() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "B2222B9000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
@@ -344,7 +345,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSendErrorResponseInMiddle() throws Exception {
+    public void testSendErrorResponseInMiddle() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A19000", "9000",
                 "B22B6103", "6985");
@@ -373,7 +374,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testChannelAlreadyOpened() throws Exception {
+    public void testChannelAlreadyOpened() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
 
@@ -392,8 +393,7 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSend_OpenChannelFailedNoSuchElement_useChannelInSharedPreference()
-            throws Exception {
+    public void testSend_OpenChannelFailedNoSuchElement_useChannelInSharedPreference() {
         // Open a channel but not close, by making CI.iccTransmitApduLogicalChannel throw.
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         doThrow(new RuntimeException()).when(mMockCi).iccTransmitApduLogicalChannel(
@@ -402,7 +402,7 @@ public class ApduSenderTest extends TelephonyTest {
         mSender.send((selectResponse, requestBuilder) -> requestBuilder.addApdu(
                 10, 1, 2, 3, 0, "a"), mResponseCaptor, mHandler);
         mLooper.processAllMessages();
-        mSender = new ApduSender(mContext, PHONE_ID,
+        mSender = new ApduSender(InstrumentationRegistry.getContext(), PHONE_ID,
                             mMockCi, ApduSender.ISD_R_AID, false /* supportExtendedApdu */);
         reset(mMockCi);
         // Stub open channel failure NO_SUCH_ELEMENT
@@ -426,7 +426,8 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     @Test
-    public void testSend_euiccSession_shouldNotCloseChannel() throws Exception {
+    public void testSend_euiccSession_shouldNotCloseChannel()
+            throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A1A1A19000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
@@ -441,12 +442,13 @@ public class ApduSenderTest extends TelephonyTest {
         inOrder.verify(mMockCi).iccOpenLogicalChannel(eq(ApduSender.ISD_R_AID), anyInt(), any());
         inOrder.verify(mMockCi).iccTransmitApduLogicalChannel(eq(channel), eq(channel | 10),
                 eq(1), eq(2), eq(3), eq(0), eq("a"), anyBoolean(), any());
-        // No iccCloseLogicalChannel
+        inOrder.verify(mMockCi).iccCloseLogicalChannel(eq(channel), eq(true /*isEs10*/), any());
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
-    public void testSendTwice_euiccSession_shouldOpenChannelOnceNotCloseChannel() throws Exception {
+    public void testSendTwice_euiccSession_shouldOpenChannelOnceNotCloseChannel()
+            throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(
                     mMockCi, channel, "A1A1A19000", "A1A1A19000");
@@ -467,12 +469,12 @@ public class ApduSenderTest extends TelephonyTest {
         // iccTransmitApduLogicalChannel twice
         inOrder.verify(mMockCi, times(2)).iccTransmitApduLogicalChannel(eq(channel),
                  eq(channel | 10), eq(1), eq(2), eq(3), eq(0), eq("a"), anyBoolean(), any());
-        // No iccCloseLogicalChannel
+        inOrder.verify(mMockCi).iccCloseLogicalChannel(eq(channel), eq(true /*isEs10*/), any());
         inOrder.verifyNoMoreInteractions();
     }
 
     @Test
-    public void testSendTwice_thenEndSession() throws Exception {
+    public void testSendTwice_thenEndSession() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel,
                 "A1A1A19000", "A1A1A19000");
@@ -500,12 +502,12 @@ public class ApduSenderTest extends TelephonyTest {
     }
 
     private int getChannelIdFromSharedPreferences() {
-        return PreferenceManager.getDefaultSharedPreferences(mContext)
+        return PreferenceManager.getDefaultSharedPreferences(InstrumentationRegistry.getContext())
                 .getInt(SHARED_PREFS_KEY_CHANNEL_ID, -1);
     }
 
     private void clearSharedPreferences() {
-        PreferenceManager.getDefaultSharedPreferences(mContext)
+        PreferenceManager.getDefaultSharedPreferences(InstrumentationRegistry.getContext())
                 .edit()
                 .remove(SHARED_PREFS_KEY_CHANNEL_ID)
                 .remove(SHARED_PREFS_KEY_CHANNEL_RESPONSE)
@@ -516,7 +518,7 @@ public class ApduSenderTest extends TelephonyTest {
      * Send an APDU to verify that the channel lock is not stuck (b/382549728).
      * Same as testSend(), but not verifying mMockCi interactions.
      */
-    private void checkChannelLock() throws Exception {
+    private void checkChannelLock() throws InterruptedException {
         int channel = LogicalChannelMocker.mockOpenLogicalChannelResponse(mMockCi, "9000");
         LogicalChannelMocker.mockSendToLogicalChannel(mMockCi, channel, "A1A1A19000");
         LogicalChannelMocker.mockCloseLogicalChannel(mMockCi, channel, /* error= */ null);
