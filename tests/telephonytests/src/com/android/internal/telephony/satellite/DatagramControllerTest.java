@@ -404,5 +404,17 @@ public class DatagramControllerTest extends TelephonyTest {
                 SatelliteDatagram datagram) {
             super.pushDemoModeDatagram(datagramType, datagram);
         }
+
+        @Override
+        protected void onSatelliteModemStateChanged(
+                @SatelliteManager.SatelliteModemState int state) {
+            super.onSatelliteModemStateChanged(state);
+        }
+
+        @Override
+        protected boolean needsWaitingForSatelliteConnected(
+                @SatelliteManager.DatagramType int datagramType) {
+            return super.needsWaitingForSatelliteConnected(datagramType);
+        }
     }
 }
