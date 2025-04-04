@@ -356,8 +356,32 @@ public class DatagramControllerTest extends TelephonyTest {
         }
 
         @Override
+        protected void updateReceiveStatus(int subId,
+                @SatelliteManager.DatagramType int datagramType,
+                @SatelliteManager.SatelliteDatagramTransferState int datagramTransferState,
+                int receivePendingCount, int errorCode) {
+            super.updateReceiveStatus(subId, datagramType, datagramTransferState,
+                    receivePendingCount, errorCode);
+        }
+
+        @Override
         protected boolean isSendingInIdleState() {
             return super.isSendingInIdleState();
+        }
+
+        @Override
+        protected int getReceivePendingCount() {
+            return super.getReceivePendingCount();
+        }
+
+        @Override
+        protected boolean isReceivingDatagrams() {
+            return super.isReceivingDatagrams();
+        }
+
+        @Override
+        protected boolean isPollingInIdleState() {
+            return super.isPollingInIdleState();
         }
     }
 }
