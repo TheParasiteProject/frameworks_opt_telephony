@@ -6167,31 +6167,27 @@ public class SatelliteController extends Handler {
             return;
         }
 
-        /* Request to enable or disable the satellite in the cellular modem only when the desired
-        state and the current state are different. */
+        /* Request to enable or disable the satellite in the cellular modem. */
         boolean isSatelliteExpectedToBeEnabled = !isSatelliteRestrictedForCarrier(subId)
-                && isSatelliteSupportedViaCarrier(subId);
+                && isSatelliteSupportedViaCarrier(subId)
+                && getCarrierRoamingNtnConnectType(subId) == CARRIER_ROAMING_NTN_CONNECT_AUTOMATIC;
         boolean isSatelliteEnabledForCarrierAtModem = isSatelliteEnabledForCarrierAtModem(
                 phone.getSubId());
         plogd("evaluateEnablingSatelliteForCarrier: subId=" + subId + " reason=" + reason
                 + " isSatelliteExpectedToBeEnabled=" + isSatelliteExpectedToBeEnabled
                 + " isSatelliteEnabledForCarrierAtModem=" + isSatelliteEnabledForCarrierAtModem);
 
-        if (isSatelliteExpectedToBeEnabled != isSatelliteEnabledForCarrierAtModem) {
-            int simSlot = SubscriptionManager.getSlotIndex(subId);
-            RequestHandleSatelliteAttachRestrictionForCarrierArgument argument =
-                    new RequestHandleSatelliteAttachRestrictionForCarrierArgument(subId,
-                            reason, callback);
-            SatelliteControllerHandlerRequest request =
-                    new SatelliteControllerHandlerRequest(argument,
-                            SatelliteServiceUtils.getPhone(subId));
-            Message onCompleted = obtainMessage(
-                    EVENT_EVALUATE_SATELLITE_ATTACH_RESTRICTION_CHANGE_DONE, request);
-            phone.setSatelliteEnabledForCarrier(simSlot,
-                    isSatelliteExpectedToBeEnabled, onCompleted);
-        } else {
-            callback.accept(SATELLITE_RESULT_SUCCESS);
-        }
+        int simSlot = SubscriptionManager.getSlotIndex(subId);
+        RequestHandleSatelliteAttachRestrictionForCarrierArgument argument =
+                new RequestHandleSatelliteAttachRestrictionForCarrierArgument(subId,
+                        reason, callback);
+        SatelliteControllerHandlerRequest request =
+                new SatelliteControllerHandlerRequest(argument,
+                        SatelliteServiceUtils.getPhone(subId));
+        Message onCompleted = obtainMessage(
+                EVENT_EVALUATE_SATELLITE_ATTACH_RESTRICTION_CHANGE_DONE, request);
+        phone.setSatelliteEnabledForCarrier(simSlot,
+                isSatelliteExpectedToBeEnabled, onCompleted);
     }
 
     @SatelliteManager.SatelliteResult private int evaluateOemSatelliteRequestAllowed(
@@ -9225,11 +9221,14 @@ public class SatelliteController extends Handler {
         if (isValidSubscriptionId(subId)) {
             Map<String, Integer> dataServicePolicy;
             synchronized (mSupportedSatelliteServicesLock) {
-                dataServicePolicy = mEntitlementDataServicePolicyMapPerCarrier.get(subId);
+                dataServicePolicy = getConfigForSubId(subId).getBoolean(
+                        KEY_SATELLITE_ENTITLEMENT_SUPPORTED_BOOL, false)
+                        ? mEntitlementDataServicePolicyMapPerCarrier.get(subId)
+                        : null;
             }
             plogd("getSatelliteDataServicePolicyForPlmn: dataServicePolicy=" + dataServicePolicy);
 
-            if (dataServicePolicy != null) {
+            if (dataServicePolicy != null && !dataServicePolicy.isEmpty()) {
                 if (!TextUtils.isEmpty(plmn) && dataServicePolicy.containsKey(plmn)) {
                     plogd("getSatelliteDataServicePolicyForPlmn: "
                             + "return policy using dataServicePolicy map");
@@ -9244,9 +9243,18 @@ public class SatelliteController extends Handler {
                             preferredPolicy = policy;
                         }
                     }
-                    plogd("getSatelliteDataServicePolicyForPlmn: "
-                            + "return preferredPolicy=" + preferredPolicy);
-                    return preferredPolicy;
+
+                    // when invoked getSatelliteDataServicePolicyPlmn() with empty plmn and data
+                    // service policy not provisioned i.e.data service policy info is empty with
+                    // or without plmn key, then ignore setting preferred data supported mode policy
+                    // as restricted and fallback to carrier configured data supported mode for the
+                    // subscription id.
+                    if (preferredPolicy
+                            > CarrierConfigManager.SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED) {
+                        plogd("getSatelliteDataServicePolicyForPlmn: "
+                                + "return preferredPolicy=" + preferredPolicy);
+                        return preferredPolicy;
+                    }
                 }
             }
 

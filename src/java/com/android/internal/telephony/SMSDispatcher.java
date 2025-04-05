@@ -1144,7 +1144,8 @@ public abstract class SMSDispatcher extends Handler {
                     tracker.isFromDefaultSmsApplication(mContext),
                     tracker.getInterval(),
                     mTelephonyManager.isEmergencyNumber(tracker.mDestAddress),
-                    tracker.isMtSmsPollingMessage(mContext));
+                    tracker.isMtSmsPollingMessage(mContext),
+                    tracker.getPduLength());
             if (mPhone != null) {
                 TelephonyAnalytics telephonyAnalytics = mPhone.getTelephonyAnalytics();
                 if (telephonyAnalytics != null) {
@@ -1206,7 +1207,8 @@ public abstract class SMSDispatcher extends Handler {
                         tracker.isFromDefaultSmsApplication(mContext),
                         tracker.getInterval(),
                         mTelephonyManager.isEmergencyNumber(tracker.mDestAddress),
-                        tracker.isMtSmsPollingMessage(mContext));
+                        tracker.isMtSmsPollingMessage(mContext),
+                        tracker.getPduLength());
                 if (mPhone != null) {
                     TelephonyAnalytics telephonyAnalytics = mPhone.getTelephonyAnalytics();
                     if (telephonyAnalytics != null) {
@@ -1244,7 +1246,8 @@ public abstract class SMSDispatcher extends Handler {
                         tracker.isFromDefaultSmsApplication(mContext),
                         tracker.getInterval(),
                         mTelephonyManager.isEmergencyNumber(tracker.mDestAddress),
-                        tracker.isMtSmsPollingMessage(mContext));
+                        tracker.isMtSmsPollingMessage(mContext),
+                        tracker.getPduLength());
                 if (mPhone != null) {
                     TelephonyAnalytics telephonyAnalytics = mPhone.getTelephonyAnalytics();
                     if (telephonyAnalytics != null) {
@@ -1272,7 +1275,8 @@ public abstract class SMSDispatcher extends Handler {
                         tracker.isFromDefaultSmsApplication(mContext),
                         tracker.getInterval(),
                         mTelephonyManager.isEmergencyNumber(tracker.mDestAddress),
-                        tracker.isMtSmsPollingMessage(mContext));
+                        tracker.isMtSmsPollingMessage(mContext),
+                        tracker.getPduLength());
                 if (mPhone != null) {
                     TelephonyAnalytics telephonyAnalytics = mPhone.getTelephonyAnalytics();
                     if (telephonyAnalytics != null) {
@@ -2544,7 +2548,8 @@ public abstract class SMSDispatcher extends Handler {
                     trackers[0].isFromDefaultSmsApplication(mContext),
                     trackers[0].getInterval(),
                     mTelephonyManager.isEmergencyNumber(trackers[0].mDestAddress),
-                    trackers[0].isMtSmsPollingMessage(mContext));
+                    trackers[0].isMtSmsPollingMessage(mContext),
+                    trackers[0].getPduLength());
             if (mPhone != null) {
                 TelephonyAnalytics telephonyAnalytics = mPhone.getTelephonyAnalytics();
                 if (telephonyAnalytics != null) {
@@ -2743,6 +2748,24 @@ public abstract class SMSDispatcher extends Handler {
             String mtSmsPollingText =
                     context.getResources().getString(R.string.config_mt_sms_polling_text);
             return mFullMessageText.equals(mtSmsPollingText);
+        }
+
+        /**
+         * Returns the length of the PDU in bytes for this tracker, if available.
+         * This value is expected to be populated in the {@code mData} map during tracker creation
+         * after the PDU has been generated.
+         *
+         * @return The PDU length in bytes, or 0 if the length is not available or invalid.
+         */
+        public int getPduLength() {
+            if (mData == null) {
+                return 0;
+            }
+            byte[] encodedPdu =  (byte[]) mData.get(MAP_KEY_PDU);
+            if (encodedPdu == null) {
+                return 0;
+            }
+            return encodedPdu.length;
         }
 
         /**
