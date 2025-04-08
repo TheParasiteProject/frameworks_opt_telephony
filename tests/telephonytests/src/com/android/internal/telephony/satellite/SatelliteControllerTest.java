@@ -742,7 +742,8 @@ public class SatelliteControllerTest extends TelephonyTest {
 
     @Test
     public void testShouldTurnOffCarrierSatelliteForEmergencyCall() throws Exception {
-        DatagramController datagramController = mock(DatagramController.class);
+        DatagramControllerTest.TestDatagramController datagramController = mock(
+                DatagramControllerTest.TestDatagramController.class);
         replaceInstance(SatelliteController.class, "mDatagramController",
                 mSatelliteControllerUT, datagramController);
 
