@@ -1434,6 +1434,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         // Verify satellite enabled for emergency
         assertTrue(mSatelliteControllerUT.getRequestIsEmergency());
         mSatelliteControllerUT.requestIsEmergencyModeEnabled(mRequestIsEmergencyReceiver);
+        processAllMessages();
         assertTrue(mRequestIsEmergency);
     }
 
