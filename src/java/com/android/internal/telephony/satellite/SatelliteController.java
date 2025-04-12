@@ -328,6 +328,7 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_IS_SATELLITE_ENABLED = 67;
     private static final int REQUEST_IS_DEMO_MODE_ENABLED = 68;
     private static final int REQUEST_IS_EMERGENCY_MODE_ENABLED = 69;
+    private static final int REQUEST_IS_SATELLITE_SUPPORTED = 70;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2376,6 +2377,18 @@ public class SatelliteController extends Handler {
                 break;
             }
 
+            case REQUEST_IS_SATELLITE_SUPPORTED: {
+                plogd("REQUEST_IS_SATELLITE_SUPPORTED");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestIsSatelliteSupported(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
             default:
                 Log.w(TAG, "SatelliteControllerHandler: unexpected message code: " +
                         msg.what);
@@ -2918,6 +2931,18 @@ public class SatelliteController extends Handler {
      *               the device if the request is successful or an error code if the request failed.
      */
     public void requestIsSatelliteSupported(@NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_IS_SATELLITE_SUPPORTED, args));
+            return;
+        }
+
+        handleRequestIsSatelliteSupported(result);
+    }
+
+    private void handleRequestIsSatelliteSupported(@NonNull ResultReceiver result) {
+        plogd("handleRequestIsSatelliteSupported");
         int subId = getSelectedSatelliteSubId();
         Boolean isSatelliteSupported = getIsSatelliteSupported();
         if (isSatelliteSupported != null) {
