@@ -674,7 +674,7 @@ public class AutoDataSwitchController extends Handler {
             TelephonyDisplayInfo displayInfo = phone.getDisplayInfoController()
                     .getTelephonyDisplayInfo();
             mPhonesSignalStatus[phoneId].mDisplayInfo = displayInfo;
-            if (getHigherScoreCandidatePhoneId() != mSelectedTargetPhoneId) {
+            if (getBetterCandidatePhoneIdBasedOnScore() != mSelectedTargetPhoneId) {
                 log("onDisplayInfoChanged: phone " + phoneId + " " + displayInfo);
                 evaluateAutoDataSwitch(EVALUATION_REASON_DISPLAY_INFO_CHANGED);
             }
@@ -694,7 +694,7 @@ public class AutoDataSwitchController extends Handler {
             SignalStrength oldSignalStrength = mPhonesSignalStatus[phoneId].mSignalStrength;
             if (oldSignalStrength.getLevel() != newSignalStrength.getLevel()) {
                 mPhonesSignalStatus[phoneId].mSignalStrength = newSignalStrength;
-                if (getHigherScoreCandidatePhoneId() != mSelectedTargetPhoneId) {
+                if (getBetterCandidatePhoneIdBasedOnScore() != mSelectedTargetPhoneId) {
                     log("onSignalStrengthChanged: phone " + phoneId + " "
                             + oldSignalStrength.getLevel() + "->" + newSignalStrength.getLevel());
                     evaluateAutoDataSwitch(EVALUATION_REASON_SIGNAL_STRENGTH_CHANGED);
@@ -706,31 +706,45 @@ public class AutoDataSwitchController extends Handler {
     }
 
     /**
-     * Called as a preliminary check for the frequent signal/display info change.
-     * @return The phone Id if found a candidate phone with higher signal score, or the DDS has
-     * an equal score.
+     * Checks for a better data phone candidate based on signal strength.Compares the preferred data
+     * phone and DDS, potentially switching to another active phone with a significantly better
+     * signal or reverting to DDS if the preferred phone isn't significantly better.
+     *
+     * @return A better candidate phone ID, the DDS phone ID,
+     * or {@link android.telephony.SubscriptionManager#INVALID_PHONE_INDEX}.
      */
-    private int getHigherScoreCandidatePhoneId() {
+    private int getBetterCandidatePhoneIdBasedOnScore() {
         int preferredPhoneId = mPhoneSwitcher.getPreferredDataPhoneId();
         int ddsPhoneId = mSubscriptionManagerService.getPhoneId(
                 mSubscriptionManagerService.getDefaultDataSubId());
-        if (isActiveModemPhone(preferredPhoneId) && isActiveModemPhone(ddsPhoneId)) {
-            int currentScore = mPhonesSignalStatus[preferredPhoneId].getRatSignalScore();
-            for (int phoneId = 0; phoneId < mPhonesSignalStatus.length; phoneId++) {
-                if (phoneId == preferredPhoneId) continue;
-                PhoneSignalStatus candidateStatus = mPhonesSignalStatus[phoneId];
-                // Ignore non-home phone.
-                if (candidateStatus.getUsableState() != PhoneSignalStatus.UsableState.HOME) {
+
+        if (!isActiveModemPhone(preferredPhoneId) || !isActiveModemPhone(ddsPhoneId)) {
+            return INVALID_PHONE_INDEX;
+        }
+
+        int defaultScore = mPhonesSignalStatus[ddsPhoneId].getRatSignalScore();
+        int preferredScore = mPhonesSignalStatus[preferredPhoneId].getRatSignalScore();
+
+        // Currently on default data subscription
+        if (ddsPhoneId == preferredPhoneId) {
+            // Find any candidate with significantly better score
+            for (int backupId = 0; backupId < mPhonesSignalStatus.length; backupId++) {
+                // Skip current phone and non-home phones
+                if (backupId == preferredPhoneId
+                        || !isHomeService(mPhonesSignalStatus[backupId].mDataRegState)) {
                     continue;
                 }
-                int candidateScore = candidateStatus.getRatSignalScore();
-                if ((candidateScore - currentScore) > mScoreTolerance
-                        // Also reevaluate if DDS has the same score as the current phone.
-                        || (candidateScore >= currentScore && phoneId == ddsPhoneId)) {
-                    return phoneId;
+
+                int candidateScore = mPhonesSignalStatus[backupId].getRatSignalScore();
+                if (candidateScore - defaultScore > mScoreTolerance) {
+                    return backupId;
                 }
             }
+        } else if (preferredScore - defaultScore <= mScoreTolerance) { // Currently on backup
+            // Switch back to dds if preferred isn't significantly better
+            return ddsPhoneId;
         }
+
         return INVALID_PHONE_INDEX;
     }
 
