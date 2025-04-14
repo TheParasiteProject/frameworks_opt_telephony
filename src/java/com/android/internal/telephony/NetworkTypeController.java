@@ -298,10 +298,13 @@ public class NetworkTypeController extends StateMachine {
 
     private void updateBandwidthConstrainedStatus(NetworkCapabilities capabilities) {
         if (capabilities != null) {
-            mIsSatelliteConstrainedData
-                    = isBandwidthConstrainedCapabilitySupported(capabilities);
-            log("satellite constrained data status : " + mIsSatelliteConstrainedData);
-            mDisplayInfoController.updateTelephonyDisplayInfo();
+            boolean isConstrained = isBandwidthConstrainedCapabilitySupported(capabilities);
+            if (isConstrained != mIsSatelliteConstrainedData) {
+                mIsSatelliteConstrainedData = isConstrained;
+                log("Update network type because satellite constrained data status changed to "
+                        + mIsSatelliteConstrainedData);
+                mDisplayInfoController.updateTelephonyDisplayInfo();
+            }
         } else {
             log("capabilities is null");
         }
