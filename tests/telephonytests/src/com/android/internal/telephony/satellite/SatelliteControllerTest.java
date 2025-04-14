@@ -729,6 +729,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         doReturn(mSubscriptionInfo).when(mMockSubscriptionManagerService).getSubscriptionInfo(
                 anyInt());
         doReturn("").when(mSubscriptionInfo).getIccId();
+
+        doReturn(true).when(mFeatureFlags).satelliteImproveMultiThreadDesign();
     }
 
     @After
