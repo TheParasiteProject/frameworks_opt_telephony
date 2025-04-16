@@ -1188,7 +1188,7 @@ public class AutoDataSwitchController extends Handler {
         int subId = subInfo.getSubscriptionId();
         logl("displayAutoDataSwitchNotification: display for subId=" + subId);
         // "Mobile network settings" screen / dialog
-        Intent intent = new Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS);
+        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_SIM_PROFILES_SETTINGS);
         final Bundle fragmentArgs = new Bundle();
         // Special contract for Settings to highlight permission row
         fragmentArgs.putString(SETTINGS_EXTRA_FRAGMENT_ARG_KEY, AUTO_DATA_SWITCH_SETTING_R_ID);
