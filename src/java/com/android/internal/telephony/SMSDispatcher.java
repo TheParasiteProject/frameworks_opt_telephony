@@ -878,17 +878,32 @@ public abstract class SMSDispatcher extends Handler {
                 Rlog.d(TAG, "processSendSmsResponse: Sending SMS by CarrierMessagingService failed."
                         + " Retry on carrier network. "
                         + SmsController.formatCrossStackMessageId(tracker.mMessageId));
+                // Reset the result code from carrier messaging service so that result code from
+                // RIL will be used.
+                resetResultCodeFromCarrierMessagingService(tracker);
                 sendSubmitPdu(tracker);
                 break;
             default:
                 Rlog.d(TAG, "processSendSmsResponse: Unknown result " + result + " Retry on carrier"
                         + " network. "
                         + SmsController.formatCrossStackMessageId(tracker.mMessageId));
+                // Reset the result code from carrier messaging service so that result code from
+                // RIL will be used.
+                resetResultCodeFromCarrierMessagingService(tracker);
                 sendSubmitPdu(tracker);
         }
     }
 
+    private void resetResultCodeFromCarrierMessagingService(SmsTracker tracker) {
+        if (Flags.temporaryFailuresInCarrierMessagingService()) {
+            tracker.mResultCodeFromCarrierMessagingService =
+                    CarrierMessagingService.SEND_STATUS_OK;
+        }
+    }
+
     private int toSmsManagerResultForSendSms(int carrierMessagingServiceResult) {
+        Rlog.d(TAG, "toSmsManagerResultForSendSms: carrierMessagingServiceResult="
+                + carrierMessagingServiceResult);
         switch (carrierMessagingServiceResult) {
             case CarrierMessagingService.SEND_STATUS_OK:
                 return Activity.RESULT_OK;
@@ -1295,6 +1310,7 @@ public abstract class SMSDispatcher extends Handler {
     @SmsManager.Result
     private int rilErrorToSmsManagerResult(CommandException.Error rilError,
             SmsTracker tracker) {
+        Rlog.d(TAG, "rilErrorToSmsManagerResult: rilError=" + rilError + ", tracker=" + tracker);
         mSmsOutgoingErrorCodes.log("rilError: " + rilError
                 + ", MessageId: " + SmsController.formatCrossStackMessageId(tracker.mMessageId));
 
