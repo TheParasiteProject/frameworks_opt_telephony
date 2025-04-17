@@ -6575,7 +6575,7 @@ public class SatelliteController extends Handler {
                         phone.getServiceState().getOperatorNumeric()));
 
                 sessionStats.onSessionStart(phone.getCarrierId(), phone,
-                        supported_satellite_services, dataPolicy);
+                        supported_satellite_services, dataPolicy, mFeatureFlags);
                 mCarrierRoamingSatelliteSessionStatsMap.put(subId, sessionStats);
                 mCarrierRoamingSatelliteControllerStats.onSessionStart(subId);
             } else if (lastNotifiedNtnMode && !currNtnMode) {
