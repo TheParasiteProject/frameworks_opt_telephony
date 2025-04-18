@@ -375,8 +375,8 @@ public class SatelliteSOSMessageRecommender extends Handler {
      * Check if satellite is available via OEM
      * @return {@code true} if satellite is provisioned via OEM else return {@code false}
      */
-    @VisibleForTesting
-    public boolean isDeviceProvisioned() {
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    protected boolean isDeviceProvisioned() {
         Boolean satelliteProvisioned = mSatelliteController.isDeviceProvisioned();
         return satelliteProvisioned != null ? satelliteProvisioned : false;
     }
@@ -756,7 +756,7 @@ public class SatelliteSOSMessageRecommender extends Handler {
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    public int getEmergencyCallToSatelliteHandoverType() {
+    protected int getEmergencyCallToSatelliteHandoverType() {
         if (isSatelliteEmergencyMessagingViaCarrierAvailable()) {
             int satelliteSubId = mSubIdOfSatelliteConnectedViaCarrierWithinHysteresisTime.get();
             return mSatelliteController.getCarrierRoamingNtnEmergencyCallToSatelliteHandoverType(

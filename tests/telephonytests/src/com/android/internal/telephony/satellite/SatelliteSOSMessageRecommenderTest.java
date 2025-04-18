@@ -1198,6 +1198,16 @@ public class SatelliteSOSMessageRecommenderTest extends TelephonyTest {
             return isSatelliteAllowedByReasons;
         }
 
+        @Override
+        protected boolean isDeviceProvisioned() {
+            return super.isDeviceProvisioned();
+        }
+
+        @Override
+        protected int getEmergencyCallToSatelliteHandoverType() {
+            return super.getEmergencyCallToSatelliteHandoverType();
+        }
+
         public boolean isTimerStarted() {
             return hasMessages(EVENT_TIME_OUT);
         }
