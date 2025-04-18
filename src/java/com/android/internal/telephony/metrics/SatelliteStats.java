@@ -3378,6 +3378,16 @@ public class SatelliteStats {
         proto.satelliteDataConsumedBytes = param.mSatelliteDataConsumedBytes;
         proto.isMultiSim = param.isMultiSim();
         proto.isNbIotNtn = param.isNbIotNtn();
+        proto.countOfDataConnections = param.mCountOfDataConnections;
+        proto.lastFailCauses = param.mLastFailCauses;
+        proto.countOfDataDisconnections = param.mCountOfDataDisconnections;
+        proto.countOfDataStalls = param.mCountOfDataStalls;
+        proto.averageUplinkBandwidthKbps = param.mAverageUplinkBandwidthKbps;
+        proto.averageDownlinkBandwidthKbps = param.mAverageDownlinkBandwidthKbps;
+        proto.minUplinkBandwidthKbps = param.mMinUplinkBandwidthKbps;
+        proto.maxUplinkBandwidthKbps = param.mMaxUplinkBandwidthKbps;
+        proto.minDownlinkBandwidthKbps = param.mMinDownlinkBandwidthKbps;
+        proto.maxDownlinkBandwidthKbps = param.mMaxDownlinkBandwidthKbps;
         if (DBG) logd("onCarrierRoamingSatelliteSessionMetrics: " + param);
         mAtomsStorage.addCarrierRoamingSatelliteSessionStats(proto);
     }
