@@ -70,7 +70,7 @@ public class DatagramControllerTest extends TelephonyTest {
 
     @Mock private DatagramReceiver mMockDatagramReceiver;
     @Mock private DatagramDispatcher mMockDatagramDispatcher;
-    @Mock private PointingAppController mMockPointingAppController;
+    @Mock private PointingAppControllerTest.TestPointingAppController mMockPointingAppController;
     @Mock private SatelliteSessionController mMockSatelliteSessionController;
     @Mock private SatelliteController mMockSatelliteController;
 
