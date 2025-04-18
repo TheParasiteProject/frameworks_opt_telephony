@@ -1203,7 +1203,7 @@ public class SatelliteSOSMessageRecommenderTest extends TelephonyTest {
         }
 
         public int getCountOfTimerStarted() {
-            return mCountOfTimerStarted;
+            return mCountOfTimerStarted.get();
         }
 
         public void sendServiceStateChangedEvent() {
@@ -1211,7 +1211,7 @@ public class SatelliteSOSMessageRecommenderTest extends TelephonyTest {
         }
 
         public long getTimeOutMillis() {
-            return mTimeoutMillis;
+            return mTimeoutMillis.get();
         }
 
         public boolean isDialerNotified() {
