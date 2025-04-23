@@ -701,6 +701,7 @@ public class SatelliteController extends Handler {
     private AtomicBoolean mOverrideNtnEligibility;
     private String mDefaultSmsPackageName = "";
     private String mSatelliteGatewayServicePackageName = "";
+    private String mOverriddenSatelliteGatewayServicePackageName = "";
     private Boolean mOverriddenDisableSatelliteWhileEnableInProgressSupported = null;
 
     private final Object mNtnSmsSupportedByMessagesAppLock = new Object();
@@ -3950,12 +3951,13 @@ public class SatelliteController extends Handler {
         }
 
         if (servicePackageName == null || servicePackageName.equals("null")) {
-            mSatelliteGatewayServicePackageName = getConfigSatelliteGatewayServicePackage();
+            mOverriddenSatelliteGatewayServicePackageName = null;
         } else {
-            mSatelliteGatewayServicePackageName = servicePackageName;
+            mOverriddenSatelliteGatewayServicePackageName = servicePackageName;
         }
-        plogd("setSatelliteGatewayServicePackageName: mSatelliteGatewayServicePackageName="
-                + mSatelliteGatewayServicePackageName);
+        plogd("setSatelliteGatewayServicePackageName: "
+                + "mOverriddenSatelliteGatewayServicePackageName="
+                + mOverriddenSatelliteGatewayServicePackageName);
 
         return mSatelliteSessionController.setSatelliteGatewayServicePackageName(
                 servicePackageName);
@@ -9116,13 +9118,22 @@ public class SatelliteController extends Handler {
             // Manual Connected
             plogd("isP2PSmsDisallowedOnCarrierRoamingNtn: manual connect");
             if (!isNtnSmsSupportedByMessagesApp()
-                    || !isApplicationSupportsP2P(mSatelliteGatewayServicePackageName)) {
+                    || !isApplicationSupportsP2P(getSatelliteGatewayServicePackageName())) {
                 plogd("isP2PSmsDisallowedOnCarrierRoamingNtn: APKs do not supports P2P");
                 return true;
             }
         }
         plogd("isP2PSmsDisallowedOnCarrierRoamingNtn: P2P is supported");
         return false;
+    }
+
+    private String getSatelliteGatewayServicePackageName() {
+        if (mOverriddenSatelliteGatewayServicePackageName != null) {
+            logd("getSatelliteGatewayServicePackageName: return overridden package name"
+                    + " for CTS test " + mOverriddenSatelliteGatewayServicePackageName);
+            return mOverriddenSatelliteGatewayServicePackageName;
+        }
+        return mSatelliteGatewayServicePackageName;
     }
 
     @NonNull
