@@ -6698,6 +6698,10 @@ public class SatelliteController extends Handler {
 
     private void logCarrierRoamingSatelliteSessionStats(@NonNull Phone phone,
             boolean lastNotifiedNtnMode, boolean currNtnMode) {
+        if (mIsDemoModeEnabled) {
+            plogd("logCarrierRoamingSatelliteSessionStats: return, demo mode is enabled");
+            return;
+        }
         synchronized (mSatelliteConnectedLock) {
             int subId = phone.getSubId();
             if (!lastNotifiedNtnMode && currNtnMode) {
