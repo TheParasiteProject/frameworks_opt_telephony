@@ -1543,11 +1543,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
         Intent intent = new Intent(intentAction);
         intent.putExtra(ImsManager.EXTRA_PHONE_ID, mPhone.getPhoneId());
         if (mPhone != null && mPhone.getContext() != null) {
-            if (mFeatureFlags.hsumBroadcast()) {
-                mPhone.getContext().sendBroadcastAsUser(intent, UserHandle.ALL);
-            } else {
-                mPhone.getContext().sendBroadcast(intent);
-            }
+            mPhone.getContext().sendBroadcastAsUser(intent, UserHandle.ALL);
         }
     }
 
@@ -4698,14 +4694,9 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
                     configChangedIntent.putExtra(ImsConfig.EXTRA_CHANGED_ITEM, item);
                     configChangedIntent.putExtra(ImsConfig.EXTRA_NEW_VALUE, value);
                     if (mPhone != null && mPhone.getContext() != null) {
-                        if (mFeatureFlags.hsumBroadcast()) {
-                            mPhone.getContext().sendBroadcastAsUser(configChangedIntent,
-                                    UserHandle.ALL,
-                                    Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-                        } else {
-                            mPhone.getContext().sendBroadcast(configChangedIntent,
-                                    Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-                        }
+                        mPhone.getContext().sendBroadcastAsUser(configChangedIntent,
+                                UserHandle.ALL,
+                                Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
                     }
                 }
 
@@ -6356,13 +6347,8 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
         configChangedIntent.putExtra(ImsConfig.EXTRA_CHANGED_ITEM, item);
         configChangedIntent.putExtra(ImsConfig.EXTRA_NEW_VALUE, value);
         if (mPhone != null && mPhone.getContext() != null) {
-            if (mFeatureFlags.hsumBroadcast()) {
-                mPhone.getContext().sendBroadcastAsUser(configChangedIntent, UserHandle.ALL,
-                        Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-            } else {
-                mPhone.getContext().sendBroadcast(
-                        configChangedIntent, Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-            }
+            mPhone.getContext().sendBroadcastAsUser(configChangedIntent, UserHandle.ALL,
+                    Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
         }
     }
 }
