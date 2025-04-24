@@ -335,6 +335,9 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_IS_SATELLITE_PROVISIONED = 74;
     private static final int REQUEST_POLL_PENDING_DATAGRAMS = 75;
     private static final int REQUEST_SEND_DATAGRAM = 76;
+    private static final int REQUEST_TIME_FOR_NEXT_SATELLITE_VISIBILITY = 77;
+    private static final int REQUEST_SATELLITE_DISPLAY_NAME = 78;
+    private static final int REQUEST_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_ID = 79;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2476,6 +2479,42 @@ public class SatelliteController extends Handler {
                 break;
             }
 
+            case REQUEST_TIME_FOR_NEXT_SATELLITE_VISIBILITY: {
+                plogd("REQUEST_TIME_FOR_NEXT_SATELLITE_VISIBILITY");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestTimeForNextSatelliteVisibility(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_SATELLITE_DISPLAY_NAME: {
+                plogd("REQUEST_SATELLITE_DISPLAY_NAME");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestSatelliteDisplayName(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_ID: {
+                plogd("REQUEST_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_ID");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestSelectedNbIotSatelliteSubscriptionId(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
             default:
                 Log.w(TAG, "SatelliteControllerHandler: unexpected message code: " +
                         msg.what);
@@ -3529,6 +3568,18 @@ public class SatelliteController extends Handler {
      *               be visible if the request is successful or an error code if the request failed.
      */
     public void requestTimeForNextSatelliteVisibility(@NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_TIME_FOR_NEXT_SATELLITE_VISIBILITY, args));
+            return;
+        }
+
+        handleRequestTimeForNextSatelliteVisibility(result);
+    }
+
+    private void handleRequestTimeForNextSatelliteVisibility(@NonNull ResultReceiver result) {
+        plogd("handleRequestTimeForNextSatelliteVisibility");
         int error = evaluateOemSatelliteRequestAllowed(true);
         if (error != SATELLITE_RESULT_SUCCESS) {
             result.send(error, null);
@@ -8029,6 +8080,18 @@ public class SatelliteController extends Handler {
      *               or an error code if the request failed.
      */
     public void requestSatelliteDisplayName(@NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_SATELLITE_DISPLAY_NAME, args));
+            return;
+        }
+
+        handleRequestSatelliteDisplayName(result);
+    }
+
+    private void handleRequestSatelliteDisplayName(@NonNull ResultReceiver result) {
+        plogd("handleRequestSatelliteDisplayName");
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             plogd("requestSatelliteDisplayName: carrierRoamingNbIotNtn flag is disabled");
             result.send(SatelliteManager.SATELLITE_RESULT_NOT_SUPPORTED, null);
@@ -8132,6 +8195,18 @@ public class SatelliteController extends Handler {
      *               id if the request is successful or an error code if the request failed.
      */
     public void requestSelectedNbIotSatelliteSubscriptionId(@NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_ID, args));
+            return;
+        }
+
+        handleRequestSelectedNbIotSatelliteSubscriptionId(result);
+    }
+
+    private void handleRequestSelectedNbIotSatelliteSubscriptionId(@NonNull ResultReceiver result) {
+        plogd("handleRequestSelectedNbIotSatelliteSubscriptionId");
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             result.send(SATELLITE_RESULT_REQUEST_NOT_SUPPORTED, null);
             logd("requestSelectedNbIotSatelliteSubscriptionId: carrierRoamingNbIotNtn is disabled");
