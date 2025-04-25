@@ -341,6 +341,9 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_SET_DEVICE_ALIGNED_WITH_SATELLITE = 80;
     private static final int REQUEST_ADD_ATTACH_RESTRICTION_FOR_CARRIER = 81;
     private static final int REQUEST_REMOVE_ATTACH_RESTRICTION_FOR_CARRIER = 82;
+    private static final int REQUEST_NTN_SIGNAL_STRENGTH = 83;
+    private static final int REQUEST_SATELLITE_SUBSCRIBER_PROVISION_STATUS = 84;
+    private static final int REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP = 85;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2558,6 +2561,41 @@ public class SatelliteController extends Handler {
                 break;
             }
 
+            case REQUEST_NTN_SIGNAL_STRENGTH: {
+                plogd("REQUEST_NTN_SIGNAL_STRENGTH");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestNtnSignalStrength(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_SATELLITE_SUBSCRIBER_PROVISION_STATUS: {
+                plogd("REQUEST_SATELLITE_SUBSCRIBER_PROVISION_STATUS");
+                SomeArgs args = (SomeArgs) msg.obj;
+                ResultReceiver result = (ResultReceiver) args.arg1;
+                try {
+                    handleRequestSatelliteSubscriberProvisionStatus(result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP: {
+                plogd("REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP");
+                SomeArgs args = (SomeArgs) msg.obj;
+                boolean ntnSmsSupported = (boolean) args.arg1;
+                try {
+                    handleRequestSetNtnSmsSupportedByMessagesApp(ntnSmsSupported);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
 
             default:
                 Log.w(TAG, "SatelliteControllerHandler: unexpected message code: " +
@@ -3788,6 +3826,18 @@ public class SatelliteController extends Handler {
     public void requestNtnSignalStrength(@NonNull ResultReceiver result) {
         if (DBG) plogd("requestNtnSignalStrength()");
 
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_NTN_SIGNAL_STRENGTH, args));
+            return;
+        }
+
+        handleRequestNtnSignalStrength(result);
+    }
+
+    private void handleRequestNtnSignalStrength(@NonNull ResultReceiver result) {
+        plogd("handleRequestNtnSignalStrength");
         int error = evaluateOemSatelliteRequestAllowed(true);
         if (error != SATELLITE_RESULT_SUCCESS) {
             result.send(error, null);
@@ -8204,6 +8254,16 @@ public class SatelliteController extends Handler {
      * to be used for provision if the request is successful or an error code if the request failed.
      */
     public void requestSatelliteSubscriberProvisionStatus(@NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = result;
+            sendMessage(obtainMessage(REQUEST_SATELLITE_SUBSCRIBER_PROVISION_STATUS, args));
+        }
+
+        handleRequestSatelliteSubscriberProvisionStatus(result);
+    }
+
+    private void handleRequestSatelliteSubscriberProvisionStatus(@NonNull ResultReceiver result) {
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             logd("requestSatelliteSubscriberProvisionStatus: carrierRoamingNbIotNtn is disabled");
             result.send(SATELLITE_RESULT_REQUEST_NOT_SUPPORTED, null);
@@ -8612,6 +8672,17 @@ public class SatelliteController extends Handler {
      * @param ntnSmsSupported {@code true} If application supports NTN SMS, else {@code false}.
      */
     public void setNtnSmsSupportedByMessagesApp(boolean ntnSmsSupported) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = ntnSmsSupported;
+            sendMessage(obtainMessage(REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP, args));
+            return;
+        }
+
+        handleRequestSetNtnSmsSupportedByMessagesApp(ntnSmsSupported);
+    }
+
+    private void handleRequestSetNtnSmsSupportedByMessagesApp(boolean ntnSmsSupported) {
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             return;
         }

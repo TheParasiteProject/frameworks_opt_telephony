@@ -6230,6 +6230,7 @@ public class SatelliteControllerTest extends TelephonyTest {
     public void testSetNtnSmsSupportedByMessagesApp() {
         when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
         mSatelliteControllerUT.setNtnSmsSupportedByMessagesApp(true);
+        processAllMessages();
         assertTrue(mSharedPreferences.getBoolean(
                 SatelliteController.NTN_SMS_SUPPORTED_BY_MESSAGES_APP_KEY, false));
     }
