@@ -338,6 +338,9 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_TIME_FOR_NEXT_SATELLITE_VISIBILITY = 77;
     private static final int REQUEST_SATELLITE_DISPLAY_NAME = 78;
     private static final int REQUEST_SELECTED_NB_IOT_SATELLITE_SUBSCRIPTION_ID = 79;
+    private static final int REQUEST_SET_DEVICE_ALIGNED_WITH_SATELLITE = 80;
+    private static final int REQUEST_ADD_ATTACH_RESTRICTION_FOR_CARRIER = 81;
+    private static final int REQUEST_REMOVE_ATTACH_RESTRICTION_FOR_CARRIER = 82;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2515,6 +2518,47 @@ public class SatelliteController extends Handler {
                 break;
             }
 
+            case REQUEST_SET_DEVICE_ALIGNED_WITH_SATELLITE: {
+                plogd("REQUEST_SET_DEVICE_ALIGNED_WITH_SATELLITE");
+                SomeArgs args = (SomeArgs) msg.obj;
+                boolean isAligned = (boolean) args.arg1;
+                try {
+                    handleRequestSetDeviceAlignedWithSatellite(isAligned);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_ADD_ATTACH_RESTRICTION_FOR_CARRIER: {
+                plogd("REQUEST_ADD_ATTACH_RESTRICTION_FOR_CARRIER");
+                SomeArgs args = (SomeArgs) msg.obj;
+                int subId = (int) args.arg1;
+                int reason = (int) args.arg2;
+                IIntegerConsumer callback = (IIntegerConsumer) args.arg3;
+                try {
+                    handleRequestAddAttachRestrictionForCarrier(subId, reason, callback);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_REMOVE_ATTACH_RESTRICTION_FOR_CARRIER: {
+                plogd("REQUEST_REMOVE_ATTACH_RESTRICTION_FOR_CARRIER");
+                SomeArgs args = (SomeArgs) msg.obj;
+                int subId = (int) args.arg1;
+                int reason = (int) args.arg2;
+                IIntegerConsumer callback = (IIntegerConsumer) args.arg3;
+                try {
+                    handleRequestRemoveAttachRestrictionForCarrier(subId, reason, callback);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+
             default:
                 Log.w(TAG, "SatelliteControllerHandler: unexpected message code: " +
                         msg.what);
@@ -3596,6 +3640,18 @@ public class SatelliteController extends Handler {
      * @param isAligned {@true} means device is aligned with the satellite, otherwise {@false}.
      */
     public void setDeviceAlignedWithSatellite(@NonNull boolean isAligned) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = isAligned;
+            sendMessage(obtainMessage(REQUEST_SET_DEVICE_ALIGNED_WITH_SATELLITE, args));
+            return;
+        }
+
+        handleRequestSetDeviceAlignedWithSatellite(isAligned);
+    }
+
+    private void handleRequestSetDeviceAlignedWithSatellite(boolean isAligned) {
+        plogd("handleSetDeviceAlignedWithSatellite: isAligned=" + isAligned);
         DemoSimulator.getInstance().setDeviceAlignedWithSatellite(isAligned);
         mDatagramController.setDeviceAlignedWithSatellite(isAligned);
         if (mSatelliteSessionController != null) {
@@ -3620,6 +3676,22 @@ public class SatelliteController extends Handler {
             @SatelliteManager.SatelliteCommunicationRestrictionReason int reason,
             @NonNull IIntegerConsumer callback) {
         logd("addAttachRestrictionForCarrier(" + subId + ", " + reason + ")");
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = subId;
+            args.arg2 = reason;
+            args.arg3 = callback;
+            sendMessage(obtainMessage(REQUEST_ADD_ATTACH_RESTRICTION_FOR_CARRIER, args));
+            return;
+        }
+
+        handleRequestAddAttachRestrictionForCarrier(subId, reason, callback);
+    }
+
+    private void handleRequestAddAttachRestrictionForCarrier(int subId,
+            @SatelliteManager.SatelliteCommunicationRestrictionReason int reason,
+            @NonNull IIntegerConsumer callback) {
+        plogd("handleRequestAddAttachRestrictionForCarrier: subId=" + subId + " reason=" + reason);
         Consumer<Integer> result = FunctionalUtils.ignoreRemoteException(callback::accept);
 
         synchronized (mIsSatelliteEnabledLock) {
@@ -3653,6 +3725,23 @@ public class SatelliteController extends Handler {
             @SatelliteManager.SatelliteCommunicationRestrictionReason int reason,
             @NonNull IIntegerConsumer callback) {
         logd("removeAttachRestrictionForCarrier(" + subId + ", " + reason + ")");
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = subId;
+            args.arg2 = reason;
+            args.arg3 = callback;
+            sendMessage(obtainMessage(REQUEST_REMOVE_ATTACH_RESTRICTION_FOR_CARRIER, args));
+            return;
+        }
+
+        handleRequestRemoveAttachRestrictionForCarrier(subId, reason, callback);
+    }
+
+    private void handleRequestRemoveAttachRestrictionForCarrier(int subId,
+            @SatelliteManager.SatelliteCommunicationRestrictionReason int reason,
+            @NonNull IIntegerConsumer callback) {
+        plogd("handleRequestRemoveAttachRestrictionForCarrier: subId=" + subId
+                + " reason=" + reason);
         Consumer<Integer> result = FunctionalUtils.ignoreRemoteException(callback::accept);
 
         synchronized (mIsSatelliteEnabledLock) {
