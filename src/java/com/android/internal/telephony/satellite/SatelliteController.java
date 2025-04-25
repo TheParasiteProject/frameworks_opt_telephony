@@ -9379,7 +9379,7 @@ public class SatelliteController extends Handler {
     }
 
     private String getSatelliteGatewayServicePackageName() {
-        if (mOverriddenSatelliteGatewayServicePackageName != null) {
+        if (!TextUtils.isEmpty(mOverriddenSatelliteGatewayServicePackageName)) {
             logd("getSatelliteGatewayServicePackageName: return overridden package name"
                     + " for CTS test " + mOverriddenSatelliteGatewayServicePackageName);
             return mOverriddenSatelliteGatewayServicePackageName;
