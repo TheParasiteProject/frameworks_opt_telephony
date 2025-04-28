@@ -2121,8 +2121,12 @@ public class GsmCdmaPhone extends Phone {
     }
 
     @Override
-    public void setCarrierInfoForImsiEncryption(ImsiEncryptionInfo imsiEncryptionInfo) {
-        CarrierInfoManager.setCarrierInfoForImsiEncryption(imsiEncryptionInfo, mContext, mPhoneId);
+    public void setCarrierInfoForImsiEncryption(ImsiEncryptionInfo imsiEncryptionInfo,
+            boolean saveToDb) {
+        if (saveToDb) {
+            CarrierInfoManager.setCarrierInfoForImsiEncryption(imsiEncryptionInfo, mContext,
+                    mPhoneId);
+        }
         mCi.setCarrierInfoForImsiEncryption(imsiEncryptionInfo, null);
     }
 
