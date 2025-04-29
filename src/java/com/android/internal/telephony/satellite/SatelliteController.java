@@ -371,23 +371,18 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     protected Phone mSatellitePhone = null;
     private SatelliteOptimizedApplicationsTracker mSatelliteOptimizedApplicationsTracker;
-    private final Object mRadioStateLock = new Object();
 
-    /** Flags to indicate whether the respective radio is enabled */
-    @GuardedBy("mRadioStateLock")
-    private boolean mBTStateEnabled = false;
-    @GuardedBy("mRadioStateLock")
-    private boolean mNfcStateEnabled = false;
-    @GuardedBy("mRadioStateLock")
-    private boolean mUwbStateEnabled = false;
-    @GuardedBy("mRadioStateLock")
-    private boolean mWifiStateEnabled = false;
-
+    /** All the atomic variables are declared here. */
+    // Flags to indicate whether the respective radio is enabled
+    private AtomicBoolean mBTStateEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mNfcStateEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mUwbStateEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mWifiStateEnabled = new AtomicBoolean(false);
     // Flags to indicate that respective radios need to be disabled when satellite is enabled
-    private boolean mDisableBTOnSatelliteEnabled = false;
-    private boolean mDisableNFCOnSatelliteEnabled = false;
-    private boolean mDisableUWBOnSatelliteEnabled = false;
-    private boolean mDisableWifiOnSatelliteEnabled = false;
+    private AtomicBoolean mDisableBTOnSatelliteEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mDisableNFCOnSatelliteEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mDisableUWBOnSatelliteEnabled = new AtomicBoolean(false);
+    private AtomicBoolean mDisableWifiOnSatelliteEnabled = new AtomicBoolean(false);
 
     private final Object mSatelliteEnabledRequestLock = new Object();
     /* This variable is used to store the first enable request that framework has received in the
@@ -1147,93 +1142,91 @@ public class SatelliteController extends Handler {
         if (mContentResolver != null) {
             IntentFilter radioStateIntentFilter = new IntentFilter();
 
-            synchronized (mRadioStateLock) {
-                // Initialize radio states to default value
-                mDisableBTOnSatelliteEnabled = false;
-                mDisableNFCOnSatelliteEnabled = false;
-                mDisableWifiOnSatelliteEnabled = false;
-                mDisableUWBOnSatelliteEnabled = false;
+            // Initialize radio states to default value
+            mDisableBTOnSatelliteEnabled.set(false);
+            mDisableNFCOnSatelliteEnabled.set(false);
+            mDisableWifiOnSatelliteEnabled.set(false);
+            mDisableUWBOnSatelliteEnabled.set(false);
 
-                mBTStateEnabled = false;
-                mNfcStateEnabled = false;
-                mWifiStateEnabled = false;
-                mUwbStateEnabled = false;
+            mBTStateEnabled.set(false);
+            mNfcStateEnabled.set(false);
+            mWifiStateEnabled.set(false);
+            mUwbStateEnabled.set(false);
 
-                // Read satellite mode radios from settings
-                String satelliteModeRadios = Settings.Global.getString(mContentResolver,
-                        Settings.Global.SATELLITE_MODE_RADIOS);
-                if (satelliteModeRadios == null) {
-                    ploge("initializeSatelliteModeRadios: satelliteModeRadios is null");
-                    return;
-                }
-                plogd("Radios To be checked when satellite is on: " + satelliteModeRadios);
-
-                if (satelliteModeRadios.contains(Settings.Global.RADIO_BLUETOOTH)) {
-                    BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                    if (bluetoothAdapter != null) {
-                        mDisableBTOnSatelliteEnabled = true;
-                        mBTStateEnabled = bluetoothAdapter.isEnabled();
-                        radioStateIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-                    }
-                }
-
-                if (satelliteModeRadios.contains(Settings.Global.RADIO_NFC)) {
-                    Context applicationContext = mContext.getApplicationContext();
-                    NfcAdapter nfcAdapter = null;
-                    if (applicationContext != null) {
-                        nfcAdapter = NfcAdapter.getDefaultAdapter(mContext.getApplicationContext());
-                    }
-                    if (nfcAdapter != null) {
-                        mDisableNFCOnSatelliteEnabled = true;
-                        mNfcStateEnabled = nfcAdapter.isEnabled();
-                        radioStateIntentFilter.addAction(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
-                    }
-                }
-
-                if (satelliteModeRadios.contains(Settings.Global.RADIO_WIFI)) {
-                    WifiManager wifiManager = mContext.getSystemService(WifiManager.class);
-                    if (wifiManager != null) {
-                        mDisableWifiOnSatelliteEnabled = true;
-                        mWifiStateEnabled = wifiManager.isWifiEnabled();
-                        radioStateIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
-                    }
-                }
-
-                try {
-                    // Unregister receiver before registering it.
-                    mContext.unregisterReceiver(mBTWifiNFCSateReceiver);
-                } catch (IllegalArgumentException e) {
-                    plogd("initializeSatelliteModeRadios: unregisterReceiver, e=" + e);
-                }
-                mContext.registerReceiver(mBTWifiNFCSateReceiver, radioStateIntentFilter);
-
-                if (satelliteModeRadios.contains(Settings.Global.RADIO_UWB)) {
-                    UwbManager uwbManager = mContext.getSystemService(UwbManager.class);
-                    if (uwbManager != null) {
-                        mDisableUWBOnSatelliteEnabled = true;
-                        mUwbStateEnabled = uwbManager.isUwbEnabled();
-                        final long identity = Binder.clearCallingIdentity();
-                        try {
-                            // Unregister callback before registering it.
-                            uwbManager.unregisterAdapterStateCallback(mUwbAdapterStateCallback);
-                            uwbManager.registerAdapterStateCallback(mContext.getMainExecutor(),
-                                    mUwbAdapterStateCallback);
-                        } finally {
-                            Binder.restoreCallingIdentity(identity);
-                        }
-                    }
-                }
-
-                plogd("mDisableBTOnSatelliteEnabled: " + mDisableBTOnSatelliteEnabled
-                        + " mDisableNFCOnSatelliteEnabled: " + mDisableNFCOnSatelliteEnabled
-                        + " mDisableWifiOnSatelliteEnabled: " + mDisableWifiOnSatelliteEnabled
-                        + " mDisableUWBOnSatelliteEnabled: " + mDisableUWBOnSatelliteEnabled);
-
-                plogd("mBTStateEnabled: " + mBTStateEnabled
-                        + " mNfcStateEnabled: " + mNfcStateEnabled
-                        + " mWifiStateEnabled: " + mWifiStateEnabled
-                        + " mUwbStateEnabled: " + mUwbStateEnabled);
+            // Read satellite mode radios from settings
+            String satelliteModeRadios = Settings.Global.getString(mContentResolver,
+                    Settings.Global.SATELLITE_MODE_RADIOS);
+            if (satelliteModeRadios == null) {
+                ploge("initializeSatelliteModeRadios: satelliteModeRadios is null");
+                return;
             }
+            plogd("Radios To be checked when satellite is on: " + satelliteModeRadios);
+
+            if (satelliteModeRadios.contains(Settings.Global.RADIO_BLUETOOTH)) {
+                BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                if (bluetoothAdapter != null) {
+                    mDisableBTOnSatelliteEnabled.set(true);
+                    mBTStateEnabled.set(bluetoothAdapter.isEnabled());
+                    radioStateIntentFilter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+                }
+            }
+
+            if (satelliteModeRadios.contains(Settings.Global.RADIO_NFC)) {
+                Context applicationContext = mContext.getApplicationContext();
+                NfcAdapter nfcAdapter = null;
+                if (applicationContext != null) {
+                    nfcAdapter = NfcAdapter.getDefaultAdapter(mContext.getApplicationContext());
+                }
+                if (nfcAdapter != null) {
+                    mDisableNFCOnSatelliteEnabled.set(true);
+                    mNfcStateEnabled.set(nfcAdapter.isEnabled());
+                    radioStateIntentFilter.addAction(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
+                }
+            }
+
+            if (satelliteModeRadios.contains(Settings.Global.RADIO_WIFI)) {
+                WifiManager wifiManager = mContext.getSystemService(WifiManager.class);
+                if (wifiManager != null) {
+                    mDisableWifiOnSatelliteEnabled.set(true);
+                    mWifiStateEnabled.set(wifiManager.isWifiEnabled());
+                    radioStateIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+                }
+            }
+
+            try {
+                // Unregister receiver before registering it.
+                mContext.unregisterReceiver(mBTWifiNFCSateReceiver);
+            } catch (IllegalArgumentException e) {
+                plogd("initializeSatelliteModeRadios: unregisterReceiver, e=" + e);
+            }
+            mContext.registerReceiver(mBTWifiNFCSateReceiver, radioStateIntentFilter);
+
+            if (satelliteModeRadios.contains(Settings.Global.RADIO_UWB)) {
+                UwbManager uwbManager = mContext.getSystemService(UwbManager.class);
+                if (uwbManager != null) {
+                    mDisableUWBOnSatelliteEnabled.set(true);
+                    mUwbStateEnabled.set(uwbManager.isUwbEnabled());
+                    final long identity = Binder.clearCallingIdentity();
+                    try {
+                        // Unregister callback before registering it.
+                        uwbManager.unregisterAdapterStateCallback(mUwbAdapterStateCallback);
+                        uwbManager.registerAdapterStateCallback(mContext.getMainExecutor(),
+                                mUwbAdapterStateCallback);
+                    } finally {
+                        Binder.restoreCallingIdentity(identity);
+                    }
+                }
+            }
+
+            plogd("mDisableBTOnSatelliteEnabled: " + mDisableBTOnSatelliteEnabled.get()
+                    + " mDisableNFCOnSatelliteEnabled: " + mDisableNFCOnSatelliteEnabled.get()
+                    + " mDisableWifiOnSatelliteEnabled: " + mDisableWifiOnSatelliteEnabled.get()
+                    + " mDisableUWBOnSatelliteEnabled: " + mDisableUWBOnSatelliteEnabled.get());
+
+            plogd("mBTStateEnabled: " + mBTStateEnabled.get()
+                    + " mNfcStateEnabled: " + mNfcStateEnabled.get()
+                    + " mWifiStateEnabled: " + mWifiStateEnabled.get()
+                    + " mUwbStateEnabled: " + mUwbStateEnabled.get());
         }
     }
 
@@ -5823,17 +5816,15 @@ public class SatelliteController extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     protected boolean areAllRadiosDisabled() {
-        synchronized (mRadioStateLock) {
-            if ((mDisableBTOnSatelliteEnabled && mBTStateEnabled)
-                    || (mDisableNFCOnSatelliteEnabled && mNfcStateEnabled)
-                    || (mDisableWifiOnSatelliteEnabled && mWifiStateEnabled)
-                    || (mDisableUWBOnSatelliteEnabled && mUwbStateEnabled)) {
-                plogd("All radios are not disabled yet.");
-                return false;
-            }
-            plogd("All radios are disabled.");
-            return true;
+        if ((mDisableBTOnSatelliteEnabled.get() && mBTStateEnabled.get())
+                || (mDisableNFCOnSatelliteEnabled.get() && mNfcStateEnabled.get())
+                || (mDisableWifiOnSatelliteEnabled.get() && mWifiStateEnabled.get())
+                || (mDisableUWBOnSatelliteEnabled.get() && mUwbStateEnabled.get())) {
+            plogd("All radios are not disabled yet.");
+            return false;
         }
+        plogd("All radios are disabled.");
+        return true;
     }
 
     private void evaluateToSendSatelliteEnabledSuccess() {
@@ -9724,51 +9715,35 @@ public class SatelliteController extends Handler {
     }
 
     private void setBTEnabledState(boolean enabled) {
-        synchronized (mRadioStateLock) {
-            mBTStateEnabled = enabled;
-        }
+        mBTStateEnabled.set(enabled);
     }
 
     private boolean getBTEnabledState() {
-        synchronized (mRadioStateLock) {
-            return mBTStateEnabled;
-        }
+        return mBTStateEnabled.get();
     }
 
     private void setNfcEnabledState(boolean enabled) {
-        synchronized (mRadioStateLock) {
-            mNfcStateEnabled = enabled;
-        }
+        mNfcStateEnabled.set(enabled);
     }
 
     private boolean getNfcEnabledState() {
-        synchronized (mRadioStateLock) {
-            return mNfcStateEnabled;
-        }
+        return mNfcStateEnabled.get();
     }
 
     private void setUwbEnabledState(boolean enabled) {
-        synchronized (mRadioStateLock) {
-            mUwbStateEnabled = enabled;
-        }
+        mUwbStateEnabled.set(enabled);
     }
 
     private boolean getUwbEnabledState() {
-        synchronized (mRadioStateLock) {
-            return mUwbStateEnabled;
-        }
+        return mUwbStateEnabled.get();
     }
 
     private void setWifiEnabledState(boolean enabled) {
-        synchronized (mRadioStateLock) {
-            mWifiStateEnabled = enabled;
-        }
+        mWifiStateEnabled.set(enabled);
     }
 
     private boolean getWifiEnabledState() {
-        synchronized (mRadioStateLock) {
-            return mWifiStateEnabled;
-        }
+        return mWifiStateEnabled.get();
     }
 
     /**
