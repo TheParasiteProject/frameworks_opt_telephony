@@ -344,6 +344,8 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_NTN_SIGNAL_STRENGTH = 83;
     private static final int REQUEST_SATELLITE_SUBSCRIBER_PROVISION_STATUS = 84;
     private static final int REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP = 85;
+    private static final int REQUEST_PROVISION_SATELLITE = 86;
+    private static final int REQUEST_DEPROVISION_SATELLITE = 87;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2591,6 +2593,32 @@ public class SatelliteController extends Handler {
                 boolean ntnSmsSupported = (boolean) args.arg1;
                 try {
                     handleRequestSetNtnSmsSupportedByMessagesApp(ntnSmsSupported);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_PROVISION_SATELLITE: {
+                plogd("REQUEST_PROVISION_SATELLITE");
+                SomeArgs args = (SomeArgs) msg.obj;
+                List<SatelliteSubscriberInfo> list = (List<SatelliteSubscriberInfo>) args.arg1;
+                ResultReceiver result = (ResultReceiver) args.arg2;
+                try {
+                    handleRequestProvisionSatellite(list, result);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case REQUEST_DEPROVISION_SATELLITE: {
+                plogd("REQUEST_DEPROVISION_SATELLITE");
+                SomeArgs args = (SomeArgs) msg.obj;
+                List<SatelliteSubscriberInfo> list = (List<SatelliteSubscriberInfo>) args.arg1;
+                ResultReceiver result = (ResultReceiver) args.arg2;
+                try {
+                    handleRequestDeprovisionSatellite(list, result);
                 } finally {
                     args.recycle();
                 }
@@ -8557,6 +8585,18 @@ public class SatelliteController extends Handler {
      */
     public void provisionSatellite(@NonNull List<SatelliteSubscriberInfo> list,
             @NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = list;
+            args.arg2 = result;
+            sendMessage(obtainMessage(REQUEST_PROVISION_SATELLITE, args));
+        }
+
+        handleRequestProvisionSatellite(list, result);
+    }
+
+    private void handleRequestProvisionSatellite(@NonNull List<SatelliteSubscriberInfo> list,
+            @NonNull ResultReceiver result) {
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             result.send(SATELLITE_RESULT_REQUEST_NOT_SUPPORTED, null);
             logd("provisionSatellite: carrierRoamingNbIotNtn not support");
@@ -8640,6 +8680,18 @@ public class SatelliteController extends Handler {
      * @param result The result receiver that returns whether deliver success or fail.
      */
     public void deprovisionSatellite(@NonNull List<SatelliteSubscriberInfo> list,
+            @NonNull ResultReceiver result) {
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.arg1 = list;
+            args.arg2 = result;
+            sendMessage(obtainMessage(REQUEST_DEPROVISION_SATELLITE, args));
+        }
+
+        handleRequestDeprovisionSatellite(list, result);
+    }
+
+    private void handleRequestDeprovisionSatellite(@NonNull List<SatelliteSubscriberInfo> list,
             @NonNull ResultReceiver result) {
         if (!mFeatureFlags.carrierRoamingNbIotNtn()) {
             result.send(SATELLITE_RESULT_REQUEST_NOT_SUPPORTED, null);
