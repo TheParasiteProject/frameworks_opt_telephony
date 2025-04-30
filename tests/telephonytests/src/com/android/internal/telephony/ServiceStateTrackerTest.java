@@ -129,7 +129,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
     // Mocked classes
     private ProxyController mProxyController;
     private Handler mTestHandler;
-    private NetworkService mIwlanNetworkService;
     private INetworkService.Stub mIwlanNetworkServiceStub;
     private SubscriptionInfo mSubInfo;
 
@@ -144,7 +143,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
     private SignalStrengthController mSsc;
 
     private ServiceStateTracker sst;
-    private ServiceStateTrackerTestHandler mSSTTestHandler;
     private PersistableBundle mBundle;
     private SatelliteController mSatelliteController;
     private EmergencyStateTracker mEmergencyStateTracker;
@@ -158,8 +156,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
     private static final int EVENT_DATA_RAT_CHANGED = 7;
     private static final int EVENT_PS_RESTRICT_ENABLED = 8;
     private static final int EVENT_PS_RESTRICT_DISABLED = 9;
-    private static final int EVENT_VOICE_ROAMING_ON = 10;
-    private static final int EVENT_VOICE_ROAMING_OFF = 11;
     private static final int EVENT_VOICE_RAT_CHANGED = 12;
 
     private static final int PHONE_ID = 0;
@@ -177,6 +173,9 @@ public class ServiceStateTrackerTest extends TelephonyTest {
             WIFI_CALLING_FLIGHT_MODE_FORMAT };
 
     private static final String HOME_PLMN = "310260";
+    private static final String HOME_MCC = "310";
+    private static final String HOME_MNC = "260";
+
     private static final String PLMN1 = "480123";
     private static final String PLMN2 = "586111";
     private static final String HOME_PNN = "home pnn";
@@ -186,35 +185,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
             String.format("%s,%s", HOME_PNN, "short"), "f2,s2"
     };
     private static final String SATELLITE_DISPLAY_NAME = "SatelliteTest";
-
-    private class ServiceStateTrackerTestHandler extends HandlerThread {
-
-        private ServiceStateTrackerTestHandler(String name) {
-            super(name);
-        }
-
-        @Override
-        public void onLooperPrepared() {
-            mSsc = new SignalStrengthController(mPhone);
-            doReturn(mSsc).when(mPhone).getSignalStrengthController();
-
-            // Capture listener registered for ServiceStateTracker to emulate the carrier config
-            // change notification used later. In this test, it's the third one. The first one
-            // comes from RatRatcheter and the second one comes from SignalStrengthController.
-            ArgumentCaptor<CarrierConfigManager.CarrierConfigChangeListener>
-                    listenerArgumentCaptor =
-                            ArgumentCaptor.forClass(
-                                    CarrierConfigManager.CarrierConfigChangeListener.class);
-            sst = new ServiceStateTracker(mPhone, mSimulatedCommands, mFeatureFlags);
-            verify(mCarrierConfigManager, atLeast(3)).registerCarrierConfigChangeListener(any(),
-                    listenerArgumentCaptor.capture());
-            mCarrierConfigChangeListener = listenerArgumentCaptor.getAllValues().get(2);
-
-            sst.setServiceStateStats(mServiceStateStats);
-            doReturn(sst).when(mPhone).getServiceStateTracker();
-            setReady(true);
-        }
-    }
 
     private void addNetworkService() {
         mCellularNetworkService = new CellularNetworkService();
@@ -253,7 +223,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
         super.setUp(getClass().getSimpleName());
         mProxyController = Mockito.mock(ProxyController.class);
         mTestHandler = Mockito.mock(Handler.class);
-        mIwlanNetworkService = Mockito.mock(NetworkService.class);
         mIwlanNetworkServiceStub = Mockito.mock(INetworkService.Stub.class);
         mSubInfo = Mockito.mock(SubscriptionInfo.class);
         mSubInfoInternal = new SubscriptionInfoInternal.Builder().setId(1).build();
@@ -2369,7 +2338,7 @@ public class ServiceStateTrackerTest extends TelephonyTest {
                 new LteVopsSupportInfo(LteVopsSupportInfo.LTE_STATUS_NOT_AVAILABLE,
                         LteVopsSupportInfo.LTE_STATUS_NOT_AVAILABLE);
         CellIdentityLte cellIdentity =
-                new CellIdentityLte(1, 1, 5, 1, new int[] {1, 2}, 5000, "001", "01", "test",
+                new CellIdentityLte(1, 1, 5, 1, new int[] {1, 2}, 5000, HOME_MCC, HOME_MNC, "test",
                         "tst", Collections.emptyList(), null);
         if (!passCellId) {
             cellIdentity = null;
@@ -2379,7 +2348,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
                 ServiceStateTracker.EVENT_POLL_STATE_OPERATOR,
                 new AsyncResult(sst.mPollingContext, opNamesResult, null)));
         processAllMessages();
-
 
         // PS WWAN
         NetworkRegistrationInfo dataResult = new NetworkRegistrationInfo(
@@ -2408,7 +2376,6 @@ public class ServiceStateTrackerTest extends TelephonyTest {
         processAllMessages();
         assertEquals(opNamesResult[0], sst.getServiceState().getOperatorAlpha());
         assertEquals(opNamesResult[2], sst.getServiceState().getOperatorNumeric());
-        verify(mLocaleTracker).updateOperatorNumeric(eq(opNamesResult[2]));
     }
 
     /**
@@ -2424,13 +2391,14 @@ public class ServiceStateTrackerTest extends TelephonyTest {
         changeRegStateWithIwlanOperatorNumeric(NetworkRegistrationInfo.REGISTRATION_STATE_HOME,
                 TelephonyManager.NETWORK_TYPE_LTE,
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME, OpNamesResult, true);
-        verify(mLocaleTracker).updateOperatorNumeric(eq(OpNamesResult[2]));
+        verify(mLocaleTracker).updateOperatorNumeric(eq(HOME_MCC + HOME_MNC));
+        Mockito.clearInvocations(mLocaleTracker);
         changeRegStateWithIwlanOperatorNumeric(
                 NetworkRegistrationInfo.REGISTRATION_STATE_NOT_REGISTERED_OR_SEARCHING,
                 TelephonyManager.NETWORK_TYPE_LTE,
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME, OpNamesResult, true);
         /* cellId based mccmnc */
-        verify(mLocaleTracker).updateOperatorNumeric(eq("00101"));
+        verify(mLocaleTracker).updateOperatorNumeric(eq(HOME_MCC + HOME_MNC));
         changeRegStateWithIwlanOperatorNumeric(
                 NetworkRegistrationInfo.REGISTRATION_STATE_NOT_REGISTERED_OR_SEARCHING,
                 TelephonyManager.NETWORK_TYPE_LTE,
@@ -2455,7 +2423,9 @@ public class ServiceStateTrackerTest extends TelephonyTest {
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME,
                 TelephonyManager.NETWORK_TYPE_LTE,
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME, OpNamesResult, true);
-        verify(mLocaleTracker).updateOperatorNumeric(eq(OpNamesResult[2]));
+        verify(mLocaleTracker).updateOperatorNumeric(eq(HOME_MCC + HOME_MNC));
+
+        clearInvocations(mLocaleTracker);
 
         // Test with Cellular as NOT_REG
         changeRegStateWithIwlanOperatorNumeric(
@@ -2463,7 +2433,7 @@ public class ServiceStateTrackerTest extends TelephonyTest {
                 TelephonyManager.NETWORK_TYPE_UNKNOWN,
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME, OpNamesResult, true);
         /* cellId based mccmnc */
-        verify(mLocaleTracker).updateOperatorNumeric(eq("00101"));
+        verify(mLocaleTracker).updateOperatorNumeric(eq(HOME_MCC + HOME_MNC));
 
         // IMS over Iwlan is registered.
         doReturn(mImsPhone)
