@@ -6909,8 +6909,12 @@ public class SatelliteController extends Handler {
                 // Log satellite session end
                 CarrierRoamingSatelliteSessionStats sessionStats =
                         mCarrierRoamingSatelliteSessionStatsMap.get(subId);
-                sessionStats.onSessionEnd(subId);
-                mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
+                if (sessionStats != null) {
+                    sessionStats.onSessionEnd(subId);
+                    mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
+                } else {
+                    plogd("logCarrierRoamingSatelliteSessionStats: sessionStats is null");
+                }
                 mCarrierRoamingSatelliteControllerStats.onSessionEnd(subId);
             }
         }
