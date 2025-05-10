@@ -222,10 +222,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @RunWith(AndroidTestingRunner.class)
@@ -248,6 +250,8 @@ public class SatelliteControllerTest extends TelephonyTest {
             (int) TimeUnit.SECONDS.toMillis(60);
     private static final int TEST_WAIT_FOR_CELLULAR_MODEM_OFF_TIMEOUT_MILLIS =
             (int) TimeUnit.SECONDS.toMillis(60);
+    private static final Set<String> TEST_ALL_SATELLITE_PLMN_SET = new HashSet<>(
+            Arrays.asList("310830", "313210"));
 
 
     private static final String SATELLITE_PLMN = "00103";
@@ -262,7 +266,7 @@ public class SatelliteControllerTest extends TelephonyTest {
     private SubscriptionInfo testSubscriptionInfo;
     private SubscriptionInfo testSubscriptionInfo2;
 
-    @Mock private SatelliteController mMockSatelliteController;
+    @Mock private TestSatelliteController mMockSatelliteController;
     @Mock private DatagramControllerTest.TestDatagramController mMockDatagramController;
     @Mock private SatelliteModemInterface mMockSatelliteModemInterface;
     @Mock private SatelliteSessionController mMockSatelliteSessionController;
@@ -731,6 +735,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         doReturn("").when(mSubscriptionInfo).getIccId();
 
         doReturn(true).when(mFeatureFlags).satelliteImproveMultiThreadDesign();
+        doReturn(TEST_ALL_SATELLITE_PLMN_SET).when(mMockSatelliteController).getAllPlmnSet();
     }
 
     @After
@@ -2932,7 +2937,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         reset(mMockSatelliteModemInterface);
         setUpResponseForRequestSetSatelliteEnabledForCarrier(true, SATELLITE_RESULT_SUCCESS);
         doReturn(true).when(mMockSatelliteModemInterface).isSatelliteServiceSupported();
-        Map<Integer, Set<Integer>> satelliteAttachRestrictionForCarrierArray = new HashMap<>();
+        ConcurrentHashMap<Integer, Set<Integer>> satelliteAttachRestrictionForCarrierArray =
+                new ConcurrentHashMap<>();
         satelliteAttachRestrictionForCarrierArray.put(SUB_ID, new HashSet<>());
         satelliteAttachRestrictionForCarrierArray.get(SUB_ID).add(
                 SATELLITE_COMMUNICATION_RESTRICTION_REASON_ENTITLEMENT);
@@ -2956,7 +2962,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         mIIntegerConsumerResults.clear();
         reset(mMockSatelliteModemInterface);
         reset(mPhone);
-        Map<Integer, Boolean> enabledForCarrierArrayPerSub = new HashMap<>();
+        ConcurrentHashMap<Integer, Boolean> enabledForCarrierArrayPerSub =
+                new ConcurrentHashMap<>();
         enabledForCarrierArrayPerSub.put(SUB_ID, true);
         replaceInstance(SatelliteController.class, "mIsSatelliteAttachEnabledForCarrierArrayPerSub",
                 mSatelliteControllerUT, enabledForCarrierArrayPerSub);
@@ -5926,7 +5933,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         }
     }
 
-    private class TestSatelliteController extends SatelliteController {
+    public class TestSatelliteController extends SatelliteController {
         public boolean setSettingsKeyForSatelliteModeCalled = false;
         public boolean allRadiosDisabled = true;
         public long elapsedRealtime = 0;
@@ -5945,7 +5952,7 @@ public class SatelliteControllerTest extends TelephonyTest {
 
         private boolean mLocationServiceEnabled = true;
 
-        TestSatelliteController(
+        public TestSatelliteController(
                 Context context, Looper looper, @NonNull FeatureFlags featureFlags) {
             super(context, looper, featureFlags);
             logd("Constructing TestSatelliteController");
@@ -6077,27 +6084,34 @@ public class SatelliteControllerTest extends TelephonyTest {
         }
 
         void setSatelliteProvisioned(@Nullable Boolean isProvisioned) {
-            synchronized (mDeviceProvisionLock) {
-                mIsDeviceProvisioned = isProvisioned;
+            if (isProvisioned == null) {
+                mIsDeviceProvisioned = null;
+                return;
+            }
+
+            if (mIsDeviceProvisioned == null) {
+                mIsDeviceProvisioned = new AtomicBoolean(isProvisioned);
+            } else {
+                mIsDeviceProvisioned.set(isProvisioned);
             }
         }
 
-        void setIsSatelliteSupported(@Nullable Boolean isSatelliteSupported) {
-            synchronized (mIsSatelliteSupportedLock) {
-                mIsSatelliteSupported = isSatelliteSupported;
-            }
+        @Override
+        protected void setIsSatelliteSupported(boolean isSatelliteSupported) {
+            super.setIsSatelliteSupported(isSatelliteSupported);
+        }
+
+        @Override
+        protected Set<String> getAllPlmnSet() {
+            return super.getAllPlmnSet();
         }
 
         public boolean isRadioOn() {
-            synchronized (mIsRadioOnLock) {
-                return mIsRadioOn;
-            }
+            return mIsRadioOn.get();
         }
 
         public boolean isRadioOffRequested() {
-            synchronized (mIsRadioOnLock) {
-                return mRadioOffRequested;
-            }
+            return mRadioOffRequested.get();
         }
 
         public boolean isWaitForCellularModemOffTimerStarted() {
