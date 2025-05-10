@@ -421,6 +421,27 @@ public class SatelliteController extends Handler {
     protected AtomicBoolean mSatelliteAccessAllowed = new AtomicBoolean(false);
     private AtomicBoolean mOverrideNtnEligibility;
     private AtomicBoolean mOverriddenDisableSatelliteWhileEnableInProgressSupported = null;
+    private AtomicLong mWaitTimeForSatelliteEnablingResponse = new AtomicLong(0);
+    private AtomicLong mDemoPointingAlignedDurationMillis = new AtomicLong(0);
+    private AtomicLong mDemoPointingNotAlignedDurationMillis = new AtomicLong(0);
+    private AtomicLong mEvaluateEsosProfilesPrioritizationDurationMillis = new AtomicLong(0);
+    private AtomicLong mLastEmergencyCallTime = new AtomicLong(0);
+    private AtomicLong mSatelliteEmergencyModeDurationMillis = new AtomicLong(0);
+    private AtomicLong mSessionStartTimeStamp = new AtomicLong(0);
+    private AtomicLong mSessionProcessingTimeStamp = new AtomicLong(0);
+    /**
+     * This is used for testing only. When mEnforcedEmergencyCallToSatelliteHandoverType is valid,
+     * Telephony will ignore the IMS registration status and cellular availability, and always send
+     * the connection event EVENT_DISPLAY_EMERGENCY_MESSAGE to Dialer.
+     */
+    private AtomicInteger mEnforcedEmergencyCallToSatelliteHandoverType =
+            new AtomicInteger(INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE);
+    private AtomicInteger mDelayInSendingEventDisplayEmergencyMessage = new AtomicInteger(0);
+    // The ID of the satellite subscription that has highest priority and is provisioned.
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    protected AtomicInteger mSelectedSatelliteSubId = new AtomicInteger(
+            SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+    protected AtomicInteger mResultReceiverTotalCount = new AtomicInteger(0);
 
     private final Object mSatelliteEnabledRequestLock = new Object();
     /* This variable is used to store the first enable request that framework has received in the
@@ -503,6 +524,8 @@ public class SatelliteController extends Handler {
      */
     private final ConcurrentHashMap<IBinder, ISelectedNbIotSatelliteSubscriptionCallback>
             mSelectedNbIotSatelliteSubscriptionChangedListeners = new ConcurrentHashMap<>();
+    protected ConcurrentHashMap<String, Integer> mResultReceiverCountPerMethodMap =
+            new ConcurrentHashMap<>();
 
     private final Object mSatelliteCapabilitiesLock = new Object();
     @GuardedBy("mSatelliteCapabilitiesLock")
@@ -576,15 +599,6 @@ public class SatelliteController extends Handler {
     @GuardedBy("mSatelliteConnectedLock")
     private SparseArray<NtnSignalStrength> mLastNotifiedCarrierRoamingNtnSignalStrength =
             new SparseArray<>();
-
-    /**
-     * This is used for testing only. When mEnforcedEmergencyCallToSatelliteHandoverType is valid,
-     * Telephony will ignore the IMS registration status and cellular availability, and always send
-     * the connection event EVENT_DISPLAY_EMERGENCY_MESSAGE to Dialer.
-     */
-    private int mEnforcedEmergencyCallToSatelliteHandoverType =
-            INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE;
-    private int mDelayInSendingEventDisplayEmergencyMessage = 0;
     @NonNull private SharedPreferences mSharedPreferences = null;
 
     @Nullable private PersistentLogger mPersistentLogger = null;
@@ -639,22 +653,11 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     private List<SatelliteSubscriberProvisionStatus> mLastEvaluatedSubscriberProvisionStatus =
             new ArrayList<>();
-    // The ID of the satellite subscription that has highest priority and is provisioned.
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    protected int mSelectedSatelliteSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     // The last ICC ID that framework configured to modem.
     @GuardedBy("mSatelliteTokenProvisionedLock")
     private String mLastConfiguredIccId;
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     @NonNull protected final Object mSatelliteTokenProvisionedLock = new Object();
-    private long mWaitTimeForSatelliteEnablingResponse;
-    private long mDemoPointingAlignedDurationMillis;
-    private long mDemoPointingNotAlignedDurationMillis;
-    private long mEvaluateEsosProfilesPrioritizationDurationMillis;
-    private final Object mLock = new Object();
-    @GuardedBy("mLock")
-    private long mLastEmergencyCallTime;
-    private long mSatelliteEmergencyModeDurationMillis;
     private static final int DEFAULT_SATELLITE_EMERGENCY_MODE_DURATION_SECONDS = 300;
     private AlertDialog mNetworkSelectionModeAutoDialog = null;
 
@@ -675,9 +678,6 @@ public class SatelliteController extends Handler {
     private final BTWifiNFCStateReceiver mBTWifiNFCSateReceiver;
     private final UwbAdapterStateCallback mUwbAdapterStateCallback;
     private final List<Integer> mCtsSatelliteAccessAllowedSubIds = new ArrayList<>();
-
-    private long mSessionStartTimeStamp;
-    private long mSessionProcessingTimeStamp;
 
     // Variable for backup and restore device's screen rotation settings.
     private String mDeviceRotationLockToBackupAndRestore = null;
@@ -767,11 +767,6 @@ public class SatelliteController extends Handler {
     protected List<Integer> mCurrentLocationTagIds = new ArrayList();
 
     public static final int RESULT_RECEIVER_COUNT_ANOMALY_THRESHOLD = 500;
-    protected final Object mResultReceiverTotalCountLock = new Object();
-    @GuardedBy("mResultReceiverTotalCountLock")
-    protected int mResultReceiverTotalCount;
-    @GuardedBy("mResultReceiverTotalCountLock")
-    protected HashMap<String, Integer> mResultReceiverCountPerMethodMap = new HashMap<>();
 
     // Satellite anomaly uuid -- ResultReceiver count threshold exceeded
     private final UUID mAnomalyUnexpectedResultReceiverCountUUID =
@@ -794,23 +789,20 @@ public class SatelliteController extends Handler {
      */
     public void incrementResultReceiverCount(String caller) {
         if (mFeatureFlags.carrierRoamingNbIotNtn()) {
-            synchronized (mResultReceiverTotalCountLock) {
-                mResultReceiverTotalCount++;
-                logd("[incrementResultReceiverCount] : " + caller
-                        + " | ResultReceiver total count= " + mResultReceiverTotalCount);
-                mResultReceiverCountPerMethodMap.compute(caller,
-                        (k, v) -> v == null ? 1 : v + 1);
+            int resultReceiverTotalCount = mResultReceiverTotalCount.incrementAndGet();
+            logd("[incrementResultReceiverCount] : " + caller
+                    + " | ResultReceiver total count= " + resultReceiverTotalCount);
+            mResultReceiverCountPerMethodMap.compute(caller,
+                    (k, v) -> v == null ? 1 : v + 1);
 
-                if (mResultReceiverTotalCount > RESULT_RECEIVER_COUNT_ANOMALY_THRESHOLD) {
-                    loge("[mResultReceiverTotalCount] is exceeds limits : "
-                            + mResultReceiverTotalCount);
-                    loge("[incrementResultReceiverCount] mResultReceiverCountPerMethodMap is "
-                            + mResultReceiverCountPerMethodMap);
-                    AnomalyReporter.reportAnomaly(
-                            generateAnomalyUnexpectedResultReceiverCountUUID(0, 0),
-                            "Satellite ResultReceiver total count= "
-                                    + mResultReceiverTotalCount + " exceeds limit.");
-                }
+            if (resultReceiverTotalCount > RESULT_RECEIVER_COUNT_ANOMALY_THRESHOLD) {
+                loge("[mResultReceiverTotalCount] is exceeds limits : " + resultReceiverTotalCount);
+                loge("[incrementResultReceiverCount] mResultReceiverCountPerMethodMap is "
+                        + mResultReceiverCountPerMethodMap);
+                AnomalyReporter.reportAnomaly(
+                        generateAnomalyUnexpectedResultReceiverCountUUID(0, 0),
+                        "Satellite ResultReceiver total count= "
+                                + resultReceiverTotalCount + " exceeds limit.");
             }
         } else {
             logd("[incrementResultReceiverCount]: carrierRoamingNbIotNtn is not enabled");
@@ -826,15 +818,13 @@ public class SatelliteController extends Handler {
      */
     public void decrementResultReceiverCount(String caller) {
         if (mFeatureFlags.carrierRoamingNbIotNtn()) {
-            synchronized (mResultReceiverTotalCountLock) {
-                if (mResultReceiverTotalCount > 0) {
-                    mResultReceiverTotalCount--;
-                }
-                logd("[decrementResultReceiverCount] : " + caller
-                        + " | ResultReceiver total count=" + mResultReceiverTotalCount);
-                mResultReceiverCountPerMethodMap.computeIfPresent(caller,
-                        (k, v) -> v > 0 ? v - 1 : v);
+            if (mResultReceiverTotalCount.get() > 0) {
+                mResultReceiverTotalCount.decrementAndGet();
             }
+            logd("[decrementResultReceiverCount] : " + caller
+                    + " | ResultReceiver total count=" + mResultReceiverTotalCount.get());
+            mResultReceiverCountPerMethodMap.computeIfPresent(caller,
+                    (k, v) -> v > 0 ? v - 1 : v);
         } else {
             logd("[decrementResultReceiverCount]: carrierRoamingNbIotNtn is not enabled");
         }
@@ -988,16 +978,17 @@ public class SatelliteController extends Handler {
             }
         }
 
-        mWaitTimeForSatelliteEnablingResponse = getWaitForSatelliteEnablingResponseTimeoutMillis();
-        mDemoPointingAlignedDurationMillis = getDemoPointingAlignedDurationMillisFromResources();
-        mDemoPointingNotAlignedDurationMillis =
-                getDemoPointingNotAlignedDurationMillisFromResources();
-        mSatelliteEmergencyModeDurationMillis =
-                getSatelliteEmergencyModeDurationFromOverlayConfig(context);
-        mEvaluateEsosProfilesPrioritizationDurationMillis =
-                getEvaluateEsosProfilesPrioritizationDurationMillis();
+        mWaitTimeForSatelliteEnablingResponse.set(
+                getWaitForSatelliteEnablingResponseTimeoutMillis());
+        mDemoPointingAlignedDurationMillis.set(getDemoPointingAlignedDurationMillisFromResources());
+        mDemoPointingNotAlignedDurationMillis.set(
+                getDemoPointingNotAlignedDurationMillisFromResources());
+        mSatelliteEmergencyModeDurationMillis.set(
+                getSatelliteEmergencyModeDurationFromOverlayConfig(context));
+        mEvaluateEsosProfilesPrioritizationDurationMillis.set(
+                getEvaluateEsosProfilesPrioritizationDurationMillis());
         sendMessageDelayed(obtainMessage(CMD_EVALUATE_ESOS_PROFILES_PRIORITIZATION),
-                mEvaluateEsosProfilesPrioritizationDurationMillis);
+                mEvaluateEsosProfilesPrioritizationDurationMillis.get());
 
         SubscriptionManager subscriptionManager = mContext.getSystemService(
                 SubscriptionManager.class);
@@ -1547,28 +1538,28 @@ public class SatelliteController extends Handler {
                     mSessionMetricsStats.setInitializationResult(error)
                             .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                             .setInitializationProcessingTime(
-                                    getElapsedRealtime() - mSessionProcessingTimeStamp)
+                                    getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                             .setIsDemoMode(mIsDemoModeEnabled.get())
                             .setCarrierId(getSatelliteCarrierId())
                             .setIsEmergency(argument.isEmergency);
-                    mSessionProcessingTimeStamp = 0;
+                    mSessionProcessingTimeStamp.set(0);
 
                     if (error == SATELLITE_RESULT_SUCCESS) {
                         mControllerMetricsStats.onSatelliteEnabled();
                         mControllerMetricsStats.reportServiceEnablementSuccessCount();
                     } else {
                         mSessionMetricsStats.reportSessionMetrics();
-                        mSessionStartTimeStamp = 0;
+                        mSessionStartTimeStamp.set(0);
                         mControllerMetricsStats.reportServiceEnablementFailCount();
                     }
                 } else {
                     mSessionMetricsStats.setTerminationResult(error)
                             .setTerminationProcessingTime(getElapsedRealtime()
-                                    - mSessionProcessingTimeStamp)
+                                    - mSessionProcessingTimeStamp.get())
                             .setSessionDurationSec(calculateSessionDurationTimeSec())
                             .reportSessionMetrics();
-                    mSessionStartTimeStamp = 0;
-                    mSessionProcessingTimeStamp = 0;
+                    mSessionStartTimeStamp.set(0);
+                    mSessionProcessingTimeStamp.set(0);
                     mControllerMetricsStats.onSatelliteDisabled();
                     handlePersistentLoggingOnSessionEnd(mIsEmergency.get());
                     mWaitingForDisableSatelliteModemResponse.set(false);
@@ -4117,33 +4108,34 @@ public class SatelliteController extends Handler {
                 + timeoutType + ", timeoutMillis=" + timeoutMillis);
         if (timeoutType == TIMEOUT_TYPE_WAIT_FOR_SATELLITE_ENABLING_RESPONSE) {
             if (reset) {
-                mWaitTimeForSatelliteEnablingResponse =
-                        getWaitForSatelliteEnablingResponseTimeoutMillis();
+                mWaitTimeForSatelliteEnablingResponse.set(
+                        getWaitForSatelliteEnablingResponseTimeoutMillis());
             } else {
-                mWaitTimeForSatelliteEnablingResponse = timeoutMillis;
+                mWaitTimeForSatelliteEnablingResponse.set(timeoutMillis);
             }
-            plogd("mWaitTimeForSatelliteEnablingResponse=" + mWaitTimeForSatelliteEnablingResponse);
+            plogd("mWaitTimeForSatelliteEnablingResponse="
+                    + mWaitTimeForSatelliteEnablingResponse.get());
         } else if (timeoutType == TIMEOUT_TYPE_DEMO_POINTING_ALIGNED_DURATION_MILLIS) {
             if (reset) {
-                mDemoPointingAlignedDurationMillis =
-                        getDemoPointingAlignedDurationMillisFromResources();
+                mDemoPointingAlignedDurationMillis.set(
+                        getDemoPointingAlignedDurationMillisFromResources());
             } else {
-                mDemoPointingAlignedDurationMillis = timeoutMillis;
+                mDemoPointingAlignedDurationMillis.set(timeoutMillis);
             }
         } else if (timeoutType == TIMEOUT_TYPE_DEMO_POINTING_NOT_ALIGNED_DURATION_MILLIS) {
             if (reset) {
-                mDemoPointingNotAlignedDurationMillis =
-                        getDemoPointingNotAlignedDurationMillisFromResources();
+                mDemoPointingNotAlignedDurationMillis.set(
+                        getDemoPointingNotAlignedDurationMillisFromResources());
             } else {
-                mDemoPointingNotAlignedDurationMillis = timeoutMillis;
+                mDemoPointingNotAlignedDurationMillis.set(timeoutMillis);
             }
         } else if (timeoutType
                 == TIMEOUT_TYPE_EVALUATE_ESOS_PROFILES_PRIORITIZATION_DURATION_MILLIS) {
             if (reset) {
-                mEvaluateEsosProfilesPrioritizationDurationMillis =
-                        getEvaluateEsosProfilesPrioritizationDurationMillis();
+                mEvaluateEsosProfilesPrioritizationDurationMillis.set(
+                        getEvaluateEsosProfilesPrioritizationDurationMillis());
             } else {
-                mEvaluateEsosProfilesPrioritizationDurationMillis = timeoutMillis;
+                mEvaluateEsosProfilesPrioritizationDurationMillis.set(timeoutMillis);
             }
         } else {
             plogw("Invalid timeoutType=" + timeoutType);
@@ -4214,12 +4206,12 @@ public class SatelliteController extends Handler {
             return false;
         }
         if (isHandoverTypeValid(handoverType)) {
-            mEnforcedEmergencyCallToSatelliteHandoverType = handoverType;
-            mDelayInSendingEventDisplayEmergencyMessage = delaySeconds > 0 ? delaySeconds : 0;
+            mEnforcedEmergencyCallToSatelliteHandoverType.set(handoverType);
+            mDelayInSendingEventDisplayEmergencyMessage.set(delaySeconds > 0 ? delaySeconds : 0);
         } else {
-            mEnforcedEmergencyCallToSatelliteHandoverType =
-                    INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE;
-            mDelayInSendingEventDisplayEmergencyMessage = 0;
+            mEnforcedEmergencyCallToSatelliteHandoverType.set(
+                    INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE);
+            mDelayInSendingEventDisplayEmergencyMessage.set(0);
         }
         return true;
     }
@@ -4247,12 +4239,12 @@ public class SatelliteController extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected int getEnforcedEmergencyCallToSatelliteHandoverType() {
-        return mEnforcedEmergencyCallToSatelliteHandoverType;
+        return mEnforcedEmergencyCallToSatelliteHandoverType.get();
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected int getDelayInSendingEventDisplayEmergencyMessage() {
-        return mDelayInSendingEventDisplayEmergencyMessage;
+        return mDelayInSendingEventDisplayEmergencyMessage.get();
     }
 
     private boolean isHandoverTypeValid(int handoverType) {
@@ -5151,9 +5143,9 @@ public class SatelliteController extends Handler {
         startWaitForSatelliteEnablingResponseTimer(argument);
         // Logs satellite session timestamps for session metrics
         if (argument.enableSatellite) {
-            mSessionStartTimeStamp = getElapsedRealtime();
+            mSessionStartTimeStamp.set(getElapsedRealtime());
         }
-        mSessionProcessingTimeStamp = getElapsedRealtime();
+        mSessionProcessingTimeStamp.set(getElapsedRealtime());
     }
 
     /** Get the request attributes that modem needs to enable/disable satellite */
@@ -6128,7 +6120,7 @@ public class SatelliteController extends Handler {
         resetCarrierRoamingSatelliteModeParams(subId);
         evaluateCarrierRoamingNtnEligibilityChange();
         sendMessageDelayed(obtainMessage(CMD_EVALUATE_ESOS_PROFILES_PRIORITIZATION),
-                mEvaluateEsosProfilesPrioritizationDurationMillis);
+                mEvaluateEsosProfilesPrioritizationDurationMillis.get());
         updateRegionalSatelliteEarfcns(subId);
     }
 
@@ -6143,7 +6135,7 @@ public class SatelliteController extends Handler {
     // imsi, msisdn, default sms subId change
     private void handleSubscriptionsChanged() {
         sendMessageDelayed(obtainMessage(CMD_EVALUATE_ESOS_PROFILES_PRIORITIZATION),
-                mEvaluateEsosProfilesPrioritizationDurationMillis);
+                mEvaluateEsosProfilesPrioritizationDurationMillis.get());
     }
 
     private void processNewCarrierConfigData(int subId) {
@@ -6677,17 +6669,16 @@ public class SatelliteController extends Handler {
                 .setCarrierId(getSatelliteCarrierId())
                 .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                 .reportSessionMetrics();
-        mSessionStartTimeStamp = 0;
-        mSessionProcessingTimeStamp = 0;
+        mSessionStartTimeStamp.set(0);
+        mSessionProcessingTimeStamp.set(0);
     }
 
     public boolean isNtnOnlyCarrier() {
-        synchronized (mSatelliteTokenProvisionedLock) {
-            if (mSelectedSatelliteSubId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                return false;
-            }
-            return mSelectedSatelliteSubId == getNtnOnlySubscriptionId();
+        int selectedSatelliteSubId = mSelectedSatelliteSubId.get();
+        if (selectedSatelliteSubId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            return false;
         }
+        return selectedSatelliteSubId == getNtnOnlySubscriptionId();
     }
 
     private void registerForServiceStateChanged() {
@@ -7154,9 +7145,9 @@ public class SatelliteController extends Handler {
             plogd("Start timer to wait for response of the satellite enabling request ID="
                     + argument.requestId + ", enableSatellite=" + argument.enableSatellite
                     + ", mWaitTimeForSatelliteEnablingResponse="
-                    + mWaitTimeForSatelliteEnablingResponse);
+                    + mWaitTimeForSatelliteEnablingResponse.get());
             sendMessageDelayed(obtainMessage(EVENT_WAIT_FOR_SATELLITE_ENABLING_RESPONSE_TIMED_OUT,
-                            argument), mWaitTimeForSatelliteEnablingResponse);
+                            argument), mWaitTimeForSatelliteEnablingResponse.get());
         }
     }
 
@@ -7190,10 +7181,10 @@ public class SatelliteController extends Handler {
             }
             plogd("Start timer to wait for response of the system selection channels update request"
                     + " ID=" + argument.requestId + ", mWaitTimeForSatelliteEnablingResponse="
-                    + mWaitTimeForSatelliteEnablingResponse);
+                    + mWaitTimeForSatelliteEnablingResponse.get());
             sendMessageDelayed(
                 obtainMessage(EVENT_WAIT_FOR_UPDATE_SYSTEM_SELECTION_CHANNELS_RESPONSE_TIMED_OUT,
-                    argument), mWaitTimeForSatelliteEnablingResponse);
+                    argument), mWaitTimeForSatelliteEnablingResponse.get());
         }
     }
 
@@ -7231,10 +7222,10 @@ public class SatelliteController extends Handler {
                     + " request ID=" + argument.requestId
                     + ", enableSatellite=" + argument.enableSatellite
                     + ", mWaitTimeForSatelliteEnablingResponse="
-                    + mWaitTimeForSatelliteEnablingResponse);
+                    + mWaitTimeForSatelliteEnablingResponse.get());
             sendMessageDelayed(obtainMessage(
                     EVENT_WAIT_FOR_UPDATE_SATELLITE_ENABLE_ATTRIBUTES_RESPONSE_TIMED_OUT,
-                    argument), mWaitTimeForSatelliteEnablingResponse);
+                    argument), mWaitTimeForSatelliteEnablingResponse.get());
         }
     }
 
@@ -7293,7 +7284,7 @@ public class SatelliteController extends Handler {
             mSessionMetricsStats.setInitializationResult(SATELLITE_RESULT_MODEM_TIMEOUT)
                     .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                     .setInitializationProcessingTime(
-                            getElapsedRealtime() - mSessionProcessingTimeStamp)
+                            getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                     .setIsDemoMode(mIsDemoModeEnabled.get())
                     .setCarrierId(getSatelliteCarrierId())
                     .reportSessionMetrics();
@@ -7303,13 +7294,13 @@ public class SatelliteController extends Handler {
             mSessionMetricsStats.setTerminationResult(SATELLITE_RESULT_MODEM_TIMEOUT)
                     .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                     .setTerminationProcessingTime(
-                            getElapsedRealtime() - mSessionProcessingTimeStamp)
+                            getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                     .setSessionDurationSec(calculateSessionDurationTimeSec())
                     .reportSessionMetrics();
         }
         notifyEnablementFailedToSatelliteSessionController(argument.enableSatellite);
-        mSessionStartTimeStamp = 0;
-        mSessionProcessingTimeStamp = 0;
+        mSessionStartTimeStamp.set(0);
+        mSessionProcessingTimeStamp.set(0);
     }
 
     private void handleCmdUpdateNtnSignalStrengthReporting(boolean shouldReport) {
@@ -7663,7 +7654,7 @@ public class SatelliteController extends Handler {
     // Should be invoked only when session termination done or session termination failed.
     private int calculateSessionDurationTimeSec() {
         return (int) (
-                (getElapsedRealtime() - mSessionStartTimeStamp
+                (getElapsedRealtime() - mSessionStartTimeStamp.get()
                 - mSessionMetricsStats.getSessionInitializationProcessingTimeMillis()
                 - mSessionMetricsStats.getSessionTerminationProcessingTimeMillis()) / 1000);
     }
@@ -7737,7 +7728,7 @@ public class SatelliteController extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public long getDemoPointingAlignedDurationMillis() {
-        return mDemoPointingAlignedDurationMillis;
+        return mDemoPointingAlignedDurationMillis.get();
     }
 
     private long getDemoPointingNotAlignedDurationMillisFromResources() {
@@ -7754,7 +7745,7 @@ public class SatelliteController extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     public long getDemoPointingNotAlignedDurationMillis() {
-        return mDemoPointingNotAlignedDurationMillis;
+        return mDemoPointingNotAlignedDurationMillis.get();
     }
 
     /** Returns {@code true} if WWAN is in service, else {@code false}.*/
@@ -7846,26 +7837,23 @@ public class SatelliteController extends Handler {
      * Set last emergency call time to the current time.
      */
     public void setLastEmergencyCallTime() {
-        synchronized (mLock) {
-            mLastEmergencyCallTime = getElapsedRealtime();
-            plogd("mLastEmergencyCallTime=" + mLastEmergencyCallTime);
-        }
+        mLastEmergencyCallTime.set(getElapsedRealtime());
+        plogd("mLastEmergencyCallTime=" + mLastEmergencyCallTime.get());
     }
 
     /**
      * Check if satellite is in emergency mode.
      */
     public boolean isInEmergencyMode() {
-        synchronized (mLock) {
-            if (mLastEmergencyCallTime == 0) return false;
+        if (mLastEmergencyCallTime.get() == 0) return false;
 
-            long currentTime = getElapsedRealtime();
-            if ((currentTime - mLastEmergencyCallTime) <= mSatelliteEmergencyModeDurationMillis) {
-                plogd("Satellite is in emergency mode");
-                return true;
-            }
-            return false;
+        long currentTime = getElapsedRealtime();
+        if ((currentTime - mLastEmergencyCallTime.get())
+                <= mSatelliteEmergencyModeDurationMillis.get()) {
+            plogd("Satellite is in emergency mode");
+            return true;
         }
+        return false;
     }
 
     private long getSatelliteEmergencyModeDurationFromOverlayConfig(@NonNull Context context) {
@@ -8257,8 +8245,8 @@ public class SatelliteController extends Handler {
     }
 
     public int getSelectedSatelliteSubId() {
-        plogd("getSelectedSatelliteSubId: subId=" + mSelectedSatelliteSubId);
-        return mSelectedSatelliteSubId;
+        plogd("getSelectedSatelliteSubId: subId=" + mSelectedSatelliteSubId.get());
+        return mSelectedSatelliteSubId.get();
     }
 
     /**
@@ -8687,16 +8675,14 @@ public class SatelliteController extends Handler {
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     protected void setSelectedSatelliteSubId(int subId) {
-        synchronized (mSatelliteTokenProvisionedLock) {
-            plogd("setSelectedSatelliteSubId: subId=" + subId);
-            mSelectedSatelliteSubId = subId;
-        }
+        plogd("setSelectedSatelliteSubId: subId=" + subId);
+        mSelectedSatelliteSubId.set(subId);
     }
 
     /** Return the carrier ID of the binding satellite subscription. */
     public int getSatelliteCarrierId() {
         SubscriptionInfo subInfo = mSubscriptionManagerService.getSubscriptionInfo(
-            mSelectedSatelliteSubId);
+            mSelectedSatelliteSubId.get());
         if (subInfo == null) {
             logd("getSatelliteCarrierId: returns UNKNOWN_CARRIER_ID");
             return UNKNOWN_CARRIER_ID;
@@ -8937,7 +8923,7 @@ public class SatelliteController extends Handler {
                 if (!mCurrentLocationTagIds.equals(tagIds)) {
                     mCurrentLocationTagIds = tagIds;
                     sendMessageDelayed(obtainMessage(CMD_EVALUATE_ESOS_PROFILES_PRIORITIZATION),
-                        mEvaluateEsosProfilesPrioritizationDurationMillis);
+                        mEvaluateEsosProfilesPrioritizationDurationMillis.get());
                 }
             }
         } else {

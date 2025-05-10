@@ -228,6 +228,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @RunWith(AndroidTestingRunner.class)
@@ -6015,9 +6016,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         @Override
         protected void setSelectedSatelliteSubId(int subId) {
             logd("setSelectedSatelliteSubId: subId=" + subId);
-            synchronized (mSatelliteTokenProvisionedLock) {
-                mSelectedSatelliteSubId = subId;
-            }
+            mSelectedSatelliteSubId = new AtomicInteger(subId);
         }
 
         @Override
@@ -6147,15 +6146,11 @@ public class SatelliteControllerTest extends TelephonyTest {
         }
 
         public int getResultReceiverTotalCount() {
-            synchronized (mResultReceiverTotalCountLock) {
-                return mResultReceiverTotalCount;
-            }
+            return mResultReceiverTotalCount.get();
         }
 
-        public HashMap<String, Integer> getResultReceiverCountPerMethodMap() {
-            synchronized (mResultReceiverTotalCountLock) {
-                return mResultReceiverCountPerMethodMap;
-            }
+        public ConcurrentHashMap<String, Integer> getResultReceiverCountPerMethodMap() {
+            return mResultReceiverCountPerMethodMap;
         }
 
         public void setIsSatelliteAllowedState(boolean isAllowed) {
