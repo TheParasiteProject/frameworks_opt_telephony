@@ -6070,9 +6070,19 @@ public class SatelliteControllerTest extends TelephonyTest {
             isApplicationUpdated = false;
         }
 
+        @Nullable
+        public Phone getSatellitePhone() {
+            return super.getSatellitePhone();
+        }
+
         @Override
         protected void initializeSatelliteModeRadios() {
             logd("initializeSatelliteModeRadios");
+        }
+
+        @NonNull
+        protected PersistableBundle getPersistableBundle(int subId) {
+            return super.getPersistableBundle(subId);
         }
 
         @Override
