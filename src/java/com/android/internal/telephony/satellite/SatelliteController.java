@@ -71,6 +71,7 @@ import android.annotation.ArrayRes;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -117,6 +118,7 @@ import android.os.ServiceSpecificException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.os.WorkSource;
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.telecom.TelecomManager;
@@ -250,8 +252,8 @@ public class SatelliteController extends Handler {
     public static final long DEFAULT_CARRIER_EMERGENCY_CALL_WAIT_FOR_CONNECTION_TIMEOUT_MILLIS =
             TimeUnit.SECONDS.toMillis(30);
 
-    /** Sets report entitled metrics cool down to 23 hours to help enforcing privacy requirement.*/
-    private static final long WAIT_FOR_REPORT_ENTITLED_MERTICS_TIMEOUT_MILLIS =
+    /** Sets general metrics report cool down to 23 hours to help enforcing privacy requirement.*/
+    private static final long REGULAR_METRIC_REPORTING_INTERVAL_MILLIS =
             TimeUnit.HOURS.toMillis(23);
 
     /**
@@ -311,7 +313,7 @@ public class SatelliteController extends Handler {
     private static final int EVENT_UPDATE_SATELLITE_ENABLE_ATTRIBUTES_DONE = 51;
     protected static final int
             EVENT_WAIT_FOR_UPDATE_SATELLITE_ENABLE_ATTRIBUTES_RESPONSE_TIMED_OUT = 52;
-    private static final int EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT = 53;
+    private static final int EVENT_WAIT_FOR_REGULAR_METRICS_REPORT_HYSTERESIS_TIMED_OUT = 53;
     protected static final int EVENT_SATELLITE_REGISTRATION_FAILURE = 54;
     private static final int EVENT_TERRESTRIAL_NETWORK_AVAILABLE_CHANGED = 55;
     private static final int EVENT_SET_NETWORK_SELECTION_AUTO_DONE = 56;
@@ -777,6 +779,17 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     protected boolean mSatelliteAccessAllowed = false;
 
+    @Nullable
+    private AlarmManager mAlarmManager;
+    @NonNull
+    private final AlarmManager.OnAlarmListener mRegularMetricReportAlarmListener =
+            () -> {
+                plogd("onAlarm: regular metric report hysteresis timer expired");
+                Message msg = SatelliteController.getInstance().obtainMessage(
+                        EVENT_WAIT_FOR_REGULAR_METRICS_REPORT_HYSTERESIS_TIMED_OUT, null);
+                msg.sendToTarget();
+            };
+
     public static final int RESULT_RECEIVER_COUNT_ANOMALY_THRESHOLD = 500;
     protected final Object mResultReceiverTotalCountLock = new Object();
     @GuardedBy("mResultReceiverTotalCountLock")
@@ -1031,6 +1044,8 @@ public class SatelliteController extends Handler {
             sendRequestAsync(CMD_GET_SATELLITE_ENABLED_FOR_CARRIER, null, phoneToSendRequest);
         }
 
+        mAlarmManager = mContext.getSystemService(AlarmManager.class);
+        scheduleRegularMetricReportTimer();
         logd("Satellite Tracker is created");
     }
 
@@ -2145,18 +2160,9 @@ public class SatelliteController extends Handler {
                 break;
             }
 
-            case EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT: {
-                // TODO: b/366329504 report carrier roaming metrics for multiple subscription IDs.
-                synchronized (mSupportedSatelliteServicesLock) {
-                    int defaultSubId = mSubscriptionManagerService.getDefaultSubId();
-                    boolean isEntitled = mSatelliteEntitlementStatusPerCarrier.get(defaultSubId,
-                            false);
-                    mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(defaultSubId,
-                            isEntitled);
-                }
-                sendMessageDelayed(obtainMessage(
-                                EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT),
-                        WAIT_FOR_REPORT_ENTITLED_MERTICS_TIMEOUT_MILLIS);
+            case EVENT_WAIT_FOR_REGULAR_METRICS_REPORT_HYSTERESIS_TIMED_OUT: {
+                handleEntireEntitlementMetricReport();
+                handleEntireProvisionMetricReport();
                 break;
             }
 
@@ -4922,15 +4928,7 @@ public class SatelliteController extends Handler {
         synchronized (mSupportedSatelliteServicesLock) {
             if (mSatelliteEntitlementStatusPerCarrier.get(subId, false) != entitlementEnabled) {
                 logd("update the carrier satellite enabled to " + entitlementEnabled);
-                mSatelliteEntitlementStatusPerCarrier.put(subId, entitlementEnabled);
-                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId,
-                        entitlementEnabled);
-                if (hasMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT)) {
-                    removeMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT);
-                    sendMessageDelayed(obtainMessage(
-                                    EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT),
-                            WAIT_FOR_REPORT_ENTITLED_MERTICS_TIMEOUT_MILLIS);
-                }
+                handleIndividualEntitlementMetricReport(subId, entitlementEnabled);
                 try {
                     mSubscriptionManagerService.setSubscriptionProperty(subId,
                             SATELLITE_ENTITLEMENT_STATUS, entitlementEnabled ? "1" : "0");
@@ -5424,9 +5422,7 @@ public class SatelliteController extends Handler {
         updateCachedDeviceProvisionStatus();
         // Report updated provisioned status to metrics.
         synchronized (mSatelliteTokenProvisionedLock) {
-            boolean isProvisioned = !mProvisionedSubscriberId.isEmpty()
-                    && mProvisionedSubscriberId.containsValue(Boolean.TRUE);
-            mControllerMetricsStats.setIsProvisioned(isProvisioned);
+            handleEntireProvisionMetricReport();
         }
         selectBindingSatelliteSubscription(false);
         evaluateCarrierRoamingNtnEligibilityChange();
@@ -6566,14 +6562,7 @@ public class SatelliteController extends Handler {
                     entitlementStatus = "0";
                 }
                 boolean result = entitlementStatus.equals("1");
-                mSatelliteEntitlementStatusPerCarrier.put(subId, result);
-                mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId, result);
-                if (hasMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT)) {
-                    removeMessages(EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT);
-                    sendMessageDelayed(obtainMessage(
-                                    EVENT_WAIT_FOR_REPORT_ENTITLED_TO_MERTICS_HYSTERESIS_TIMED_OUT),
-                            WAIT_FOR_REPORT_ENTITLED_MERTICS_TIMEOUT_MILLIS);
-                }
+                handleIndividualEntitlementMetricReport(subId, result);
             }
 
             if (!mSatelliteEntitlementStatusPerCarrier.get(subId, false)) {
@@ -9722,6 +9711,131 @@ public class SatelliteController extends Handler {
 
     private boolean getWifiEnabledState() {
         return mWifiStateEnabled.get();
+    }
+
+    @GuardedBy("mSupportedSatelliteServicesLock")
+    private void handleEntireEntitlementMetricReport() {
+        synchronized (mSupportedSatelliteServicesLock) {
+            int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
+            if (activeSubIds != null && activeSubIds.length > 0) {
+                for (int subId : activeSubIds) {
+                    boolean isSubIdEntitled = mSatelliteEntitlementStatusPerCarrier.get(subId);
+                    mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId,
+                            isSubIdEntitled);
+                    plogd("handleEntitlementMetricReport: subId=" + subId + ", isSubEntitled="
+                            + isSubIdEntitled);
+                }
+            } else {
+                loge("handleEntireEntitlementMetricReport: no active subId");
+            }
+        }
+        scheduleRegularMetricReportTimer();
+    }
+
+    @GuardedBy("mSupportedSatelliteServicesLock")
+    private void handleIndividualEntitlementMetricReport(int subId,
+            boolean isSubscriptionEntitled) {
+        synchronized (mSupportedSatelliteServicesLock) {
+            mSatelliteEntitlementStatusPerCarrier.put(subId, isSubscriptionEntitled);
+            mCarrierRoamingSatelliteControllerStats.reportIsDeviceEntitled(subId,
+                    isSubscriptionEntitled);
+        }
+    }
+
+    @GuardedBy("mSatelliteTokenProvisionedLock")
+    private void handleEntireProvisionMetricReport() {
+        logd("handleEntireProvisionMetricReport:");
+        // Hold the final aggregated status for each carrierId.
+        Map<Integer, CarrierReportInfo> reportDataPerCarrier = new HashMap<>();
+        synchronized (mSatelliteTokenProvisionedLock) {
+            // Aggregate provision status and isNtnOnlyCarrier info per carrierId
+            List<SubscriptionInfo> allSubInfos = mSubscriptionManagerService.getAllSubInfoList(
+                    mContext.getOpPackageName(), mContext.getAttributionTag());
+            for (SubscriptionInfo info : allSubInfos) {
+                int subId = info.getSubscriptionId();
+                boolean isNtnOnlySubId = info.isOnlyNonTerrestrialNetwork();
+                boolean isActiveSubId = info.isActive();
+
+                if (!isNtnOnlySubId && !isActiveSubId) {
+                    plogd("handleEntireProvisionMetricReport: subId=" + subId
+                            + " is neither NTN-only nor active. Skipping.");
+                    continue;
+                }
+
+                int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
+                if (carrierId == TelephonyManager.UNKNOWN_CARRIER_ID && !isNtnOnlySubId) {
+                    plogd("handleEntireProvisionMetricReport: neither valid carrierId "
+                            + "nor NTN-only, subId=" + subId + ". Skipping.");
+                    continue;
+                }
+
+                String subscriberId = getSubscriberIdAndType(info).first;
+                boolean isProvisioned = mProvisionedSubscriberId.getOrDefault(subscriberId, false);
+
+                CarrierReportInfo carrierInfo = reportDataPerCarrier.computeIfAbsent(
+                        carrierId, key -> new CarrierReportInfo());
+                carrierInfo.aggregate(isProvisioned, isNtnOnlySubId);
+            }
+        }
+
+        // Report the aggregated status for each carrierId
+        if (reportDataPerCarrier.isEmpty()) {
+            plogd("handleEntireProvisionMetricReport: No reportable data found");
+        } else {
+            plogd("handleEntireProvisionMetricReport: Reporting final aggregated status for "
+                    + reportDataPerCarrier.size() + " carrier(s).");
+            for (Map.Entry<Integer, CarrierReportInfo> reportEntry :
+                    reportDataPerCarrier.entrySet()) {
+                int carrierId = reportEntry.getKey();
+                CarrierReportInfo info = reportEntry.getValue();
+
+                plogd("handleEntireProvisionMetricReport: Final report for carrierId="
+                        + carrierId + ", isProvisioned=" + info.mIsAnySubProvisioned
+                        + ", isNtnOnlyCarrier=" + info.mIsNtnOnlyCarrier);
+
+                mControllerMetricsStats.setIsProvisioned(
+                        carrierId,
+                        info.mIsAnySubProvisioned,
+                        info.mIsNtnOnlyCarrier);
+            }
+        }
+        scheduleRegularMetricReportTimer();
+    }
+
+    // Helper class to store aggregated information per carrierId.
+    private static class CarrierReportInfo {
+        boolean mIsAnySubProvisioned = false;
+        boolean mIsNtnOnlyCarrier = false;
+
+        void aggregate(boolean isProvisioned, boolean isNtnOnlyCarrier) {
+            // if any subId for the carrier was provisioned, this carrier is provisioned
+            if (isProvisioned) {
+                this.mIsAnySubProvisioned = true;
+            }
+            this.mIsNtnOnlyCarrier = isNtnOnlyCarrier;
+        }
+    }
+
+    private void scheduleRegularMetricReportTimer() {
+        if (mAlarmManager == null) {
+            plogd("scheduleRegularMetricReportTimer: AlarmManager is null");
+            return;
+        }
+        mAlarmManager.cancel(mRegularMetricReportAlarmListener);
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                getElapsedRealtime() + REGULAR_METRIC_REPORTING_INTERVAL_MILLIS,
+                TAG, new HandlerExecutor(this), new WorkSource(),
+                mRegularMetricReportAlarmListener);
+    }
+
+    /**
+     * Uses this function to set AlarmManager object for testing.
+     *
+     * @param alarmManager The instance of AlarmManager.
+     */
+    @VisibleForTesting
+    public void setAlarmManager(AlarmManager alarmManager) {
+        mAlarmManager = alarmManager;
     }
 
     /**
