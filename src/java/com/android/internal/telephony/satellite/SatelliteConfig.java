@@ -423,4 +423,26 @@ public class SatelliteConfig {
     private static void loge(@NonNull String log) {
         Log.e(TAG, log);
     }
+
+    @Override
+    public String toString() {
+        return "SatelliteConfig{"
+                + "mVersion="
+                + mVersion
+                + ", mSupportedServicesPerCarrier="
+                + mSupportedServicesPerCarrier
+                + ", mCarrierRoamingMaxAllowedDataMode="
+                + mCarrierRoamingMaxAllowedDataMode
+                + ", mSatelliteRegionCountryCodes="
+                + mSatelliteRegionCountryCodes
+                + ", mIsSatelliteRegionAllowed="
+                + mIsSatelliteRegionAllowed
+                + ", mSatS2File="
+                + mSatS2File
+                + ", mSatelliteAccessConfigJsonFile="
+                + mSatelliteAccessConfigJsonFile
+                + ", mConfigData="
+                + mConfigData
+                + "}";
+    }
 }
