@@ -28,6 +28,7 @@ import static android.telephony.ims.RegistrationManager.SUGGESTED_ACTION_TRIGGER
 import static android.telephony.ims.RegistrationManager.SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK_WITH_TIMEOUT;
 import static android.telephony.ims.RegistrationManager.SUGGESTED_ACTION_TRIGGER_RAT_BLOCK;
 import static android.telephony.ims.stub.ImsRegistrationImplBase.REGISTRATION_TECH_NONE;
+import static android.telephony.ims.stub.ImsRegistrationImplBase.DEFAULT_THROTTLE_SEC;
 
 import static com.android.internal.telephony.CommandsInterface.CB_FACILITY_BAIC;
 import static com.android.internal.telephony.CommandsInterface.CB_FACILITY_BAICr;
@@ -2573,51 +2574,65 @@ public class ImsPhone extends ImsPhoneBase {
         public void handleImsUnregistered(ImsReasonInfo imsReasonInfo,
                 @RegistrationManager.SuggestedAction int suggestedAction,
                 @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech) {
-            if (DBG) {
-                logd("handleImsUnregistered: onImsMmTelDisconnected imsReasonInfo="
-                        + imsReasonInfo + ", suggestedAction=" + suggestedAction
-                        + ", disconnectedRadioTech=" + imsRadioTech);
-            }
-            mRegLocalLog.log("handleImsUnregistered: onImsMmTelDisconnected imsRadioTech="
-                    + imsReasonInfo);
-            setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
-            processDisconnectReason(imsReasonInfo);
-            getDefaultPhone().setImsRegistrationState(false);
-            mMetrics.writeOnImsConnectionState(mPhoneId, ImsConnectionState.State.DISCONNECTED,
-                    imsReasonInfo);
-            mImsStats.onImsUnregistered(imsReasonInfo);
-            mImsNrSaModeHandler.onImsUnregistered(imsRadioTech);
-            mImsRegistrationTech = REGISTRATION_TECH_NONE;
-            int suggestedModemAction = SUGGESTED_ACTION_NONE;
-            if (imsReasonInfo.getCode() == ImsReasonInfo.CODE_REGISTRATION_ERROR) {
-                if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK)
-                        || (suggestedAction == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK_WITH_TIMEOUT)) {
-                    suggestedModemAction = suggestedAction;
-                } else if (mFeatureFlags.addRatRelatedSuggestedActionToImsRegistration()) {
-                    if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_RAT_BLOCK)
-                            || (suggestedAction == SUGGESTED_ACTION_TRIGGER_CLEAR_RAT_BLOCKS)) {
+            if (mFeatureFlags.supportThrottleTimeForDeregistration()) {
+                processImsUnregistered(
+                        imsReasonInfo, suggestedAction, imsRadioTech, DEFAULT_THROTTLE_SEC);
+            } else {
+                if (DBG) {
+                    logd("handleImsUnregistered: onImsMmTelDisconnected imsReasonInfo="
+                            + imsReasonInfo + ", suggestedAction=" + suggestedAction
+                            + ", disconnectedRadioTech=" + imsRadioTech);
+                }
+                mRegLocalLog.log("handleImsUnregistered: onImsMmTelDisconnected imsRadioTech="
+                        + imsReasonInfo);
+                setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
+                processDisconnectReason(imsReasonInfo);
+                getDefaultPhone().setImsRegistrationState(false);
+                mMetrics.writeOnImsConnectionState(mPhoneId, ImsConnectionState.State.DISCONNECTED,
+                        imsReasonInfo);
+                mImsStats.onImsUnregistered(imsReasonInfo);
+                mImsNrSaModeHandler.onImsUnregistered(imsRadioTech);
+                mImsRegistrationTech = REGISTRATION_TECH_NONE;
+                int suggestedModemAction = SUGGESTED_ACTION_NONE;
+                if (imsReasonInfo.getCode() == ImsReasonInfo.CODE_REGISTRATION_ERROR) {
+                    if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK)
+                            || (suggestedAction
+                                    == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK_WITH_TIMEOUT)) {
                         suggestedModemAction = suggestedAction;
+                    } else if (mFeatureFlags.addRatRelatedSuggestedActionToImsRegistration()) {
+                        if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_RAT_BLOCK)
+                                || (suggestedAction == SUGGESTED_ACTION_TRIGGER_CLEAR_RAT_BLOCKS)) {
+                            suggestedModemAction = suggestedAction;
+                        }
                     }
                 }
-            }
-            updateImsRegistrationInfo(REGISTRATION_STATE_NOT_REGISTERED,
-                    imsRadioTech, suggestedModemAction, TRANSPORT_TYPE_INVALID);
+                updateImsRegistrationInfo(REGISTRATION_STATE_NOT_REGISTERED,
+                        imsRadioTech, suggestedModemAction, TRANSPORT_TYPE_INVALID);
 
-            if (mFeatureFlags.clearCachedImsPhoneNumberWhenDeviceLostImsRegistration()) {
-                // Clear the phone number from P-Associated-Uri
-                setCurrentSubscriberUris(null);
-                clearPhoneNumberForSourceIms();
-            }
+                if (mFeatureFlags.clearCachedImsPhoneNumberWhenDeviceLostImsRegistration()) {
+                    // Clear the phone number from P-Associated-Uri
+                    setCurrentSubscriberUris(null);
+                    clearPhoneNumberForSourceIms();
+                }
 
-            AsyncResult ar;
-            if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
-                ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
-                        REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
-                        null);
-            } else {
-                ar = new AsyncResult(null, null, null);
+                AsyncResult ar;
+                if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
+                    ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                            REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
+                            null);
+                } else {
+                    ar = new AsyncResult(null, null, null);
+                }
+                mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
             }
-            mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
+        }
+
+        @Override
+        public void handleImsUnregistered(ImsReasonInfo imsReasonInfo,
+                @RegistrationManager.SuggestedAction int suggestedAction,
+                @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
+                int throttlingTimeSec) {
+            processImsUnregistered(imsReasonInfo, suggestedAction, imsRadioTech, throttlingTimeSec);
         }
 
         @Override
@@ -2627,6 +2642,61 @@ public class ImsPhone extends ImsPhoneBase {
             setPhoneNumberForSourceIms(uris);
         }
     };
+
+    /** Processes IMS unregistration, updates state, and performs suggested actions. */
+    @VisibleForTesting
+    public void processImsUnregistered(ImsReasonInfo imsReasonInfo,
+            @RegistrationManager.SuggestedAction int suggestedAction,
+            @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
+            int throttlingTimeSec) {
+        if (DBG) {
+            logd("handleImsUnregistered: onImsMmTelDisconnected imsReasonInfo="
+                    + imsReasonInfo + ", suggestedAction=" + suggestedAction
+                    + ", disconnectedRadioTech=" + imsRadioTech
+                    + ", throttlingTimeSec=" + throttlingTimeSec);
+        }
+        mRegLocalLog.log("handleImsUnregistered: onImsMmTelDisconnected imsRadioTech="
+                + imsReasonInfo);
+        setServiceState(ServiceState.STATE_OUT_OF_SERVICE);
+        processDisconnectReason(imsReasonInfo);
+        getDefaultPhone().setImsRegistrationState(false);
+        mMetrics.writeOnImsConnectionState(mPhoneId, ImsConnectionState.State.DISCONNECTED,
+                imsReasonInfo);
+        mImsStats.onImsUnregistered(imsReasonInfo);
+        mImsNrSaModeHandler.onImsUnregistered(imsRadioTech);
+        mImsRegistrationTech = REGISTRATION_TECH_NONE;
+        int suggestedModemAction = SUGGESTED_ACTION_NONE;
+        if (imsReasonInfo.getCode() == ImsReasonInfo.CODE_REGISTRATION_ERROR) {
+            if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK)
+                    || (suggestedAction == SUGGESTED_ACTION_TRIGGER_PLMN_BLOCK_WITH_TIMEOUT)) {
+                suggestedModemAction = suggestedAction;
+            } else if (mFeatureFlags.addRatRelatedSuggestedActionToImsRegistration()) {
+                if ((suggestedAction == SUGGESTED_ACTION_TRIGGER_RAT_BLOCK)
+                        || (suggestedAction == SUGGESTED_ACTION_TRIGGER_CLEAR_RAT_BLOCKS)) {
+                    suggestedModemAction = suggestedAction;
+                }
+            }
+        }
+
+        updateImsRegistrationInfo(REGISTRATION_STATE_NOT_REGISTERED,
+                imsRadioTech, suggestedModemAction, TRANSPORT_TYPE_INVALID, throttlingTimeSec);
+
+        if (mFeatureFlags.clearCachedImsPhoneNumberWhenDeviceLostImsRegistration()) {
+            // Clear the phone number from P-Associated-Uri
+            setCurrentSubscriberUris(null);
+            clearPhoneNumberForSourceIms();
+        }
+
+        AsyncResult ar;
+        if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
+            ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                    REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
+                    null);
+        } else {
+            ar = new AsyncResult(null, null, null);
+        }
+        mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
+    }
 
     /** Clear the IMS phone number from IMS associated Uris when IMS registration is lost. */
     @VisibleForTesting
@@ -2795,8 +2865,14 @@ public class ImsPhone extends ImsPhoneBase {
                 return;
             }
 
-            mDefaultPhone.mCi.updateImsRegistrationInfo(mImsRegistrationState,
-                    mImsRegistrationTech, 0, capabilities, null);
+            if (mFeatureFlags.supportThrottleTimeForDeregistration()) {
+                mDefaultPhone.mCi.updateImsRegistrationInfo(mImsRegistrationState,
+                        mImsRegistrationTech, 0, capabilities, DEFAULT_THROTTLE_SEC, null);
+            } else {
+                mDefaultPhone.mCi.updateImsRegistrationInfo(mImsRegistrationState,
+                        mImsRegistrationTech, 0, capabilities, null);
+            }
+
             mNotifiedRegisteredState = true;
 
             mImsNrSaModeHandler.updateImsCapability(capabilities);
@@ -2809,12 +2885,32 @@ public class ImsPhone extends ImsPhoneBase {
      * @param regState indicates IMS registration state.
      * @param imsRadioTech indicates the type of the radio access network where IMS is registered.
      * @param suggestedAction indicates the suggested action for the radio to perform.
+     * @param transportType indicates the transport type over which the IMS registration.
      */
     private void updateImsRegistrationInfo(
             @RegistrationManager.ImsRegistrationState int regState,
             @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
             @RegistrationManager.SuggestedAction int suggestedAction,
             @AccessNetworkConstants.TransportType int transportType) {
+        updateImsRegistrationInfo(regState, imsRadioTech, suggestedAction, transportType,
+                DEFAULT_THROTTLE_SEC);
+    }
+
+    /**
+     * Update IMS registration info
+     *
+     * @param regState indicates IMS registration state.
+     * @param imsRadioTech indicates the type of the radio access network where IMS is registered.
+     * @param suggestedAction indicates the suggested action for the radio to perform.
+     * @param transportType indicates the transport type over which the IMS registration.
+     * @param throttlingTimeSec The registration throttling time in seconds.
+     */
+    private void updateImsRegistrationInfo(
+            @RegistrationManager.ImsRegistrationState int regState,
+            @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
+            @RegistrationManager.SuggestedAction int suggestedAction,
+            @AccessNetworkConstants.TransportType int transportType,
+            int throttlingTimeSec) {
 
         if (regState == mImsRegistrationState) {
             // In NOT_REGISTERED state, the current PLMN can be blocked with a suggested action.
@@ -2831,14 +2927,25 @@ public class ImsPhone extends ImsPhoneBase {
         }
 
         if (regState == REGISTRATION_STATE_NOT_REGISTERED) {
-            mDefaultPhone.mCi.updateImsRegistrationInfo(regState,
-                    imsRadioTech, suggestedAction, 0, null);
+            if (mFeatureFlags.supportThrottleTimeForDeregistration()) {
+                mDefaultPhone.mCi.updateImsRegistrationInfo(regState,
+                        imsRadioTech, suggestedAction, 0, throttlingTimeSec, null);
+            } else {
+                mDefaultPhone.mCi.updateImsRegistrationInfo(regState,
+                        imsRadioTech, suggestedAction, 0, null);
+            }
         } else if (mImsRegistrationState == REGISTRATION_STATE_REGISTERED) {
             // This happens when radio tech is changed while in REGISTERED state.
             if (mImsRegistrationCapabilities > 0) {
                 // Capability has been updated. Notify REGISTRATION_STATE_REGISTERED.
-                mDefaultPhone.mCi.updateImsRegistrationInfo(regState, imsRadioTech, 0,
-                        mImsRegistrationCapabilities, null);
+                if (mFeatureFlags.supportThrottleTimeForDeregistration()) {
+                    mDefaultPhone.mCi.updateImsRegistrationInfo(regState, imsRadioTech, 0,
+                            mImsRegistrationCapabilities, throttlingTimeSec, null);
+                } else {
+                    mDefaultPhone.mCi.updateImsRegistrationInfo(regState, imsRadioTech, 0,
+                            mImsRegistrationCapabilities, null);
+                }
+
                 mImsRegistrationTech = imsRadioTech;
                 mTransportType = transportType;
                 mNotifiedRegisteredState = true;
