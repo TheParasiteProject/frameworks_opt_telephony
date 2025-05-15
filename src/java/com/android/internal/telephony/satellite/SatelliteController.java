@@ -349,6 +349,7 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_SET_NTN_SMS_SUPPORTED_BY_MESSAGES_APP = 85;
     private static final int REQUEST_PROVISION_SATELLITE = 86;
     private static final int REQUEST_DEPROVISION_SATELLITE = 87;
+    private static final int EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED = 88;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -679,7 +680,7 @@ public class SatelliteController extends Handler {
     private final RegistrantList mSatelliteSubIdChangedRegistrants = new RegistrantList();
     private final BTWifiNFCStateReceiver mBTWifiNFCSateReceiver;
     private final UwbAdapterStateCallback mUwbAdapterStateCallback;
-    private final List<Integer> mCtsSatelliteAccessAllowedSubIds = new ArrayList<>();
+    @Nullable private List<Integer> mCtsSatelliteAccessAllowedSubIds = null;
 
     // Variable for backup and restore device's screen rotation settings.
     private String mDeviceRotationLockToBackupAndRestore = null;
@@ -2556,6 +2557,12 @@ public class SatelliteController extends Handler {
                 } finally {
                     args.recycle();
                 }
+                break;
+            }
+
+            case EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED: {
+                plogd("EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED");
+                handleSatelliteAccessAllowedStateChanged((boolean) msg.obj);
                 break;
             }
 
@@ -8399,10 +8406,16 @@ public class SatelliteController extends Handler {
             plogd("isSatelliteAvailableAtCurrentLocation: subscriptionInfo is null");
             return false;
         }
-        if (mCtsSatelliteAccessAllowedSubIds.contains(info.getSubscriptionId())) {
-            plogd("isSatelliteAvailableAtCurrentLocation: subscriptionId="
-                      + info.getSubscriptionId() + " is allowed for CTS testing");
-            return true;
+        if (mCtsSatelliteAccessAllowedSubIds != null) {
+            if (mCtsSatelliteAccessAllowedSubIds.contains(info.getSubscriptionId())) {
+                plogd("isSatelliteAvailableAtCurrentLocation: subscriptionId="
+                        + info.getSubscriptionId() + " is allowed for CTS testing");
+                return true;
+            } else {
+                plogd("isSatelliteAvailableAtCurrentLocation: subscriptionId="
+                        + info.getSubscriptionId() + " is not allowed for CTS testing");
+                return false;
+            }
         }
         if (!isSatelliteAccessAllowedAtCurrentLocation()) {
             plogd("isSatelliteAvailableAtCurrentLocation: satellite access is not allowed at " +
@@ -8887,7 +8900,8 @@ public class SatelliteController extends Handler {
                 public void onAccessAllowedStateChanged(boolean isAllowed) {
                     plogd("onAccessStateChanged: isAllowed=" + isAllowed);
                     if (mFeatureFlags.satelliteExitP2pSessionOutsideGeofence()) {
-                        handleSatelliteAccessAllowedStateChanged(isAllowed);
+                        sendMessage(obtainMessage(EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED,
+                            isAllowed));
                     } else {
                         mSatelliteAccessAllowed.set(isAllowed);
                         evaluateESOSProfilesPrioritization();
@@ -9080,36 +9094,44 @@ public class SatelliteController extends Handler {
      * This API can be used by only CTS to override the satellite access allowed state for
      * a list of subscription IDs.
      *
+     * @param reset {@code true} mean the overridden configs should not be used, {@code false}
+     *              otherwise.
      * @param subIdListStr The string representation of the list of subscription IDs,
      *                     which are numbers separated by comma.
      * @return {@code true} if the satellite access allowed state is set successfully,
      * {@code false} otherwise.
      */
-    public boolean setSatelliteAccessAllowedForSubscriptions(@Nullable String subIdListStr) {
+    public boolean setSatelliteAccessAllowedForSubscriptions(
+        boolean reset, @Nullable String subIdListStr) {
         if (!isMockModemAllowed()) {
             plogd("setSatelliteAccessAllowedForSubscriptions: mock modem not allowed");
             return false;
         }
 
-        plogd("setSatelliteAccessAllowedForSubscriptions: subIdListStr=" + subIdListStr);
-        if (subIdListStr == null) {
-            mCtsSatelliteAccessAllowedSubIds.clear();
-            return true;
-        }
-
-        List<Integer> subIdList = new ArrayList<>();
-        for (String subIdStr : subIdListStr.split(",")) {
-            try {
-                subIdList.add(Integer.parseInt(subIdStr));
-            } catch (NumberFormatException e) {
-                plogd("setSatelliteAccessAllowedForSubscriptions: invalid subIdStr=" + subIdStr);
-                return false;
+        plogd("setSatelliteAccessAllowedForSubscriptions: subIdListStr=" + subIdListStr
+                  + " reset=" + reset);
+        boolean result = true;
+        if (reset) {
+            mCtsSatelliteAccessAllowedSubIds = null;
+        } else {
+            mCtsSatelliteAccessAllowedSubIds = new ArrayList<>();
+            if (!TextUtils.isEmpty(subIdListStr)) {
+                for (String subIdStr : subIdListStr.split(",")) {
+                    try {
+                        mCtsSatelliteAccessAllowedSubIds.add(Integer.parseInt(subIdStr));
+                    } catch (NumberFormatException e) {
+                        plogd("setSatelliteAccessAllowedForSubscriptions: invalid subIdStr="
+                                + subIdStr);
+                        mCtsSatelliteAccessAllowedSubIds = null;
+                        result = false;
+                    }
+                }
             }
         }
-        mCtsSatelliteAccessAllowedSubIds.clear();
-        mCtsSatelliteAccessAllowedSubIds.addAll(subIdList);
-        selectBindingSatelliteSubscription(false);
-        return true;
+        boolean isAllowed = mSatelliteAccessAllowed.get();
+        plogd("setSatelliteAccessAllowedForSubscriptions: isAllowed=" + isAllowed);
+        sendMessage(obtainMessage(EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED, isAllowed));
+        return result;
     }
 
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
