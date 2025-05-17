@@ -16,6 +16,7 @@
 
 package com.android.internal.telephony;
 
+import android.annotation.NonNull;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Binder;
@@ -41,6 +42,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.GsmAlphabet.TextEncodingDetails;
 import com.android.internal.telephony.analytics.TelephonyAnalytics;
 import com.android.internal.telephony.analytics.TelephonyAnalytics.SmsMmsAnalytics;
+import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.util.SMSDispatcherUtil;
@@ -365,8 +367,8 @@ public class ImsSmsDispatcher extends SMSDispatcher {
     }
 
     public ImsSmsDispatcher(Phone phone, SmsDispatchersController smsDispatchersController,
-            FeatureConnectorFactory factory) {
-        super(phone, smsDispatchersController);
+            FeatureConnectorFactory factory, @NonNull FeatureFlags featureFlags) {
+        super(phone, smsDispatchersController, featureFlags);
         mConnectorFactory = factory;
 
         mImsManagerConnector = mConnectorFactory.create(mContext, mPhone.getPhoneId(), TAG,
