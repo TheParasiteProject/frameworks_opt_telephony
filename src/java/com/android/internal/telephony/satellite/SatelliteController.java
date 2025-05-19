@@ -5394,7 +5394,7 @@ public class SatelliteController extends Handler {
             handleEntireProvisionMetricReport();
         }
         selectBindingSatelliteSubscription(false);
-        evaluateCarrierRoamingNtnEligibilityChange();
+        handleCarrierRoamingNtnAvailableServicesChanged();
     }
 
     private void updateCachedDeviceProvisionStatus() {
@@ -9412,6 +9412,12 @@ public class SatelliteController extends Handler {
             if (!isNtnSmsSupportedByMessagesApp()
                     || !isApplicationSupportsP2P(getSatelliteGatewayServicePackageName())) {
                 plogd("isP2PSmsDisallowedOnCarrierRoamingNtn: APKs do not supports P2P");
+                return true;
+            }
+
+            if (!isSubscriptionProvisioned(subId)) {
+                plogd("isP2PSmsDisallowedOnCarrierRoamingNtn: subId=" + subId
+                        + " is not provisioned.");
                 return true;
             }
         }
