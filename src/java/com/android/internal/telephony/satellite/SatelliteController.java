@@ -1076,6 +1076,7 @@ public class SatelliteController extends Handler {
     /**
      * Get satelliteConfig from SatelliteConfigParser
      */
+    @Nullable
     public SatelliteConfig getSatelliteConfig() {
         SatelliteConfigParser satelliteConfigParser = getSatelliteConfigParser();
         if (satelliteConfigParser == null) {
@@ -1099,6 +1100,7 @@ public class SatelliteController extends Handler {
     /**
      * Get SatelliteConfigParser from TelephonyConfigUpdateInstallReceiver
      */
+    @Nullable
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     public SatelliteConfigParser getSatelliteConfigParser() {
         return (SatelliteConfigParser) TelephonyConfigUpdateInstallReceiver
@@ -6054,7 +6056,6 @@ public class SatelliteController extends Handler {
      *     the configupdater configuration if available and valid, otherwise the value from the
      *     device configuration overlay.
      */
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     public int getMaxAllowedDataMode() {
         int maxAllowedDataMode = getMaxAllowedDataModeDeviceConfigOverlay();
         logd("getMaxAllowedDataMode: device config=" + maxAllowedDataMode);
