@@ -142,6 +142,7 @@ public class CatService extends Handler implements AppInterface {
     protected static final int MSG_ID_ALPHA_NOTIFY   = 9;
 
     static final int MSG_ID_RIL_MSG_DECODED          = 10;
+    static final int MSG_ID_NOTIFY_COMMAND_RESULT    = 11;
 
     // Events to signal SIM presence or absent in the device.
     private static final int MSG_ID_ICC_RECORDS_LOADED       = 20;
@@ -164,6 +165,7 @@ public class CatService extends Handler implements AppInterface {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private int mSlotId;
+    private SetUpCallCommandHandler mSetUpCallHandler = null;
     private static HandlerThread sCatServiceThread;
 
     /* For multisim catservice should not be singleton */
@@ -1096,6 +1098,22 @@ public class CatService extends Handler implements AppInterface {
                     CatLog.d(this, "CAT Alpha message: msg.obj is null");
                 }
                 break;
+            case MSG_ID_NOTIFY_COMMAND_RESULT:
+                ResultCode resultCode = (ResultCode) msg.obj;
+                CatLog.d(this, "Command handling result: " + resultCode);
+
+                if (mCurrntCmd == null) {
+                    CatLog.e(this, "No command to handle");
+                    break;
+                }
+
+                sendTerminalResponse(mCurrntCmd.mCmdDet, resultCode, false, 0, null);
+
+                if (mCurrntCmd.mCmdDet.typeOfCommand == CommandType.SET_UP_CALL.value()) {
+                    mSetUpCallHandler = null;
+                }
+                mCurrntCmd = null;
+                break;
             default:
                 throw new AssertionError("Unrecognized CAT command: " + msg.what);
         }
@@ -1259,12 +1277,47 @@ public class CatService extends Handler implements AppInterface {
                         break;
                     // 3GPP TS.102.223: Open Channel alpha confirmation should not send TR
                     case OPEN_CHANNEL:
-                    case SET_UP_CALL:
                         mCmdIf.handleCallSetupRequestFromSim(resMsg.mUsersConfirm, null);
-                        // No need to send terminal response for SET UP CALL. The user's
-                        // confirmation result is send back using a dedicated ril message
-                        // invoked by the CommandInterface call above.
                         mCurrntCmd = null;
+                        return;
+                    case SET_UP_CALL:
+                        if (Flags.supportStkCommandUssdAndCall()) {
+                            if (mSetUpCallHandler != null) {
+                                CatLog.d(this, "Already handling another command");
+                                sendTerminalResponse(
+                                        cmdDet, ResultCode.TERMINAL_CRNTLY_UNABLE_TO_PROCESS,
+                                        false, 0, null);
+                            }
+                            if (!resMsg.mUsersConfirm) {
+                                CatLog.d(this, "User not accept");
+                                sendTerminalResponse(cmdDet, ResultCode.USER_NOT_ACCEPT,
+                                        false, 0, null);
+                                mCurrntCmd = null;
+                                return;
+                            }
+
+                            SubscriptionInfo subInfo = getSubscriptionInfo(mSlotId);
+                            if (subInfo == null) {
+                                CatLog.d(this, "Subscription info is null");
+                                sendTerminalResponse(cmdDet, ResultCode.CMD_DATA_NOT_UNDERSTOOD,
+                                        false, 0, null);
+                                mCurrntCmd = null;
+                                return;
+                            }
+
+                            mSetUpCallHandler = new SetUpCallCommandHandler(
+                                    getLooper(),
+                                    this,
+                                    mContext,
+                                    subInfo.getSubscriptionId());
+                            mSetUpCallHandler.start(mCurrntCmd.getCallSettings());
+                        } else {
+                            mCmdIf.handleCallSetupRequestFromSim(resMsg.mUsersConfirm, null);
+                            // No need to send terminal response for SET UP CALL. The user's
+                            // confirmation result is send back using a dedicated ril message
+                            // invoked by the CommandInterface call above.
+                            mCurrntCmd = null;
+                        }
                         return;
                     case SET_UP_EVENT_LIST:
                         if (IDLE_SCREEN_AVAILABLE_EVENT == resMsg.mEventValue) {
@@ -1282,28 +1335,50 @@ public class CatService extends Handler implements AppInterface {
                 break;
             case BACKWARD_MOVE_BY_USER:
             case USER_NOT_ACCEPT:
-                // if the user dismissed the alert dialog for a
-                // setup call/open channel, consider that as the user
-                // rejecting the call. Use dedicated API for this, rather than
-                // sending a terminal response.
-                if (type == CommandType.SET_UP_CALL || type == CommandType.OPEN_CHANNEL) {
-                    mCmdIf.handleCallSetupRequestFromSim(false, null);
-                    mCurrntCmd = null;
-                    return;
+                if (Flags.supportStkCommandUssdAndCall()) {
+                    // if the user dismissed the alert dialog for a
+                    // open channel, consider that as the user
+                    // rejecting the call. Use dedicated API for this, rather than
+                    // sending a terminal response.
+                    if (type == CommandType.OPEN_CHANNEL) {
+                        mCmdIf.handleCallSetupRequestFromSim(false, null);
+                        mCurrntCmd = null;
+                        return;
+                    } else {
+                        resp = null;
+                    }
                 } else {
-                    resp = null;
+                    // if the user dismissed the alert dialog for a
+                    // setup call/open channel, consider that as the user
+                    // rejecting the call. Use dedicated API for this, rather than
+                    // sending a terminal response.
+                    if (type == CommandType.SET_UP_CALL || type == CommandType.OPEN_CHANNEL) {
+                        mCmdIf.handleCallSetupRequestFromSim(false, null);
+                        mCurrntCmd = null;
+                        return;
+                    } else {
+                        resp = null;
+                    }
                 }
                 break;
             case NO_RESPONSE_FROM_USER:
-                // No need to send terminal response for SET UP CALL on user timeout,
-                // instead use dedicated API
-                if (type == CommandType.SET_UP_CALL) {
-                    mCmdIf.handleCallSetupRequestFromSim(false, null);
-                    mCurrntCmd = null;
-                    return;
+                if (Flags.supportStkCommandUssdAndCall()) {
+                    if (type == CommandType.SET_UP_CALL) {
+                        sendTerminalResponse(cmdDet, ResultCode.USER_NOT_ACCEPT, false, 0, null);
+                        mCurrntCmd = null;
+                        return;
+                    }
+                    resp = null;
+                    break;
+                } else {
+                    // No need to send terminal response for SET UP CALL on user timeout,
+                    // instead use dedicated API
+                    if (type == CommandType.SET_UP_CALL) {
+                        mCmdIf.handleCallSetupRequestFromSim(false, null);
+                        mCurrntCmd = null;
+                        return;
+                    }
                 }
-                resp = null;
-                break;
             case UICC_SESSION_TERM_BY_USER:
                 resp = null;
                 break;
@@ -1386,5 +1461,15 @@ public class CatService extends Handler implements AppInterface {
         }
         mContext.getSystemService(ActivityManager.class).setDeviceLocales(new LocaleList(locales));
         BackupManager.dataChanged("com.android.providers.settings");
+    }
+
+    private SubscriptionInfo getSubscriptionInfo(int slotId) {
+        SubscriptionManager subscriptionManager = (SubscriptionManager)
+                mContext.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        if (subscriptionManager == null) {
+            return null;
+        }
+
+        return subscriptionManager.getActiveSubscriptionInfoForSimSlotIndex(slotId);
     }
 }

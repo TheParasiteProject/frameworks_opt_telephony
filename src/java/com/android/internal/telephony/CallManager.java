@@ -211,7 +211,7 @@ public class CallManager {
      * get Phone object corresponds to subId
      * @return Phone
      */
-    private Phone getPhone(int subId) {
+    public Phone getPhone(int subId) {
         Phone p = null;
         for (Phone phone : mPhones) {
             if (phone.getSubId() == subId &&
