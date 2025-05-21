@@ -2340,6 +2340,11 @@ public class DataNetwork extends StateMachine {
         // will always be registered with NOT_SUSPENDED capability.
         mNetworkAgent = createNetworkAgent();
         mNetworkAgent.markConnected();
+        // Update NetworkAgent in QosCallbackTracker so that QoS callbacks on the new network agent
+        // properly reach to the callback tracker.
+        if (mFlags.qosUpdateNetworkAgent() && mQosCallbackTracker != null) {
+            mQosCallbackTracker.updateNetworkAgent(mNetworkAgent);
+        }
         notifyPreciseDataConnectionState();
         // Because network agent is always created with NOT_SUSPENDED, we need to update
         // the suspended if it's was in suspended state.
