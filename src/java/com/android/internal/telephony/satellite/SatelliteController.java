@@ -437,6 +437,7 @@ public class SatelliteController extends Handler {
     private AtomicInteger mEnforcedEmergencyCallToSatelliteHandoverType =
             new AtomicInteger(INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE);
     private AtomicInteger mDelayInSendingEventDisplayEmergencyMessage = new AtomicInteger(0);
+    private AtomicInteger mSimSlotIdForLaunchingT911ConversationThread = new AtomicInteger(0);
     private AtomicInteger mMaxAllowedDataModeForCtsTest = new AtomicInteger(-1);
     // The ID of the satellite subscription that has highest priority and is provisioned.
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
@@ -4213,9 +4214,11 @@ public class SatelliteController extends Handler {
      *                     To disable the override, use -1 for handoverType.
      * @param delaySeconds The event EVENT_DISPLAY_EMERGENCY_MESSAGE will be sent to Dialer
      *                     delaySeconds after the emergency call starts.
+     * @param simSlotId The SIM slot ID to use for loading T911 conversation thread.
      * @return {@code true} if the handover type is set successfully, {@code false} otherwise.
      */
-    public boolean setEmergencyCallToSatelliteHandoverType(int handoverType, int delaySeconds) {
+    public boolean setEmergencyCallToSatelliteHandoverType(
+        int handoverType, int delaySeconds, int simSlotId) {
         if (!isMockModemAllowed()) {
             ploge("setEmergencyCallToSatelliteHandoverType: mock modem not allowed");
             return false;
@@ -4223,10 +4226,12 @@ public class SatelliteController extends Handler {
         if (isHandoverTypeValid(handoverType)) {
             mEnforcedEmergencyCallToSatelliteHandoverType.set(handoverType);
             mDelayInSendingEventDisplayEmergencyMessage.set(delaySeconds > 0 ? delaySeconds : 0);
+            mSimSlotIdForLaunchingT911ConversationThread.set(simSlotId);
         } else {
             mEnforcedEmergencyCallToSatelliteHandoverType.set(
                     INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE);
             mDelayInSendingEventDisplayEmergencyMessage.set(0);
+            mSimSlotIdForLaunchingT911ConversationThread.set(0);
         }
         return true;
     }
@@ -4260,6 +4265,11 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected int getDelayInSendingEventDisplayEmergencyMessage() {
         return mDelayInSendingEventDisplayEmergencyMessage.get();
+    }
+
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected int getSimSlotIdForLaunchingT911ConversationThread() {
+        return mSimSlotIdForLaunchingT911ConversationThread.get();
     }
 
     private boolean isHandoverTypeValid(int handoverType) {
