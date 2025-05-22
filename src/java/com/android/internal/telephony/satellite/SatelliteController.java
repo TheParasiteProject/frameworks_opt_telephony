@@ -437,6 +437,7 @@ public class SatelliteController extends Handler {
     private AtomicInteger mEnforcedEmergencyCallToSatelliteHandoverType =
             new AtomicInteger(INVALID_EMERGENCY_CALL_TO_SATELLITE_HANDOVER_TYPE);
     private AtomicInteger mDelayInSendingEventDisplayEmergencyMessage = new AtomicInteger(0);
+    private AtomicInteger mMaxAllowedDataModeForCtsTest = new AtomicInteger(-1);
     // The ID of the satellite subscription that has highest priority and is provisioned.
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     protected AtomicInteger mSelectedSatelliteSubId = new AtomicInteger(
@@ -3681,6 +3682,8 @@ public class SatelliteController extends Handler {
             return;
         }
         mSatelliteAttachRestrictionForCarrierArray.get(subId).add(reason);
+        plogd("handleRequestAddAttachRestrictionForCarrier: subId=" + subId
+                + ", reasons=" + mSatelliteAttachRestrictionForCarrierArray.get(subId));
 
         RequestHandleSatelliteAttachRestrictionForCarrierArgument request =
                 new RequestHandleSatelliteAttachRestrictionForCarrierArgument(subId, reason,
@@ -3729,6 +3732,8 @@ public class SatelliteController extends Handler {
             return;
         }
         mSatelliteAttachRestrictionForCarrierArray.get(subId).remove(reason);
+        plogd("handleRequestRemoveAttachRestrictionForCarrier: subId=" + subId
+                + ", reasons=" + mSatelliteAttachRestrictionForCarrierArray.get(subId));
 
         RequestHandleSatelliteAttachRestrictionForCarrierArgument request =
                 new RequestHandleSatelliteAttachRestrictionForCarrierArgument(subId, reason,
@@ -4051,6 +4056,23 @@ public class SatelliteController extends Handler {
             mOverriddenDisableSatelliteWhileEnableInProgressSupported =
                     new AtomicBoolean(supported);
         }
+        return true;
+    }
+
+    /**
+     * This API can be used by only CTS to control the max allowed data mode.
+     *
+     * @param maxAllowedDataMode The max allowed data mode.
+     * @return {@code true} if the value is set successfully, {@code false} otherwise.
+     */
+    public boolean setMaxAllowedDataModeForCtsTest(int maxAllowedDataMode) {
+        if (!isMockModemAllowed()) {
+            plogd("setMaxAllowedDataModeForCtsTest: mock modem not allowed");
+            return false;
+        }
+
+        plogd("setMaxAllowedDataModeForCtsTest - maxAllowedDataMode=" + maxAllowedDataMode);
+        mMaxAllowedDataModeForCtsTest.set(maxAllowedDataMode);
         return true;
     }
 
@@ -6036,6 +6058,11 @@ public class SatelliteController extends Handler {
      *     device configuration overlay.
      */
     public int getMaxAllowedDataMode() {
+        if (mMaxAllowedDataModeForCtsTest.get() >= 0) {
+            logd("getMaxAllowedDataMode: using the overridden value for CTS test="
+                + mMaxAllowedDataModeForCtsTest.get());
+            return mMaxAllowedDataModeForCtsTest.get();
+        }
         int maxAllowedDataMode = getMaxAllowedDataModeDeviceConfigOverlay();
         logd("getMaxAllowedDataMode: device config=" + maxAllowedDataMode);
 
