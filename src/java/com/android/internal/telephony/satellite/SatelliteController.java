@@ -483,6 +483,20 @@ public class SatelliteController extends Handler {
      */
     @GuardedBy("mSatelliteEnabledRequestLock")
     private RequestSatelliteEnabledArgument mSatelliteEnableAttributesUpdateRequest = null;
+    @NonNull protected final Object mSatelliteTokenProvisionedLock = new Object();
+    // key : priority, low value is high, value : List<SubscriptionInfo>
+    @GuardedBy("mSatelliteTokenProvisionedLock")
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    protected TreeMap<Integer, List<SubscriptionInfo>> mSubsInfoListPerPriority = new TreeMap<>();
+    // List of subscriber information and status at the time of last evaluation
+    @GuardedBy("mSatelliteTokenProvisionedLock")
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
+    private List<SatelliteSubscriberProvisionStatus> mLastEvaluatedSubscriberProvisionStatus =
+            new ArrayList<>();
+    // The last ICC ID that framework configured to modem.
+    @GuardedBy("mSatelliteTokenProvisionedLock")
+    private String mLastConfiguredIccId;
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
 
     private final AtomicBoolean mRegisteredForPendingDatagramCountWithSatelliteService =
             new AtomicBoolean(false);
@@ -651,20 +665,6 @@ public class SatelliteController extends Handler {
     @GuardedBy("mSupportedSatelliteServicesLock")
     SparseArray<Map<String, Integer>> mEntitlementVoiceServicePolicyMapPerCarrier =
             new SparseArray<>();
-    // key : priority, low value is high, value : List<SubscriptionInfo>
-    @GuardedBy("mSatelliteTokenProvisionedLock")
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    protected TreeMap<Integer, List<SubscriptionInfo>> mSubsInfoListPerPriority = new TreeMap<>();
-    // List of subscriber information and status at the time of last evaluation
-    @GuardedBy("mSatelliteTokenProvisionedLock")
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    private List<SatelliteSubscriberProvisionStatus> mLastEvaluatedSubscriberProvisionStatus =
-            new ArrayList<>();
-    // The last ICC ID that framework configured to modem.
-    @GuardedBy("mSatelliteTokenProvisionedLock")
-    private String mLastConfiguredIccId;
-    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
-    @NonNull protected final Object mSatelliteTokenProvisionedLock = new Object();
     private static final int DEFAULT_SATELLITE_EMERGENCY_MODE_DURATION_SECONDS = 300;
     private AlertDialog mNetworkSelectionModeAutoDialog = null;
 
@@ -2042,13 +2042,11 @@ public class SatelliteController extends Handler {
                 } else {
                     String iccId = subscriptionInfo.getIccId();
                     argument.setIccId(iccId);
-                    synchronized (mSatelliteTokenProvisionedLock) {
-                        if (!iccId.equals(mLastConfiguredIccId)) {
-                            logd("updateSatelliteSubscription subId=" + subId
-                                    + ", iccId=" + iccId + " to modem");
-                            mSatelliteModemInterface.updateSatelliteSubscription(
+                    if (!iccId.equals(getLastConfiguredIccId())) {
+                        logd("updateSatelliteSubscription subId=" + subId
+                                + ", iccId=" + iccId + " to modem");
+                        mSatelliteModemInterface.updateSatelliteSubscription(
                                 iccId, onCompleted);
-                        }
                     }
                 }
                 if (provisionChanged) {
@@ -2074,9 +2072,7 @@ public class SatelliteController extends Handler {
                 int error = SatelliteServiceUtils.getSatelliteError(ar,
                         "updateSatelliteSubscription");
                 if (error == SATELLITE_RESULT_SUCCESS) {
-                    synchronized (mSatelliteTokenProvisionedLock) {
-                        mLastConfiguredIccId = argument.getIccId();
-                    }
+                    setLastConfiguredIccId(argument.getIccId());
                 }
                 mProvisionMetricsStats.setResultCode(error)
                         .setIsProvisionRequest(argument.mProvisioned)
@@ -2550,7 +2546,7 @@ public class SatelliteController extends Handler {
         @NonNull
         public ResultReceiver mResult;
         public long mRequestId;
-        public String mIccId;
+        @NonNull public String mIccId;
         public boolean mProvisioned;
 
         RequestProvisionSatelliteArgument(List<SatelliteSubscriberInfo> satelliteSubscriberInfoList,
@@ -2562,10 +2558,11 @@ public class SatelliteController extends Handler {
                     n -> ((n + 1) % Long.MAX_VALUE));
         }
 
-        public void setIccId(String iccId) {
+        public void setIccId(@NonNull String iccId) {
             mIccId = iccId;
         }
 
+        @NonNull
         public String getIccId() {
             return mIccId;
         }
@@ -5323,42 +5320,40 @@ public class SatelliteController extends Handler {
         logd("updateSatelliteSubscriptionProvisionState: List=" + newList + " , provisioned="
                 + provisioned);
         boolean provisionChanged = false;
-        synchronized (mSatelliteTokenProvisionedLock) {
-            for (SatelliteSubscriberInfo subscriberInfo : newList) {
+        for (SatelliteSubscriberInfo subscriberInfo : newList) {
 
-                int subId = subscriberInfo.getSubscriptionId();
-                Boolean currentProvisioned =
-                        mProvisionedSubscriberId.get(subscriberInfo.getSubscriberId());
-                if (currentProvisioned == null) {
-                    currentProvisioned = false;
-                }
+            int subId = subscriberInfo.getSubscriptionId();
+            Boolean currentProvisioned =
+                    mProvisionedSubscriberId.get(subscriberInfo.getSubscriberId());
+            if (currentProvisioned == null) {
+                currentProvisioned = false;
+            }
 
-                Boolean isProvisionedInPersistentDb = false;
-                try {
-                    isProvisionedInPersistentDb = mSubscriptionManagerService
-                         .isSatelliteProvisionedForNonIpDatagram(subId);
-                    if (isProvisionedInPersistentDb == null) {
-                        isProvisionedInPersistentDb = false;
-                    }
-                } catch (IllegalArgumentException | SecurityException ex) {
-                    ploge("isSatelliteProvisionedForNonIpDatagram: subId=" + subId + ", ex="
-                            + ex);
+            Boolean isProvisionedInPersistentDb = false;
+            try {
+                isProvisionedInPersistentDb = mSubscriptionManagerService
+                        .isSatelliteProvisionedForNonIpDatagram(subId);
+                if (isProvisionedInPersistentDb == null) {
+                    isProvisionedInPersistentDb = false;
                 }
-                if (currentProvisioned == provisioned
-                        && isProvisionedInPersistentDb == provisioned) {
-                    continue;
-                }
-                provisionChanged = true;
-                mProvisionedSubscriberId.put(subscriberInfo.getSubscriberId(), provisioned);
-                try {
-                    mSubscriptionManagerService.setIsSatelliteProvisionedForNonIpDatagram(subId,
-                            provisioned);
-                    plogd("updateSatelliteSubscriptionProvisionState: set Provision state to db "
-                            + "subId=" + subId);
-                } catch (IllegalArgumentException | SecurityException ex) {
-                    ploge("setIsSatelliteProvisionedForNonIpDatagram: subId=" + subId + ", ex="
-                            + ex);
-                }
+            } catch (IllegalArgumentException | SecurityException ex) {
+                ploge("isSatelliteProvisionedForNonIpDatagram: subId=" + subId + ", ex="
+                        + ex);
+            }
+            if (currentProvisioned == provisioned
+                    && isProvisionedInPersistentDb == provisioned) {
+                continue;
+            }
+            provisionChanged = true;
+            mProvisionedSubscriberId.put(subscriberInfo.getSubscriberId(), provisioned);
+            try {
+                mSubscriptionManagerService.setIsSatelliteProvisionedForNonIpDatagram(subId,
+                        provisioned);
+                plogd("updateSatelliteSubscriptionProvisionState: set Provision state to db "
+                        + "subId=" + subId);
+            } catch (IllegalArgumentException | SecurityException ex) {
+                ploge("setIsSatelliteProvisionedForNonIpDatagram: subId=" + subId + ", ex="
+                        + ex);
             }
         }
         return provisionChanged;
@@ -5371,9 +5366,7 @@ public class SatelliteController extends Handler {
         notifySatelliteSubscriptionProvisionStateChanged(informList);
         updateCachedDeviceProvisionStatus();
         // Report updated provisioned status to metrics.
-        synchronized (mSatelliteTokenProvisionedLock) {
-            handleEntireProvisionMetricReport();
-        }
+        handleEntireProvisionMetricReport();
         selectBindingSatelliteSubscription(false);
         handleCarrierRoamingNtnAvailableServicesChanged();
     }
@@ -6306,16 +6299,14 @@ public class SatelliteController extends Handler {
             Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(
                     mSubscriptionManagerService.getSubscriptionInfo(subId));
             String subscriberId = subscriberIdPair.first;
-            synchronized (mSatelliteTokenProvisionedLock) {
-                if (mProvisionedSubscriberId.get(subscriberId) == null) {
-                    boolean Provisioned = mSubscriptionManagerService
-                            .isSatelliteProvisionedForNonIpDatagram(subId);
-                    if (Provisioned) {
-                        mProvisionedSubscriberId.put(subscriberId, true);
-                        logd("updateSatelliteProvisionStatePerSubscriberId: "
-                                + Rlog.pii(TelephonyUtils.IS_DEBUGGABLE, subscriberId)
-                                + " set true");
-                    }
+            if (mProvisionedSubscriberId.get(subscriberId) == null) {
+                boolean Provisioned = mSubscriptionManagerService
+                        .isSatelliteProvisionedForNonIpDatagram(subId);
+                if (Provisioned) {
+                    mProvisionedSubscriberId.put(subscriberId, true);
+                    logd("updateSatelliteProvisionStatePerSubscriberId: "
+                            + Rlog.pii(TelephonyUtils.IS_DEBUGGABLE, subscriberId)
+                            + " set true");
                 }
             }
         }
@@ -7065,9 +7056,7 @@ public class SatelliteController extends Handler {
                         Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(
                                 mSubscriptionManagerService.getSubscriptionInfo(subId));
                         String subscriberId = subscriberIdPair.first;
-                        synchronized (mSatelliteTokenProvisionedLock) {
-                            mProvisionedSubscriberId.put(subscriberId, true);
-                        }
+                        mProvisionedSubscriberId.put(subscriberId, true);
                         return true;
                     }
                 }
@@ -7879,59 +7868,57 @@ public class SatelliteController extends Handler {
         // Key : priority - lower value has higher priority; Value : List<SubscriptionInfo>
         TreeMap<Integer, List<SubscriptionInfo>> newSubsInfoListPerPriority = new TreeMap<>();
         plogd("evaluateESOSProfilesPrioritization: allSubInfos.size()=" + allSubInfos.size());
-        synchronized (mSatelliteTokenProvisionedLock) {
-            for (SubscriptionInfo info : allSubInfos) {
-                int subId = info.getSubscriptionId();
-                boolean isActive = info.isActive();
-                boolean isDefaultSmsSubId =
-                        mSubscriptionManagerService.getDefaultSmsSubId() == subId;
-                boolean isNtnOnly = info.isOnlyNonTerrestrialNetwork();
-                boolean isESOSSupported = info.isSatelliteESOSSupported();
-                boolean isCarrierSatelliteHigherPriority =
+        for (SubscriptionInfo info : allSubInfos) {
+            int subId = info.getSubscriptionId();
+            boolean isActive = info.isActive();
+            boolean isDefaultSmsSubId =
+                    mSubscriptionManagerService.getDefaultSmsSubId() == subId;
+            boolean isNtnOnly = info.isOnlyNonTerrestrialNetwork();
+            boolean isESOSSupported = info.isSatelliteESOSSupported();
+            boolean isCarrierSatelliteHigherPriority =
                     isCarrierSatelliteHigherPriority(info);
-                if (!isNtnOnly && !isESOSSupported) {
-                    continue;
-                }
-                if (!isActive && !isNtnOnly) {
-                    continue;
-                }
-                if (!isNtnOnly && !isCarrierConfigLoaded(subId)) {
-                    // Skip to add priority list if the carrier config is not loaded properly
-                    // for the given carrier subscription.
-                    continue;
-                }
+            if (!isNtnOnly && !isESOSSupported) {
+                continue;
+            }
+            if (!isActive && !isNtnOnly) {
+                continue;
+            }
+            if (!isNtnOnly && !isCarrierConfigLoaded(subId)) {
+                // Skip to add priority list if the carrier config is not loaded properly
+                // for the given carrier subscription.
+                continue;
+            }
 
-                int keyPriority = (isESOSSupported && isActive && isDefaultSmsSubId
+            int keyPriority = (isESOSSupported && isActive && isDefaultSmsSubId
                     && isCarrierSatelliteHigherPriority)
                     ? 0 : (isESOSSupported && isActive &&
-                        isCarrierSatelliteHigherPriority)
-                        ? 1 : (isNtnOnly)
-                            ? 2 : (isESOSSupported)
-                                ? 3 : -1;
-                if (keyPriority != -1) {
-                    newSubsInfoListPerPriority.computeIfAbsent(keyPriority,
-                            k -> new ArrayList<>()).add(info);
-                } else {
-                    plogw("evaluateESOSProfilesPrioritization: Got -1 keyPriority for subId="
-                            + info.getSubscriptionId());
-                }
+                    isCarrierSatelliteHigherPriority)
+                    ? 1 : (isNtnOnly)
+                    ? 2 : (isESOSSupported)
+                    ? 3 : -1;
+            if (keyPriority != -1) {
+                newSubsInfoListPerPriority.computeIfAbsent(keyPriority,
+                        k -> new ArrayList<>()).add(info);
+            } else {
+                plogw("evaluateESOSProfilesPrioritization: Got -1 keyPriority for subId="
+                        + info.getSubscriptionId());
+            }
 
-                Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(info);
-                String newSubscriberId = subscriberIdPair.first;
-                Optional<String> oldSubscriberId = mSubscriberIdPerSub.entrySet().stream()
-                        .filter(entry -> entry.getValue().equals(subId))
-                        .map(Map.Entry::getKey).findFirst();
+            Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(info);
+            String newSubscriberId = subscriberIdPair.first;
+            Optional<String> oldSubscriberId = mSubscriberIdPerSub.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(subId))
+                    .map(Map.Entry::getKey).findFirst();
 
-                if (oldSubscriberId.isPresent()
-                        && !newSubscriberId.equals(oldSubscriberId.get())) {
-                    mSubscriberIdPerSub.remove(oldSubscriberId.get());
-                    mProvisionedSubscriberId.remove(oldSubscriberId.get());
-                    logd("Old phone number is removed: id = " + subId);
-                    isChanged = true;
-                }
-                if (!newSubscriberId.isEmpty()) {
-                    mSubscriberIdPerSub.put(newSubscriberId, subId);
-                }
+            if (oldSubscriberId.isPresent()
+                    && !newSubscriberId.equals(oldSubscriberId.get())) {
+                mSubscriberIdPerSub.remove(oldSubscriberId.get());
+                mProvisionedSubscriberId.remove(oldSubscriberId.get());
+                logd("Old phone number is removed: id = " + subId);
+                isChanged = true;
+            }
+            if (!newSubscriberId.isEmpty()) {
+                mSubscriberIdPerSub.put(newSubscriberId, subId);
             }
         }
         plogd("evaluateESOSProfilesPrioritization: newSubsInfoListPerPriority.size()="
@@ -7943,20 +7930,18 @@ public class SatelliteController extends Handler {
         }
 
         // If priority has changed, send broadcast for provisioned ESOS subs IDs
-        synchronized (mSatelliteTokenProvisionedLock) {
-            List<SatelliteSubscriberProvisionStatus> newEvaluatedSubscriberProvisionStatus =
-                    getPrioritizedSatelliteSubscriberProvisionStatusList(
-                            newSubsInfoListPerPriority);
-            if (isPriorityChanged(mSubsInfoListPerPriority, newSubsInfoListPerPriority)
-                    || isSubscriberContentChanged(mLastEvaluatedSubscriberProvisionStatus,
-                            newEvaluatedSubscriberProvisionStatus)
-                    || isChanged) {
-                mSubsInfoListPerPriority = newSubsInfoListPerPriority;
-                mLastEvaluatedSubscriberProvisionStatus = newEvaluatedSubscriberProvisionStatus;
-                sendBroadCastForProvisionedESOSSubs();
-                mHasSentBroadcast.set(true);
-                selectBindingSatelliteSubscription(false);
-            }
+        List<SatelliteSubscriberProvisionStatus> newEvaluatedSubscriberProvisionStatus =
+                getPrioritizedSatelliteSubscriberProvisionStatusList(
+                        newSubsInfoListPerPriority);
+        if (isPriorityChanged(getSubsInfoListPerPriority(), newSubsInfoListPerPriority)
+                || isSubscriberContentChanged(getLastEvaluatedSubscriberProvisionStatus(),
+                newEvaluatedSubscriberProvisionStatus)
+                || isChanged) {
+            setSubsInfoListPerPriority(newSubsInfoListPerPriority);
+            setLastEvaluatedSubscriberProvisionStatus(newEvaluatedSubscriberProvisionStatus);
+            sendBroadCastForProvisionedESOSSubs();
+            mHasSentBroadcast.set(true);
+            selectBindingSatelliteSubscription(false);
         }
     }
 
@@ -8173,54 +8158,51 @@ public class SatelliteController extends Handler {
 
     private List<SatelliteSubscriberProvisionStatus>
             getPrioritizedSatelliteSubscriberProvisionStatusList() {
-        synchronized (mSatelliteTokenProvisionedLock) {
-            return getPrioritizedSatelliteSubscriberProvisionStatusList(mSubsInfoListPerPriority);
-        }
+        return getPrioritizedSatelliteSubscriberProvisionStatusList(getSubsInfoListPerPriority());
     }
 
+    @NonNull
     private List<SatelliteSubscriberProvisionStatus>
             getPrioritizedSatelliteSubscriberProvisionStatusList(
                     Map<Integer, List<SubscriptionInfo>> subsInfoListPerPriority) {
         List<SatelliteSubscriberProvisionStatus> list = new ArrayList<>();
-        synchronized (mSatelliteTokenProvisionedLock) {
-            for (int priority : subsInfoListPerPriority.keySet()) {
-                List<SubscriptionInfo> infoList = subsInfoListPerPriority.get(priority);
-                if (infoList == null) {
-                    logd("getPrioritySatelliteSubscriberProvisionStatusList: no exist this "
-                            + "priority " + priority);
+        for (int priority : subsInfoListPerPriority.keySet()) {
+            List<SubscriptionInfo> infoList = subsInfoListPerPriority.get(priority);
+            if (infoList == null) {
+                logd("getPrioritySatelliteSubscriberProvisionStatusList: no exist this "
+                        + "priority " + priority);
+                continue;
+            }
+            for (SubscriptionInfo info : infoList) {
+                Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(info);
+                String subscriberId = subscriberIdPair.first;
+                int carrierId = info.getCarrierId();
+                String apn = getConfigForSubId(info.getSubscriptionId())
+                        .getString(KEY_SATELLITE_NIDD_APN_NAME_STRING, "");
+                logd("getPrioritySatelliteSubscriberProvisionStatusList:"
+                        + " subscriberId:"
+                        + Rlog.pii(TelephonyUtils.IS_DEBUGGABLE, subscriberId)
+                        + " , carrierId=" + carrierId + " , apn=" + apn);
+                if (subscriberId.isEmpty()) {
+                    logd("getPrioritySatelliteSubscriberProvisionStatusList: getSubscriberId "
+                            + "failed skip this subscriberId.");
                     continue;
                 }
-                for (SubscriptionInfo info : infoList) {
-                    Pair<String, Integer> subscriberIdPair = getSubscriberIdAndType(info);
-                    String subscriberId = subscriberIdPair.first;
-                    int carrierId = info.getCarrierId();
-                    String apn = getConfigForSubId(info.getSubscriptionId())
-                            .getString(KEY_SATELLITE_NIDD_APN_NAME_STRING, "");
-                    logd("getPrioritySatelliteSubscriberProvisionStatusList:"
-                            + " subscriberId:"
-                            + Rlog.pii(TelephonyUtils.IS_DEBUGGABLE, subscriberId)
-                            + " , carrierId=" + carrierId + " , apn=" + apn);
-                    if (subscriberId.isEmpty()) {
-                        logd("getPrioritySatelliteSubscriberProvisionStatusList: getSubscriberId "
-                                + "failed skip this subscriberId.");
-                        continue;
-                    }
-                    SatelliteSubscriberInfo satelliteSubscriberInfo =
-                            new SatelliteSubscriberInfo.Builder().setSubscriberId(subscriberId)
-                                    .setCarrierId(carrierId).setNiddApn(apn)
-                                    .setSubscriptionId(info.getSubscriptionId())
-                                    .setSubscriberIdType(subscriberIdPair.second)
-                                    .build();
-                    boolean provisioned = mProvisionedSubscriberId.getOrDefault(subscriberId,
-                            false);
-                    logd("getPrioritySatelliteSubscriberProvisionStatusList: "
-                            + "satelliteSubscriberInfo=" + satelliteSubscriberInfo
-                            + ", provisioned=" + provisioned);
-                    list.add(new SatelliteSubscriberProvisionStatus.Builder()
-                            .setSatelliteSubscriberInfo(satelliteSubscriberInfo)
-                            .setProvisioned(provisioned).build());
-                    mSubscriberIdPerSub.put(subscriberId, info.getSubscriptionId());
-                }
+                SatelliteSubscriberInfo satelliteSubscriberInfo =
+                        new SatelliteSubscriberInfo.Builder().setSubscriberId(subscriberId)
+                                .setCarrierId(carrierId).setNiddApn(apn)
+                                .setSubscriptionId(info.getSubscriptionId())
+                                .setSubscriberIdType(subscriberIdPair.second)
+                                .build();
+                boolean provisioned = mProvisionedSubscriberId.getOrDefault(subscriberId,
+                        false);
+                logd("getPrioritySatelliteSubscriberProvisionStatusList: "
+                        + "satelliteSubscriberInfo=" + satelliteSubscriberInfo
+                        + ", provisioned=" + provisioned);
+                list.add(new SatelliteSubscriberProvisionStatus.Builder()
+                        .setSatelliteSubscriberInfo(satelliteSubscriberInfo)
+                        .setProvisioned(provisioned).build());
+                mSubscriberIdPerSub.put(subscriberId, info.getSubscriptionId());
             }
         }
         return list;
@@ -8416,10 +8398,8 @@ public class SatelliteController extends Handler {
     }
 
     private int getSubIdFromSubscriberId(String subscriberId) {
-        synchronized (mSatelliteTokenProvisionedLock) {
-            return mSubscriberIdPerSub.getOrDefault(subscriberId,
-                    SubscriptionManager.INVALID_SUBSCRIPTION_ID);
-        }
+        return mSubscriberIdPerSub.getOrDefault(subscriberId,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID);
     }
 
     private boolean isActiveSubId(int subId) {
@@ -8446,9 +8426,7 @@ public class SatelliteController extends Handler {
             return false;
         }
 
-        synchronized (mSatelliteTokenProvisionedLock) {
-            return mProvisionedSubscriberId.getOrDefault(subscriberId, false);
-        }
+        return mProvisionedSubscriberId.getOrDefault(subscriberId, false);
     }
 
     /**
@@ -9667,7 +9645,6 @@ public class SatelliteController extends Handler {
         return mWifiStateEnabled.get();
     }
 
-    @GuardedBy("mSupportedSatelliteServicesLock")
     private void handleEntireEntitlementMetricReport() {
         synchronized (mSupportedSatelliteServicesLock) {
             int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
@@ -9686,7 +9663,6 @@ public class SatelliteController extends Handler {
         scheduleRegularMetricReportTimer();
     }
 
-    @GuardedBy("mSupportedSatelliteServicesLock")
     private void handleIndividualEntitlementMetricReport(int subId,
             boolean isSubscriptionEntitled) {
         synchronized (mSupportedSatelliteServicesLock) {
@@ -9696,40 +9672,37 @@ public class SatelliteController extends Handler {
         }
     }
 
-    @GuardedBy("mSatelliteTokenProvisionedLock")
     private void handleEntireProvisionMetricReport() {
         logd("handleEntireProvisionMetricReport:");
         // Hold the final aggregated status for each carrierId.
         Map<Integer, CarrierReportInfo> reportDataPerCarrier = new HashMap<>();
-        synchronized (mSatelliteTokenProvisionedLock) {
-            // Aggregate provision status and isNtnOnlyCarrier info per carrierId
-            List<SubscriptionInfo> allSubInfos = mSubscriptionManagerService.getAllSubInfoList(
-                    mContext.getOpPackageName(), mContext.getAttributionTag());
-            for (SubscriptionInfo info : allSubInfos) {
-                int subId = info.getSubscriptionId();
-                boolean isNtnOnlySubId = info.isOnlyNonTerrestrialNetwork();
-                boolean isActiveSubId = info.isActive();
+        // Aggregate provision status and isNtnOnlyCarrier info per carrierId
+        List<SubscriptionInfo> allSubInfos = mSubscriptionManagerService.getAllSubInfoList(
+                mContext.getOpPackageName(), mContext.getAttributionTag());
+        for (SubscriptionInfo info : allSubInfos) {
+            int subId = info.getSubscriptionId();
+            boolean isNtnOnlySubId = info.isOnlyNonTerrestrialNetwork();
+            boolean isActiveSubId = info.isActive();
 
-                if (!isNtnOnlySubId && !isActiveSubId) {
-                    plogd("handleEntireProvisionMetricReport: subId=" + subId
-                            + " is neither NTN-only nor active. Skipping.");
-                    continue;
-                }
-
-                int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
-                if (carrierId == TelephonyManager.UNKNOWN_CARRIER_ID && !isNtnOnlySubId) {
-                    plogd("handleEntireProvisionMetricReport: neither valid carrierId "
-                            + "nor NTN-only, subId=" + subId + ". Skipping.");
-                    continue;
-                }
-
-                String subscriberId = getSubscriberIdAndType(info).first;
-                boolean isProvisioned = mProvisionedSubscriberId.getOrDefault(subscriberId, false);
-
-                CarrierReportInfo carrierInfo = reportDataPerCarrier.computeIfAbsent(
-                        carrierId, key -> new CarrierReportInfo());
-                carrierInfo.aggregate(isProvisioned, isNtnOnlySubId);
+            if (!isNtnOnlySubId && !isActiveSubId) {
+                plogd("handleEntireProvisionMetricReport: subId=" + subId
+                        + " is neither NTN-only nor active. Skipping.");
+                continue;
             }
+
+            int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
+            if (carrierId == TelephonyManager.UNKNOWN_CARRIER_ID && !isNtnOnlySubId) {
+                plogd("handleEntireProvisionMetricReport: neither valid carrierId "
+                        + "nor NTN-only, subId=" + subId + ". Skipping.");
+                continue;
+            }
+
+            String subscriberId = getSubscriberIdAndType(info).first;
+            boolean isProvisioned = mProvisionedSubscriberId.getOrDefault(subscriberId, false);
+
+            CarrierReportInfo carrierInfo = reportDataPerCarrier.computeIfAbsent(
+                    carrierId, key -> new CarrierReportInfo());
+            carrierInfo.aggregate(isProvisioned, isNtnOnlySubId);
         }
 
         // Report the aggregated status for each carrierId
@@ -10070,6 +10043,47 @@ public class SatelliteController extends Handler {
     private RequestSatelliteEnabledArgument getSatelliteEnableAttributesUpdateRequest() {
         synchronized (mSatelliteEnabledRequestLock) {
             return mSatelliteEnableAttributesUpdateRequest;
+        }
+    }
+
+    private void setSubsInfoListPerPriority(
+            @NonNull TreeMap<Integer, List<SubscriptionInfo>> subsInfoListPerPriority) {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            mSubsInfoListPerPriority = subsInfoListPerPriority;
+        }
+    }
+
+    @NonNull
+    private TreeMap<Integer, List<SubscriptionInfo>> getSubsInfoListPerPriority() {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            return mSubsInfoListPerPriority;
+        }
+    }
+
+    private void setLastEvaluatedSubscriberProvisionStatus(
+            @NonNull List<SatelliteSubscriberProvisionStatus> subscriberProvisionStatus) {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            mLastEvaluatedSubscriberProvisionStatus = subscriberProvisionStatus;
+        }
+    }
+
+    @NonNull
+    private List<SatelliteSubscriberProvisionStatus> getLastEvaluatedSubscriberProvisionStatus() {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            return mLastEvaluatedSubscriberProvisionStatus;
+        }
+    }
+
+    private void setLastConfiguredIccId(@NonNull String lastConfiguredIccId) {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            mLastConfiguredIccId = lastConfiguredIccId;
+        }
+    }
+
+    @NonNull
+    private String getLastConfiguredIccId() {
+        synchronized (mSatelliteTokenProvisionedLock) {
+            return mLastConfiguredIccId;
         }
     }
 }
