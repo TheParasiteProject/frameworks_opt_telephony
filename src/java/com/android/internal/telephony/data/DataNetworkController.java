@@ -912,7 +912,8 @@ public class DataNetworkController extends Handler {
 
         mAccessNetworksManager = phone.getAccessNetworksManager();
         for (int transport : mAccessNetworksManager.getAvailableTransports()) {
-            mDataServiceManagers.put(transport, new DataServiceManager(mPhone, looper, transport));
+            mDataServiceManagers.put(transport,
+                    new DataServiceManager(mPhone, looper, transport, featureFlags));
         }
 
         mDataConfigManager = new DataConfigManager(mPhone, looper, featureFlags);
@@ -934,7 +935,7 @@ public class DataNetworkController extends Handler {
 
         mDataSettingsManager = TelephonyComponentFactory.getInstance().inject(
                 DataSettingsManager.class.getName())
-                .makeDataSettingsManager(mPhone, this, mFeatureFlags, looper,
+                .makeDataSettingsManager(mPhone, this, mDataServiceManagers, mFeatureFlags, looper,
                         new DataSettingsManagerCallback(this::post) {
                             @Override
                             public void onDataEnabledChanged(boolean enabled,
@@ -3599,10 +3600,12 @@ public class DataNetworkController extends Handler {
             if (simState == TelephonyManager.SIM_STATE_ABSENT) {
                 onSimAbsent();
                 mDataNetworkControllerCallbacks.forEach(callback -> callback.invokeFromExecutor(
-                    () -> callback.onSimStateChanged(simState)));
+                        () -> callback.onSimStateChanged(simState)));
             } else if (simState == TelephonyManager.SIM_STATE_LOADED) {
                 sendMessage(obtainMessage(EVENT_REEVALUATE_UNSATISFIED_NETWORK_REQUESTS,
                         DataEvaluationReason.SIM_LOADED));
+                mDataNetworkControllerCallbacks.forEach(callback -> callback.invokeFromExecutor(
+                        () -> callback.onSimStateChanged(simState)));
             }
         }
     }
