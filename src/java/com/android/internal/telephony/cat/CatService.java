@@ -568,10 +568,14 @@ public class CatService extends Handler implements AppInterface {
             case SEND_DTMF:
             case SEND_SS:
             case SEND_USSD:
-                if ((((DisplayTextParams)cmdParams).mTextMsg.text != null)
-                        && (((DisplayTextParams)cmdParams).mTextMsg.text.equals(STK_DEFAULT))) {
+                if (Flags.supportStkCommandUssdAndCall()) {
+                    sendUssd(cmdParams.mCmdDet,
+                            ((SendUssdParams) cmdParams).mUssdString,
+                            ((SendUssdParams) cmdParams).mCodingScheme);
+                } else if ((((DisplayTextParams) cmdParams).mTextMsg.text != null)
+                        && (((DisplayTextParams) cmdParams).mTextMsg.text.equals(STK_DEFAULT))) {
                     message = mContext.getText(com.android.internal.R.string.sending);
-                    ((DisplayTextParams)cmdParams).mTextMsg.text = message.toString();
+                    ((DisplayTextParams) cmdParams).mTextMsg.text = message.toString();
                 }
                 break;
             case PLAY_TONE:
@@ -1471,5 +1475,39 @@ public class CatService extends Handler implements AppInterface {
         }
 
         return subscriptionManager.getActiveSubscriptionInfoForSimSlotIndex(slotId);
+    }
+
+
+    /**
+     * Sends a USSD request via TelephonyManager. The terminal request is sent after the USSD
+     * response is received or the request is failed.
+     *
+     * @param cmdDet The command details to be used for the terminal response.
+     * @param request The USSD request string.
+     * @param codingScheme The coding scheme to be used for the terminal response.
+     */
+    @VisibleForTesting
+    public void sendUssd(CommandDetails cmdDet, String request, byte codingScheme) {
+        TelephonyManager.UssdResponseCallback ussdCallback =
+                new TelephonyManager.UssdResponseCallback() {
+                    @Override
+                    public void onReceiveUssdResponse(final TelephonyManager telephonyManager,
+                            String request, CharSequence response) {
+                        ResponseData resp = new SendUssdResponseData(
+                                response == null ? "" : response.toString(), codingScheme);
+                        sendTerminalResponse(cmdDet,
+                                ResultCode.OK, false, 0x00, resp);
+                    }
+
+                    @Override
+                    public void onReceiveUssdResponseFailed(final TelephonyManager telephonyManager,
+                            String request, int failureCode) {
+                        sendTerminalResponse(cmdDet,
+                                ResultCode.USSD_RETURN_ERROR, false, 0x00, null);
+                    }
+                };
+
+        mContext.getSystemService(TelephonyManager.class)
+                .sendUssdRequest(request, ussdCallback, null);
     }
 }
