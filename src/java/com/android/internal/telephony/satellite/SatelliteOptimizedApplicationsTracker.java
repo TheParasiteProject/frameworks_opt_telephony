@@ -200,13 +200,18 @@ public class SatelliteOptimizedApplicationsTracker {
         // Get the application's metadata
         Bundle metadata = applicationInfo.metaData;
         if (metadata != null) {
-            final String value = metadata.getString(APP_PROPERTY);
-            if (value == null) return false; // No expected meta-data.
+            try {
+                final Object value = metadata.get(APP_PROPERTY);
+                if (value == null) return false; // No expected meta-data.
 
-            // Check if the retrieved object is a matched String.
-            if (value instanceof String
-                    && TextUtils.equals((String) value, packageName)) {
-                return true;
+                // Check if the retrieved object is a matched String.
+                return value instanceof String
+                        && TextUtils.equals((String) value, packageName);
+            } catch (Exception e) {
+                loge("Exception while reading metadata [ "
+                        + packageName
+                        + " ] exp = "
+                        + e.getMessage());
             }
         }
         return false;
