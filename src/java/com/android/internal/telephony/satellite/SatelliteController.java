@@ -6809,6 +6809,9 @@ public class SatelliteController extends Handler {
             return;
         }
         int subId = phone.getSubId();
+        int userId = Binder.getCallingUserHandle().getIdentifier();
+        final long identity = Binder.clearCallingIdentity();
+        List<String> satelliteApps = List.of();
         if (!lastNotifiedNtnMode && currNtnMode) {
             // Log satellite session start
             CarrierRoamingSatelliteSessionStats sessionStats =
@@ -6819,9 +6822,10 @@ public class SatelliteController extends Handler {
                                     phone.getServiceState().getOperatorNumeric()));
             int dataPolicy = mapDataPolicyForMetrics(getSatelliteDataServicePolicyForPlmn(subId,
                     phone.getServiceState().getOperatorNumeric()));
+            satelliteApps = getSatelliteDataOptimizedApps(userId);
 
             sessionStats.onSessionStart(phone.getCarrierId(), phone,
-                    supported_satellite_services, dataPolicy, mFeatureFlags);
+                    supported_satellite_services, dataPolicy, satelliteApps, mFeatureFlags);
             mCarrierRoamingSatelliteSessionStatsMap.put(subId, sessionStats);
             mCarrierRoamingSatelliteControllerStats.onSessionStart(subId);
         } else if (lastNotifiedNtnMode && !currNtnMode) {
@@ -6829,13 +6833,15 @@ public class SatelliteController extends Handler {
             CarrierRoamingSatelliteSessionStats sessionStats =
                     mCarrierRoamingSatelliteSessionStatsMap.get(subId);
             if (sessionStats != null) {
-                sessionStats.onSessionEnd(subId);
+                satelliteApps = getSatelliteDataOptimizedApps(userId);
+                sessionStats.onSessionEnd(subId, satelliteApps);
                 mCarrierRoamingSatelliteSessionStatsMap.remove(subId);
             } else {
                 plogd("logCarrierRoamingSatelliteSessionStats: sessionStats is null");
             }
             mCarrierRoamingSatelliteControllerStats.onSessionEnd(subId);
         }
+        Binder.restoreCallingIdentity(identity);
     }
 
     private void evaluateCarrierRoamingNtnEligibilityChange() {
