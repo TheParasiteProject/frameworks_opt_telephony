@@ -415,6 +415,9 @@ public class DataNetwork extends StateMachine {
     /** Data network tear down due to current data network transport mismatch. */
     public static final int TEAR_DOWN_REASON_DATA_NETWORK_TRANSPORT_NOT_ALLOWED = 32;
 
+    /** Data network tear down due to device shut down. */
+    public static final int TEAR_DOWN_REASON_DATA_NETWORK_DEVICE_SHUT_DOWN = 33;
+
     //********************************************************************************************//
     // WHENEVER ADD A NEW TEAR DOWN REASON, PLEASE UPDATE DataDeactivateReasonEnum in enums.proto //
     //********************************************************************************************//

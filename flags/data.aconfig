@@ -1,6 +1,17 @@
 package: "com.android.internal.telephony.flags"
 container: "system"
 
+# OWNER=linggm TARGET=26Q2
+flag {
+  name: "keep_wfc_on_apm"
+  namespace: "telephony"
+  description: "Keep WFC even when turn on APM."
+  bug:"420996981"
+  metadata {
+    purpose: PURPOSE_BUGFIX
+  }
+}
+
 # OWNER=linggm TARGET=25Q3
 flag {
   name: "auto_data_prune_listener"
