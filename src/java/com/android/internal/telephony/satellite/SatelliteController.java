@@ -236,6 +236,8 @@ public class SatelliteController extends Handler {
     public static final int TIMEOUT_TYPE_DEMO_POINTING_NOT_ALIGNED_DURATION_MILLIS = 3;
     /** This is used by CTS to override evaluate esos profiles prioritization duration. */
     public static final int TIMEOUT_TYPE_EVALUATE_ESOS_PROFILES_PRIORITIZATION_DURATION_MILLIS = 4;
+    /** This is used by CTS to override evaluate carrier roaming ntn eligibility change duration. */
+    public static final int TIMEOUT_TYPE_EMERGENCY_CALL_MONITORING_DURATION_MILLIS = 5;
     /** Key used to read/write OEM-enabled satellite provision status in shared preferences. */
     private static final String OEM_ENABLED_SATELLITE_PROVISION_STATUS_KEY =
             "oem_enabled_satellite_provision_status_key";
@@ -427,6 +429,7 @@ public class SatelliteController extends Handler {
     private AtomicLong mEvaluateEsosProfilesPrioritizationDurationMillis = new AtomicLong(0);
     private AtomicLong mLastEmergencyCallTime = new AtomicLong(0);
     private AtomicLong mSatelliteEmergencyModeDurationMillis = new AtomicLong(0);
+    private AtomicLong mEmergencyCallMonitoringDurationMillisForCtsTest = new AtomicLong(0);
     private AtomicLong mSessionStartTimeStamp = new AtomicLong(0);
     private AtomicLong mSessionProcessingTimeStamp = new AtomicLong(0);
     private static AtomicLong sNextSatelliteEnableRequestId = new AtomicLong(0);
@@ -4183,6 +4186,12 @@ public class SatelliteController extends Handler {
             } else {
                 mEvaluateEsosProfilesPrioritizationDurationMillis.set(timeoutMillis);
             }
+        } else if (timeoutType == TIMEOUT_TYPE_EMERGENCY_CALL_MONITORING_DURATION_MILLIS) {
+            if (reset) {
+                mEmergencyCallMonitoringDurationMillisForCtsTest.set(0);
+            } else {
+                mEmergencyCallMonitoringDurationMillisForCtsTest.set(timeoutMillis);
+            }
         } else {
             plogw("Invalid timeoutType=" + timeoutType);
             return false;
@@ -4300,6 +4309,11 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected int getSimSlotIdForLaunchingT911ConversationThread() {
         return mSimSlotIdForLaunchingT911ConversationThread.get();
+    }
+
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected long getEmergencyCallMonitoringDurationMillisForCtsTests() {
+        return mEmergencyCallMonitoringDurationMillisForCtsTest.get();
     }
 
     private boolean isHandoverTypeValid(int handoverType) {
