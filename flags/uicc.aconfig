@@ -26,14 +26,6 @@ flag {
     bug:"313553044"
 }
 
-# OWNER=arunvoddu TARGET=24Q3
-flag {
-    name: "carrier_restriction_rules_enhancement"
-    namespace: "telephony"
-    description: "This flag controls the new enhancements to the existing carrier restrictions rules"
-    bug:"317226653"
-}
-
 # OWNER=rafahs TARGET=24Q3
 flag {
     name: "esim_available_memory"
@@ -69,17 +61,6 @@ flag {
     namespace: "telephony"
     description: "This flag controls optimization of apdu sender class."
     bug:"335257880"
-}
-
-# OWNER=arunvoddu TARGET=24Q4
-flag {
-    name: "ignore_carrierid_reset_for_sim_removal"
-    namespace: "telephony"
-    description: "This flag controls the carrierId reset while imsi key deletion time upon sim ejection."
-    bug:"366178705"
-    metadata {
-        purpose: PURPOSE_BUGFIX
-    }
 }
 
 # OWNER=jhyoon TARGET=25Q2
@@ -127,14 +108,6 @@ flag {
     bug:"381319469"
 }
 
-# OWNER=arunvoddu TARGET=25Q4
-flag {
-    name: "send_imsi_key_for_duplicate_sim"
-    namespace: "telephony"
-    description: "This flag reset the cache if the sim phonebook is empty"
-    bug:"404094844"
-}
-
 # OWNER=arunvoddu TARGET=25Q3
 flag {
     name: "sim_phonebook_cache_fix"
@@ -145,8 +118,16 @@ flag {
 
 # OWNER=arunvoddu TARGET=25Q4
 flag {
+    name: "send_imsi_key_for_duplicate_sim"
+    namespace: "telephony"
+    description: "This will make sure to send the IMSIKey to Modem in case SIM2 operator is same as SIM1"
+    bug:"400888891"
+}
+
+# OWNER=arunvoddu TARGET=25Q4
+flag {
     name: "cat_service_creation_fix"
     namespace: "telephony"
-    description: "This flag reset the cache if the sim phonebook is empty"
+    description: "Flag fix is to create the catService object with valid SIM Application"
     bug:"417398404"
 }
