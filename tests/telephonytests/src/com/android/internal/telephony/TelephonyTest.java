@@ -568,6 +568,7 @@ public abstract class TelephonyTest {
         lenient().doReturn(true).when(mFeatureFlags).threadShred();
         lenient().doReturn(true).when(mFeatureFlags).dynamicModemShutdown();
         lenient().doReturn(true).when(mFeatureFlags).dataServiceNotifyImsDataNetwork();
+        lenient().doReturn(true).when(mFeatureFlags).keepWfcOnApm();
 
         WorkerThread.reset();
         TelephonyManager.disableServiceHandleCaching();
@@ -599,6 +600,7 @@ public abstract class TelephonyTest {
                 .queryLocalInterface(anyString());
 
         mPhone.mCi = mSimulatedCommands;
+        mPhone.mCT = mCT;
         mCT.mCi = mSimulatedCommands;
         lenient().doReturn(mUiccCard).when(mPhone).getUiccCard();
         lenient().doReturn(mUiccCard).when(mUiccSlot).getUiccCard();
