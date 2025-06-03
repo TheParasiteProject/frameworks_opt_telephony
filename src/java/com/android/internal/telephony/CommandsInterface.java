@@ -27,9 +27,6 @@ import android.os.Message;
 import android.os.WorkSource;
 import android.telephony.AccessNetworkConstants;
 import android.telephony.AccessNetworkConstants.AccessNetworkType;
-import android.telephony.AccessNetworkConstants.RadioAccessNetworkType;
-import android.telephony.AccessNetworkConstants.TransportType;
-import android.telephony.Annotation.DataState;
 import android.telephony.BarringInfo;
 import android.telephony.CarrierRestrictionRules;
 import android.telephony.ClientRequestStats;
@@ -3024,24 +3021,4 @@ public interface CommandsInterface {
      */
     default void updateAllowedImsServices(@NonNull Set<Integer> allowedImsServicesAny,
             @NonNull Set<Integer> allowedImsServicesHomeOnly, @Nullable Message result) {}
-
-    /**
-     * Notify IMS data network to the modem.
-     *
-     * @param accessNetwork The access network type.
-     * @param dataNetworkState The data network connection state.
-     * @param physicalTransportType The physical transport type of the data network.
-     * @param physicalNetworkSlotIndex The slot index while the physical transport type is
-     *        {@link AccessNetworkConstants#TRANSPORT_TYPE_WWAN}. If the physical transport type is
-     *        {@link AccessNetworkConstants#TRANSPORT_TYPE_WLAN}, this slot index will be
-     *        {@link SubscriptionManager#INVALID_SIM_SLOT_INDEX}.
-     * @param result Callback message to receive the result.
-     *
-     * Response function is IRadioDataResponse.notifyImsDataNetworkResponse()
-     *
-     * This is available when android.hardware.telephony.data is defined.
-     */
-    default void notifyImsDataNetwork(@RadioAccessNetworkType int accessNetwork,
-            @DataState int dataNetworkState, @TransportType int physicalTransportType,
-            int physicalNetworkSlotIndex, @Nullable Message result) {}
 }
