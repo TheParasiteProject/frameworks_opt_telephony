@@ -58,6 +58,9 @@ import android.provider.Settings;
 import android.sysprop.TelephonyProperties;
 import android.telephony.AccessNetworkConstants;
 import android.telephony.AccessNetworkConstants.AccessNetworkType;
+import android.telephony.AccessNetworkConstants.RadioAccessNetworkType;
+import android.telephony.AccessNetworkConstants.TransportType;
+import android.telephony.Annotation.DataState;
 import android.telephony.BarringInfo;
 import android.telephony.CarrierRestrictionRules;
 import android.telephony.ClientRequestStats;
@@ -4806,6 +4809,42 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_DATA, rr, "setUserDataRoamingEnabled", () -> {
             dataProxy.setUserDataRoamingEnabled(rr.mSerial, enabled);
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void notifyImsDataNetwork(@RadioAccessNetworkType int accessNetwork,
+            @DataState int dataNetworkState, @TransportType int physicalTransportType,
+            int physicalNetworkSlotIndex, @Nullable Message result) {
+        RadioDataProxy dataProxy = getRadioServiceProxy(RadioDataProxy.class);
+        if (!canMakeRequest("notifyImsDataNetwork", dataProxy, result, RADIO_HAL_VERSION_2_4)) {
+            return;
+        }
+
+        RILRequest rr = obtainRequest(RIL_REQUEST_NOTIFY_IMS_DATA_NETWORK, result,
+                mRILDefaultWorkSource);
+        if (RILJ_LOGD) {
+            riljLog(
+                    rr.serialString()
+                            + "> "
+                            + RILUtils.requestToString(rr.mRequest)
+                            + " accessNetwork="
+                            + AccessNetworkConstants.AccessNetworkType.toString(accessNetwork)
+                            + " dataNetworkState="
+                            + TelephonyUtils.dataStateToString(dataNetworkState)
+                            + " physicalTransportType="
+                            + AccessNetworkConstants.transportTypeToString(physicalTransportType)
+                            + " physicalNetworkSlotIndex="
+                            + physicalNetworkSlotIndex);
+        }
+
+        radioServiceInvokeHelper(HAL_SERVICE_DATA, rr, "notifyImsDataNetwork", () -> {
+            dataProxy.notifyImsDataNetwork(rr.mSerial, accessNetwork,
+                    RILUtils.convertToHalDataNetworkState(dataNetworkState),
+                    physicalTransportType, physicalNetworkSlotIndex);
         });
     }
 
