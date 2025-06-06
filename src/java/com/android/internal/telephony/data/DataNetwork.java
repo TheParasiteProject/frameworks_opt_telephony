@@ -47,6 +47,7 @@ import android.os.SystemClock;
 import android.provider.Telephony;
 import android.telephony.AccessNetworkConstants;
 import android.telephony.AccessNetworkConstants.AccessNetworkType;
+import android.telephony.AccessNetworkConstants.RadioAccessNetworkType;
 import android.telephony.AccessNetworkConstants.TransportType;
 import android.telephony.Annotation.DataFailureCause;
 import android.telephony.Annotation.DataState;
@@ -583,6 +584,17 @@ public class DataNetwork extends StateMachine {
     /** PDU session id. */
     private int mPduSessionId = DataCallResponse.PDU_SESSION_ID_NOT_SET;
 
+    /** Physical network transport type. */
+    @TransportType
+    private int mPhysicalNetworkTransportType = AccessNetworkConstants.TRANSPORT_TYPE_INVALID;
+
+    /** Physical network slot index. */
+    private int mPhysicalNetworkSlotIndex = SubscriptionManager.INVALID_SIM_SLOT_INDEX;
+
+    /** Last notified access network. */
+    @RadioAccessNetworkType
+    private int mLastNotifiedAccessNetwork = AccessNetworkType.UNKNOWN;
+
     /**
      * Data service managers for accessing {@link AccessNetworkConstants#TRANSPORT_TYPE_WWAN} and
      * {@link AccessNetworkConstants#TRANSPORT_TYPE_WLAN} data services.
@@ -1073,6 +1085,10 @@ public class DataNetwork extends StateMachine {
             mTrafficDescriptors.add(dataProfile.getTrafficDescriptor());
         }
         mTransport = transport;
+        mPhysicalNetworkTransportType = transport;
+        if (mPhysicalNetworkTransportType == AccessNetworkConstants.TRANSPORT_TYPE_WWAN) {
+            mPhysicalNetworkSlotIndex = mPhone.getPhoneId();
+        }
         mLastKnownDataNetworkType = getDataNetworkType();
         mLastKnownRoamingState = mPhone.getServiceState().getDataRoamingFromRegistration();
         mIsSatellite = mPhone.getServiceState().isUsingNonTerrestrialNetwork()
@@ -1386,6 +1402,11 @@ public class DataNetwork extends StateMachine {
                     }
                     updateSuspendState();
                     updateNetworkCapabilities();
+                    int accessNetwork = DataUtils.networkTypeToAccessNetworkType(networkType);
+                    if (accessNetwork != AccessNetworkType.UNKNOWN
+                            && (mLastNotifiedAccessNetwork != accessNetwork)) {
+                        notifyImsDataNetwork();
+                    }
                     break;
                 }
                 case EVENT_ATTACH_NETWORK_REQUEST: {
@@ -1516,6 +1537,7 @@ public class DataNetwork extends StateMachine {
                     .getCarrierServicePackageUid();
 
             notifyPreciseDataConnectionState();
+            notifyImsDataNetwork();
             if (mTransport == AccessNetworkConstants.TRANSPORT_TYPE_WLAN) {
                 // Defer setupData until we get the PDU session ID response
                 allocatePduSessionId();
@@ -1755,6 +1777,7 @@ public class DataNetwork extends StateMachine {
             mDataNetworkCallback.invokeFromExecutor(
                     () -> mDataNetworkCallback.onLinkStatusChanged(DataNetwork.this, mLinkStatus));
             notifyPreciseDataConnectionState();
+            notifyImsDataNetwork();
             updateSuspendState();
         }
 
@@ -1952,6 +1975,7 @@ public class DataNetwork extends StateMachine {
             sendMessageDelayed(EVENT_STUCK_IN_TRANSIENT_STATE,
                     mDataConfigManager.getAnomalyNetworkDisconnectingTimeoutMs());
             notifyPreciseDataConnectionState();
+            notifyImsDataNetwork();
         }
 
         @Override
@@ -2051,6 +2075,7 @@ public class DataNetwork extends StateMachine {
                                 requestList, mFailCause, mRetryDelayMillis));
             }
             notifyPreciseDataConnectionState();
+            notifyImsDataNetwork();
             mNetworkAgent.unregister();
             mDataNetworkController.unregisterDataNetworkControllerCallback(
                     mDataNetworkControllerCallback);
@@ -2893,6 +2918,31 @@ public class DataNetwork extends StateMachine {
             mQosCallbackTracker.updateSessions(mQosBearerSessions);
         }
 
+        if (mFlags.dataServiceNotifyImsDataNetwork()) {
+            // If physical network transport type is
+            // {@link AccessNetworkConstants#TRANSPORT_TYPE_INVALID} use the transport type of
+            // this data network by default.
+            int newPhysicalNetworkTransportType = response.getPhysicalNetworkTransportType()
+                    == AccessNetworkConstants.TRANSPORT_TYPE_INVALID
+                    ? mTransport : response.getPhysicalNetworkTransportType();
+
+            int newPhysicalNetworkSlotIndex = response.getPhysicalNetworkSlotIndex();
+            if (newPhysicalNetworkTransportType == AccessNetworkConstants.TRANSPORT_TYPE_WWAN
+                    && newPhysicalNetworkSlotIndex == SubscriptionManager.INVALID_SIM_SLOT_INDEX) {
+                // If physical network transport type is
+                // {@link AccessNetworkConstants#TRANSPORT_TYPE_WWAN} and physical network slot id
+                // is {@link SubscriptionManager#INVALID_SIM_SLOT_INDEX}, use the phone id of
+                // this data network by default.
+                newPhysicalNetworkSlotIndex = mPhone.getPhoneId();
+            }
+            if (mPhysicalNetworkTransportType != newPhysicalNetworkTransportType
+                    || (mPhysicalNetworkSlotIndex != newPhysicalNetworkSlotIndex)) {
+                mPhysicalNetworkTransportType = newPhysicalNetworkTransportType;
+                mPhysicalNetworkSlotIndex = newPhysicalNetworkSlotIndex;
+                notifyImsDataNetwork();
+            }
+        }
+
         if (!linkProperties.equals(mLinkProperties)) {
             // If the new link properties is not compatible (e.g. IP changes, interface changes),
             // then we should de-register the network agent and re-create a new one.
@@ -3601,6 +3651,40 @@ public class DataNetwork extends StateMachine {
             logv("notifyPreciseDataConnectionState=" + pdcs);
             mPhone.notifyDataConnection(pdcs);
         }
+    }
+
+    /**
+     * Send the IMS data network to the data service.
+     *
+     * <p>
+     * Note that notify only when {@link DataState} or {@link RadioAccessNetworkType} or
+     * mPhysicalNetworkTransportType or mPhysicalNetworkSlotIndex changes. Also, no notification
+     * when data state is {@link TelephonyManager#DATA_HANDOVER_IN_PROGRESS} or
+     * {@link TelephonyManager#DATA_SUSPENDED} or {@link TelephonyManager#DATA_UNKNOWN} since
+     * {@link android.hardware.radio.data.DataNetworkState} does not support these states.
+     */
+    private void notifyImsDataNetwork() {
+        if (!mFlags.dataServiceNotifyImsDataNetwork() || !mNetworkCapabilities.hasCapability(
+                NetworkCapabilities.NET_CAPABILITY_IMS)) {
+            return;
+        }
+        int dataState = getState();
+        if (dataState == TelephonyManager.DATA_HANDOVER_IN_PROGRESS
+                || (dataState == TelephonyManager.DATA_SUSPENDED)
+                || (dataState == TelephonyManager.DATA_UNKNOWN)) {
+            return;
+        }
+        int dataNetwork = getDataNetworkType();
+        if (dataNetwork == TelephonyManager.NETWORK_TYPE_UNKNOWN) {
+            dataNetwork = getLastKnownDataNetworkType();
+        }
+        int accessNetwork = DataUtils.networkTypeToAccessNetworkType(dataNetwork);
+        for (int transport : mAccessNetworksManager.getAvailableTransports()) {
+            mDataServiceManagers.get(transport).notifyImsDataNetwork(
+                    accessNetwork, dataState, mPhysicalNetworkTransportType,
+                    mPhysicalNetworkSlotIndex, null);
+        }
+        mLastNotifiedAccessNetwork = accessNetwork;
     }
 
     /**
