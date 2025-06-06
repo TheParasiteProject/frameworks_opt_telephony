@@ -354,6 +354,10 @@ public class SatelliteController extends Handler {
     private static final int EVENT_BT_WIFI_NFC_STATE_CHANGED = 90;
     private static final int EVENT_UWB_STATE_CHANGED = 91;
     private static final int EVENT_CARRIER_CONFIG_CHANGED = 92;
+    private static final int EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED = 93;
+
+    private static final int TRUE = 1;
+    private static final int FALSE = 0;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -2588,6 +2592,29 @@ public class SatelliteController extends Handler {
                 int specificCarrierId = (int) args.arg4;
                 try {
                     handleCarrierConfigChanged(slotIndex, subId, carrierId, specificCarrierId);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED: {
+                plogd("EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED");
+                SomeArgs args = (SomeArgs) msg.obj;
+                int subId = args.argi1;
+                boolean entitlementEnabled = args.argi2 == TRUE ? true : false;
+                List<String> allowedPlmnList = (List<String>) args.arg1;
+                List<String> barredPlmnList = (List<String>) args.arg2;
+                Map<String, Integer> plmnDataPlanMap = (Map<String, Integer>) args.arg3;
+                Map<String, List<Integer>> plmnServiceTypeMap =
+                    (Map<String, List<Integer>>) args.arg4;
+                Map<String, Integer> plmnDataServicePolicyMap = (Map<String, Integer>) args.arg5;
+                Map<String, Integer> plmnVoiceServicePolicyMap = (Map<String, Integer>) args.arg6;
+                IIntegerConsumer callback = (IIntegerConsumer) args.arg7;
+                try {
+                    handleSatelliteEntitlementStatusUpdated(subId, entitlementEnabled,
+                        allowedPlmnList, barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap,
+                        plmnDataServicePolicyMap, plmnVoiceServicePolicyMap, callback);
                 } finally {
                     args.recycle();
                 }
@@ -4911,10 +4938,39 @@ public class SatelliteController extends Handler {
      */
     public void onSatelliteEntitlementStatusUpdated(int subId, boolean entitlementEnabled,
             @Nullable List<String> allowedPlmnList, @Nullable List<String> barredPlmnList,
-            @Nullable Map<String,Integer> plmnDataPlanMap,
-            @Nullable Map<String,List<Integer>> plmnServiceTypeMap,
-            @Nullable Map<String,Integer> plmnDataServicePolicyMap,
-            @Nullable Map<String,Integer> plmnVoiceServicePolicyMap,
+            @Nullable Map<String, Integer> plmnDataPlanMap,
+            @Nullable Map<String, List<Integer>> plmnServiceTypeMap,
+            @Nullable Map<String, Integer> plmnDataServicePolicyMap,
+            @Nullable Map<String, Integer> plmnVoiceServicePolicyMap,
+            @Nullable IIntegerConsumer callback) {
+        plogd("onSatelliteEntitlementStatusUpdated: subId=" + subId
+                + ", entitlementEnabled=" + entitlementEnabled);
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.argi1 = subId;
+            args.argi2 = entitlementEnabled ? TRUE : FALSE;
+            args.arg1 = allowedPlmnList;
+            args.arg2 = barredPlmnList;
+            args.arg3 = plmnDataPlanMap;
+            args.arg4 = plmnServiceTypeMap;
+            args.arg5 = plmnDataServicePolicyMap;
+            args.arg6 = plmnVoiceServicePolicyMap;
+            args.arg7 = callback;
+            sendMessage(obtainMessage(EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED, args));
+            return;
+        }
+
+        handleSatelliteEntitlementStatusUpdated(subId, entitlementEnabled, allowedPlmnList,
+                barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap, plmnDataServicePolicyMap,
+                plmnVoiceServicePolicyMap, callback);
+    }
+
+    private void handleSatelliteEntitlementStatusUpdated(int subId, boolean entitlementEnabled,
+            @Nullable List<String> allowedPlmnList, @Nullable List<String> barredPlmnList,
+            @Nullable Map<String, Integer> plmnDataPlanMap,
+            @Nullable Map<String, List<Integer>> plmnServiceTypeMap,
+            @Nullable Map<String, Integer> plmnDataServicePolicyMap,
+            @Nullable Map<String, Integer> plmnVoiceServicePolicyMap,
             @Nullable IIntegerConsumer callback) {
         if (callback == null) {
             callback = new IIntegerConsumer.Stub() {
@@ -4942,7 +4998,8 @@ public class SatelliteController extends Handler {
         if (plmnVoiceServicePolicyMap == null) {
             plmnVoiceServicePolicyMap = new HashMap<>();
         }
-        logd("onSatelliteEntitlementStatusUpdated subId=" + subId + ", entitlementEnabled="
+        logd("handleSatelliteEntitlementStatusUpdated: "
+                + "subId=" + subId + ", entitlementEnabled="
                 + entitlementEnabled + ", allowedPlmnList=["
                 + String.join(",", allowedPlmnList) + "]" + ", barredPlmnList=["
                 + String.join(",", barredPlmnList) + "]"
@@ -4959,7 +5016,7 @@ public class SatelliteController extends Handler {
                 mSubscriptionManagerService.setSubscriptionProperty(subId,
                         SATELLITE_ENTITLEMENT_STATUS, entitlementEnabled ? "1" : "0");
             } catch (IllegalArgumentException | SecurityException e) {
-                loge("onSatelliteEntitlementStatusUpdated: setSubscriptionProperty, e=" + e);
+                loge("handleSatelliteEntitlementStatusUpdated: setSubscriptionProperty, e=" + e);
             }
         }
 
@@ -4982,7 +5039,7 @@ public class SatelliteController extends Handler {
                     plmnDataServicePolicyMap, plmnVoiceServicePolicyMap);
 
         } else {
-            loge("onSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
+            loge("handleSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
                     + "or invalid barredPlmnList");
         }
 
@@ -5968,6 +6025,7 @@ public class SatelliteController extends Handler {
     }
 
     private void updateSupportedSatelliteServicesForActiveSubscriptions() {
+        plogd("updateSupportedSatelliteServicesForActiveSubscriptions");
         mSatelliteServicesSupportedByCarriersFromConfig.clear();
         mMergedPlmnListPerCarrier.clear();
         int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
