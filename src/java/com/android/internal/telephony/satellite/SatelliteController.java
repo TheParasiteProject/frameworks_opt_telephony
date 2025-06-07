@@ -236,6 +236,8 @@ public class SatelliteController extends Handler {
     public static final int TIMEOUT_TYPE_DEMO_POINTING_NOT_ALIGNED_DURATION_MILLIS = 3;
     /** This is used by CTS to override evaluate esos profiles prioritization duration. */
     public static final int TIMEOUT_TYPE_EVALUATE_ESOS_PROFILES_PRIORITIZATION_DURATION_MILLIS = 4;
+    /** This is used by CTS to override evaluate carrier roaming ntn eligibility change duration. */
+    public static final int TIMEOUT_TYPE_EMERGENCY_CALL_MONITORING_DURATION_MILLIS = 5;
     /** Key used to read/write OEM-enabled satellite provision status in shared preferences. */
     private static final String OEM_ENABLED_SATELLITE_PROVISION_STATUS_KEY =
             "oem_enabled_satellite_provision_status_key";
@@ -348,6 +350,14 @@ public class SatelliteController extends Handler {
     private static final int REQUEST_PROVISION_SATELLITE = 86;
     private static final int REQUEST_DEPROVISION_SATELLITE = 87;
     private static final int EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED = 88;
+    private static final int EVENT_SATELLITE_ACCESS_CONFIGURATION_CHANGED = 89;
+    private static final int EVENT_BT_WIFI_NFC_STATE_CHANGED = 90;
+    private static final int EVENT_UWB_STATE_CHANGED = 91;
+    private static final int EVENT_CARRIER_CONFIG_CHANGED = 92;
+    private static final int EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED = 93;
+
+    private static final int TRUE = 1;
+    private static final int FALSE = 0;
 
     @NonNull private static SatelliteController sInstance;
     @NonNull private final Context mContext;
@@ -423,6 +433,7 @@ public class SatelliteController extends Handler {
     private AtomicLong mEvaluateEsosProfilesPrioritizationDurationMillis = new AtomicLong(0);
     private AtomicLong mLastEmergencyCallTime = new AtomicLong(0);
     private AtomicLong mSatelliteEmergencyModeDurationMillis = new AtomicLong(0);
+    private AtomicLong mEmergencyCallMonitoringDurationMillisForCtsTest = new AtomicLong(0);
     private AtomicLong mSessionStartTimeStamp = new AtomicLong(0);
     private AtomicLong mSessionProcessingTimeStamp = new AtomicLong(0);
     private static AtomicLong sNextSatelliteEnableRequestId = new AtomicLong(0);
@@ -934,9 +945,20 @@ public class SatelliteController extends Handler {
         registerApplicationStateChanged();
         registerLocationServiceStateChanged();
         updateSupportedSatelliteServicesForActiveSubscriptions();
-        mCarrierConfigChangeListener =
-                (slotIndex, subId, carrierId, specificCarrierId) ->
-                        handleCarrierConfigChanged(slotIndex, subId, carrierId, specificCarrierId);
+        mCarrierConfigChangeListener = (slotIndex, subId, carrierId, specificCarrierId) -> {
+            if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+                SomeArgs args = SomeArgs.obtain();
+                args.arg1 = slotIndex;
+                args.arg2 = subId;
+                args.arg3 = carrierId;
+                args.arg4 = specificCarrierId;
+                sendMessage(obtainMessage(EVENT_CARRIER_CONFIG_CHANGED, args));
+                return;
+            }
+
+            handleCarrierConfigChanged(slotIndex, subId, carrierId, specificCarrierId);
+        };
+
         if (mCarrierConfigManager != null) {
             mCarrierConfigManager.registerCarrierConfigChangeListener(
                     new HandlerExecutor(new Handler(looper)), mCarrierConfigChangeListener);
@@ -1206,75 +1228,95 @@ public class SatelliteController extends Handler {
         public void onStateChanged(int state, int reason) {
             plogd("UwbAdapterStateCallback#onStateChanged() called, state = " + toString(state));
             plogd("Adapter state changed reason " + String.valueOf(reason));
-            if (state == UwbManager.AdapterStateCallback.STATE_DISABLED) {
-                setUwbEnabledState(false);
-                evaluateToSendSatelliteEnabledSuccess();
-            } else {
-                setUwbEnabledState(true);
+            if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+                sendMessage(obtainMessage(EVENT_UWB_STATE_CHANGED, state));
+                return;
             }
-            plogd("mUwbStateEnabled: " + getUwbEnabledState());
+
+            handleEventUwbStateChanged(state);
         }
+    }
+
+    private void handleEventUwbStateChanged(int state) {
+        if (state == UwbManager.AdapterStateCallback.STATE_DISABLED) {
+            setUwbEnabledState(false);
+            evaluateToSendSatelliteEnabledSuccess();
+        } else {
+            setUwbEnabledState(true);
+        }
+        plogd("mUwbStateEnabled: " + getUwbEnabledState());
     }
 
     protected class BTWifiNFCStateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (action == null) {
-                plogd("BTWifiNFCStateReceiver NULL action for intent " + intent);
+            if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+                sendMessage(obtainMessage(EVENT_BT_WIFI_NFC_STATE_CHANGED, intent));
                 return;
             }
 
-            switch (action) {
-                case BluetoothAdapter.ACTION_STATE_CHANGED:
-                    int btState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
-                            BluetoothAdapter.ERROR);
-                    boolean currentBTStateEnabled = getBTEnabledState();
-                    if (btState == BluetoothAdapter.STATE_OFF) {
-                        setBTEnabledState(false);
-                        evaluateToSendSatelliteEnabledSuccess();
-                    } else if (btState == BluetoothAdapter.STATE_ON) {
-                        setBTEnabledState(true);
-                    }
+            handleEventBtWifiNfcStateChanged(intent);
+        }
+    }
 
-                    if (currentBTStateEnabled != getBTEnabledState()) {
-                        plogd("mBTStateEnabled=" + getBTEnabledState());
-                    }
-                    break;
+    private void handleEventBtWifiNfcStateChanged(@NonNull Intent intent) {
+        final String action = intent.getAction();
+        if (action == null) {
+            plogd("BTWifiNFCStateReceiver NULL action for intent " + intent);
+            return;
+        }
 
-                case NfcAdapter.ACTION_ADAPTER_STATE_CHANGED:
-                    int nfcState = intent.getIntExtra(NfcAdapter.EXTRA_ADAPTER_STATE, -1);
-                    boolean currentNfcStateEnabled = getNfcEnabledState();
-                    if (nfcState == NfcAdapter.STATE_ON) {
-                        setNfcEnabledState(true);
-                    } else if (nfcState == NfcAdapter.STATE_OFF) {
-                        setNfcEnabledState(false);
-                        evaluateToSendSatelliteEnabledSuccess();
-                    }
+        plogd("handleEventBtWifiNfcStateChanged: action=" + action);
 
-                    if (currentNfcStateEnabled != getNfcEnabledState()) {
-                        plogd("mNfcStateEnabled=" + getNfcEnabledState());
-                    }
-                    break;
+        switch (action) {
+            case BluetoothAdapter.ACTION_STATE_CHANGED:
+                int btState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
+                        BluetoothAdapter.ERROR);
+                boolean currentBTStateEnabled = getBTEnabledState();
+                if (btState == BluetoothAdapter.STATE_OFF) {
+                    setBTEnabledState(false);
+                    evaluateToSendSatelliteEnabledSuccess();
+                } else if (btState == BluetoothAdapter.STATE_ON) {
+                    setBTEnabledState(true);
+                }
 
-                case WifiManager.WIFI_STATE_CHANGED_ACTION:
-                    int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
-                            WifiManager.WIFI_STATE_UNKNOWN);
-                    boolean currentWifiStateEnabled = getWifiEnabledState();
-                    if (wifiState == WifiManager.WIFI_STATE_ENABLED) {
-                        setWifiEnabledState(true);
-                    } else if (wifiState == WifiManager.WIFI_STATE_DISABLED) {
-                        setWifiEnabledState(false);
-                        evaluateToSendSatelliteEnabledSuccess();
-                    }
+                if (currentBTStateEnabled != getBTEnabledState()) {
+                    plogd("mBTStateEnabled=" + getBTEnabledState());
+                }
+                break;
 
-                    if (currentWifiStateEnabled != getWifiEnabledState()) {
-                        plogd("mWifiStateEnabled=" + getWifiEnabledState());
-                    }
-                    break;
-                default:
-                    break;
-            }
+            case NfcAdapter.ACTION_ADAPTER_STATE_CHANGED:
+                int nfcState = intent.getIntExtra(NfcAdapter.EXTRA_ADAPTER_STATE, -1);
+                boolean currentNfcStateEnabled = getNfcEnabledState();
+                if (nfcState == NfcAdapter.STATE_ON) {
+                    setNfcEnabledState(true);
+                } else if (nfcState == NfcAdapter.STATE_OFF) {
+                    setNfcEnabledState(false);
+                    evaluateToSendSatelliteEnabledSuccess();
+                }
+
+                if (currentNfcStateEnabled != getNfcEnabledState()) {
+                    plogd("mNfcStateEnabled=" + getNfcEnabledState());
+                }
+                break;
+
+            case WifiManager.WIFI_STATE_CHANGED_ACTION:
+                int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
+                        WifiManager.WIFI_STATE_UNKNOWN);
+                boolean currentWifiStateEnabled = getWifiEnabledState();
+                if (wifiState == WifiManager.WIFI_STATE_ENABLED) {
+                    setWifiEnabledState(true);
+                } else if (wifiState == WifiManager.WIFI_STATE_DISABLED) {
+                    setWifiEnabledState(false);
+                    evaluateToSendSatelliteEnabledSuccess();
+                }
+
+                if (currentWifiStateEnabled != getWifiEnabledState()) {
+                    plogd("mWifiStateEnabled=" + getWifiEnabledState());
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -2520,6 +2562,62 @@ public class SatelliteController extends Handler {
             case EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED: {
                 plogd("EVENT_SATELLITE_ACCESS_ALLOWED_STATE_CHANGED");
                 handleSatelliteAccessAllowedStateChanged((boolean) msg.obj);
+                break;
+            }
+
+            case EVENT_SATELLITE_ACCESS_CONFIGURATION_CHANGED: {
+                plogd("EVENT_SATELLITE_ACCESS_CONFIGURATION_CHANGED");
+                handleSatelliteAccessConfigUpdateResult((SatelliteAccessConfiguration) msg.obj);
+                break;
+            }
+
+            case EVENT_BT_WIFI_NFC_STATE_CHANGED: {
+                plogd("EVENT_BT_WIFI_NFC_STATE_CHANGED");
+                handleEventBtWifiNfcStateChanged((Intent) msg.obj);
+                break;
+            }
+
+            case EVENT_UWB_STATE_CHANGED: {
+                plogd("EVENT_UWB_STATE_CHANGED");
+                handleEventUwbStateChanged((int) msg.obj);
+                break;
+            }
+
+            case EVENT_CARRIER_CONFIG_CHANGED: {
+                plogd("EVENT_CARRIER_CONFIG_CHANGED");
+                SomeArgs args = (SomeArgs) msg.obj;
+                int slotIndex = (int) args.arg1;
+                int subId = (int) args.arg2;
+                int carrierId = (int) args.arg3;
+                int specificCarrierId = (int) args.arg4;
+                try {
+                    handleCarrierConfigChanged(slotIndex, subId, carrierId, specificCarrierId);
+                } finally {
+                    args.recycle();
+                }
+                break;
+            }
+
+            case EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED: {
+                plogd("EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED");
+                SomeArgs args = (SomeArgs) msg.obj;
+                int subId = args.argi1;
+                boolean entitlementEnabled = args.argi2 == TRUE ? true : false;
+                List<String> allowedPlmnList = (List<String>) args.arg1;
+                List<String> barredPlmnList = (List<String>) args.arg2;
+                Map<String, Integer> plmnDataPlanMap = (Map<String, Integer>) args.arg3;
+                Map<String, List<Integer>> plmnServiceTypeMap =
+                    (Map<String, List<Integer>>) args.arg4;
+                Map<String, Integer> plmnDataServicePolicyMap = (Map<String, Integer>) args.arg5;
+                Map<String, Integer> plmnVoiceServicePolicyMap = (Map<String, Integer>) args.arg6;
+                IIntegerConsumer callback = (IIntegerConsumer) args.arg7;
+                try {
+                    handleSatelliteEntitlementStatusUpdated(subId, entitlementEnabled,
+                        allowedPlmnList, barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap,
+                        plmnDataServicePolicyMap, plmnVoiceServicePolicyMap, callback);
+                } finally {
+                    args.recycle();
+                }
                 break;
             }
 
@@ -4115,6 +4213,12 @@ public class SatelliteController extends Handler {
             } else {
                 mEvaluateEsosProfilesPrioritizationDurationMillis.set(timeoutMillis);
             }
+        } else if (timeoutType == TIMEOUT_TYPE_EMERGENCY_CALL_MONITORING_DURATION_MILLIS) {
+            if (reset) {
+                mEmergencyCallMonitoringDurationMillisForCtsTest.set(0);
+            } else {
+                mEmergencyCallMonitoringDurationMillisForCtsTest.set(timeoutMillis);
+            }
         } else {
             plogw("Invalid timeoutType=" + timeoutType);
             return false;
@@ -4232,6 +4336,11 @@ public class SatelliteController extends Handler {
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
     protected int getSimSlotIdForLaunchingT911ConversationThread() {
         return mSimSlotIdForLaunchingT911ConversationThread.get();
+    }
+
+    @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
+    protected long getEmergencyCallMonitoringDurationMillisForCtsTests() {
+        return mEmergencyCallMonitoringDurationMillisForCtsTest.get();
     }
 
     private boolean isHandoverTypeValid(int handoverType) {
@@ -4829,10 +4938,39 @@ public class SatelliteController extends Handler {
      */
     public void onSatelliteEntitlementStatusUpdated(int subId, boolean entitlementEnabled,
             @Nullable List<String> allowedPlmnList, @Nullable List<String> barredPlmnList,
-            @Nullable Map<String,Integer> plmnDataPlanMap,
-            @Nullable Map<String,List<Integer>> plmnServiceTypeMap,
-            @Nullable Map<String,Integer> plmnDataServicePolicyMap,
-            @Nullable Map<String,Integer> plmnVoiceServicePolicyMap,
+            @Nullable Map<String, Integer> plmnDataPlanMap,
+            @Nullable Map<String, List<Integer>> plmnServiceTypeMap,
+            @Nullable Map<String, Integer> plmnDataServicePolicyMap,
+            @Nullable Map<String, Integer> plmnVoiceServicePolicyMap,
+            @Nullable IIntegerConsumer callback) {
+        plogd("onSatelliteEntitlementStatusUpdated: subId=" + subId
+                + ", entitlementEnabled=" + entitlementEnabled);
+        if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+            SomeArgs args = SomeArgs.obtain();
+            args.argi1 = subId;
+            args.argi2 = entitlementEnabled ? TRUE : FALSE;
+            args.arg1 = allowedPlmnList;
+            args.arg2 = barredPlmnList;
+            args.arg3 = plmnDataPlanMap;
+            args.arg4 = plmnServiceTypeMap;
+            args.arg5 = plmnDataServicePolicyMap;
+            args.arg6 = plmnVoiceServicePolicyMap;
+            args.arg7 = callback;
+            sendMessage(obtainMessage(EVENT_SATELLITE_ENTILEMENT_STATUS_UPDATED, args));
+            return;
+        }
+
+        handleSatelliteEntitlementStatusUpdated(subId, entitlementEnabled, allowedPlmnList,
+                barredPlmnList, plmnDataPlanMap, plmnServiceTypeMap, plmnDataServicePolicyMap,
+                plmnVoiceServicePolicyMap, callback);
+    }
+
+    private void handleSatelliteEntitlementStatusUpdated(int subId, boolean entitlementEnabled,
+            @Nullable List<String> allowedPlmnList, @Nullable List<String> barredPlmnList,
+            @Nullable Map<String, Integer> plmnDataPlanMap,
+            @Nullable Map<String, List<Integer>> plmnServiceTypeMap,
+            @Nullable Map<String, Integer> plmnDataServicePolicyMap,
+            @Nullable Map<String, Integer> plmnVoiceServicePolicyMap,
             @Nullable IIntegerConsumer callback) {
         if (callback == null) {
             callback = new IIntegerConsumer.Stub() {
@@ -4860,7 +4998,8 @@ public class SatelliteController extends Handler {
         if (plmnVoiceServicePolicyMap == null) {
             plmnVoiceServicePolicyMap = new HashMap<>();
         }
-        logd("onSatelliteEntitlementStatusUpdated subId=" + subId + ", entitlementEnabled="
+        logd("handleSatelliteEntitlementStatusUpdated: "
+                + "subId=" + subId + ", entitlementEnabled="
                 + entitlementEnabled + ", allowedPlmnList=["
                 + String.join(",", allowedPlmnList) + "]" + ", barredPlmnList=["
                 + String.join(",", barredPlmnList) + "]"
@@ -4877,7 +5016,7 @@ public class SatelliteController extends Handler {
                 mSubscriptionManagerService.setSubscriptionProperty(subId,
                         SATELLITE_ENTITLEMENT_STATUS, entitlementEnabled ? "1" : "0");
             } catch (IllegalArgumentException | SecurityException e) {
-                loge("onSatelliteEntitlementStatusUpdated: setSubscriptionProperty, e=" + e);
+                loge("handleSatelliteEntitlementStatusUpdated: setSubscriptionProperty, e=" + e);
             }
         }
 
@@ -4900,7 +5039,7 @@ public class SatelliteController extends Handler {
                     plmnDataServicePolicyMap, plmnVoiceServicePolicyMap);
 
         } else {
-            loge("onSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
+            loge("handleSatelliteEntitlementStatusUpdated: either invalid allowedPlmnList "
                     + "or invalid barredPlmnList");
         }
 
@@ -5886,6 +6025,7 @@ public class SatelliteController extends Handler {
     }
 
     private void updateSupportedSatelliteServicesForActiveSubscriptions() {
+        plogd("updateSupportedSatelliteServicesForActiveSubscriptions");
         mSatelliteServicesSupportedByCarriersFromConfig.clear();
         mMergedPlmnListPerCarrier.clear();
         int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
@@ -8809,6 +8949,12 @@ public class SatelliteController extends Handler {
                     SatelliteAccessConfiguration satelliteAccessConfiguration) {
                     plogd("onAccessConfigurationChanged: satelliteAccessConfiguration="
                         + satelliteAccessConfiguration);
+                    if (mFeatureFlags.satelliteImproveMultiThreadDesign()) {
+                        sendMessage(obtainMessage(EVENT_SATELLITE_ACCESS_CONFIGURATION_CHANGED,
+                                satelliteAccessConfiguration));
+                        return;
+                    }
+
                     handleSatelliteAccessConfigUpdateResult(satelliteAccessConfiguration);
                 }
             };

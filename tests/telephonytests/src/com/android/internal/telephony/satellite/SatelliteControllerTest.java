@@ -1007,6 +1007,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                     /*slotIndex*/ 0, /*subId*/ SUB_ID, /*carrierId*/ 0, /*specificCarrierId*/ 0)
             );
         }
+        processAllMessages();
         when(mServiceState.getNetworkRegistrationInfoList()).thenReturn(List.of(satelliteNri));
         when(mServiceState.isUsingNonTerrestrialNetwork()).thenReturn(true);
         sendServiceStateChangedEvent();
@@ -3015,6 +3016,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         verify(mMockSatelliteModemInterface, never()).requestSatelliteEnabled(
                 any(SatelliteModemEnableRequestAttributes.class), any(Message.class));
 
@@ -3081,6 +3083,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         verify(mMockSatelliteModemInterface, never()).requestSatelliteEnabled(
                 any(SatelliteModemEnableRequestAttributes.class), any(Message.class));
 
@@ -3091,6 +3094,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         verify(mMockSatelliteModemInterface, never()).requestSatelliteEnabled(
                 any(SatelliteModemEnableRequestAttributes.class), any(Message.class));
 
@@ -3101,6 +3105,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         verify(mMockSatelliteModemInterface, never()).requestSatelliteEnabled(
                 any(SatelliteModemEnableRequestAttributes.class), any(Message.class));
 
@@ -3111,6 +3116,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         verify(mMockSatelliteModemInterface, never()).requestSatelliteEnabled(
                 any(SatelliteModemEnableRequestAttributes.class), any(Message.class));
     }
@@ -3121,6 +3127,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         List<String> plmnListPerCarrier = mSatelliteControllerUT.getSatellitePlmnsForCarrier(
                 SUB_ID);
@@ -3344,6 +3351,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, true, new ArrayList<>(),
                 new ArrayList<>(), new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         assertEquals(true, satelliteEnabledPerCarrier.get(SUB_ID));
         assertEquals(false, satelliteEnabledPerCarrier.computeIfAbsent(SUB_ID1, k -> false));
@@ -3352,6 +3360,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID1, true, new ArrayList<>(),
                 new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         assertEquals(true, satelliteEnabledPerCarrier.get(SUB_ID));
         assertEquals(true, satelliteEnabledPerCarrier.get(SUB_ID1));
@@ -3360,6 +3369,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false, new ArrayList<>(),
                 new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
                 new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         assertEquals(false, satelliteEnabledPerCarrier.get(SUB_ID));
         assertEquals(true, satelliteEnabledPerCarrier.get(SUB_ID1));
@@ -6409,6 +6419,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, dataPlanListMap, new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         int dataPlanForPlmn;
         dataPlanForPlmn = mSatelliteControllerUT.getSatelliteDataPlanForPlmn(SUB_ID, "00101");
@@ -6440,6 +6451,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, dataPlanListMap, new HashMap<>(),
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         int dataPlanForPlmn = mSatelliteControllerUT.getSatelliteDataPlanForPlmn(SUB_ID, "00101");
         assertEquals(SATELLITE_DATA_PLAN_METERED, dataPlanForPlmn);
@@ -6487,6 +6499,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         List<Integer> allowedServiceForPlmn;
         allowedServiceForPlmn = mSatelliteControllerUT
@@ -6545,6 +6558,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         List<Integer> allowedServiceForPlmn;
         allowedServiceForPlmn = mSatelliteControllerUT
@@ -6606,6 +6620,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         List<Integer> allowedServiceForPlmn;
         allowedServiceForPlmn = mSatelliteControllerUT
@@ -6664,6 +6679,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         List<Integer> allowedServiceForPlmn;
         allowedServiceForPlmn = mSatelliteControllerUT
@@ -6704,6 +6720,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, dataPlanListMap, allowedServiceListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         // Verify whether the carrier config plmn list is returned with conditions below
         // the config data plmn list : empty
@@ -6759,6 +6776,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 dataServicePolicyMap, new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         int dataSupportModeForPlmn;
         dataSupportModeForPlmn = mSatelliteControllerUT
@@ -6807,6 +6825,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, true,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 dataServicePolicyMap, new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         mCarrierConfigBundle.putInt(
                 CarrierConfigManager.KEY_SATELLITE_DATA_SUPPORT_MODE_INT,
                 SATELLITE_DATA_SUPPORT_BANDWIDTH_CONSTRAINED);
@@ -6857,6 +6876,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                 dataServicePolicyMap,
                 new HashMap<>(),
                 mIIntegerConsumer);
+        processAllMessages();
 
         // Cap maxAllowedDataMode to SATELLITE_DATA_SUPPORT_ONLY_RESTRICTED
         mContextFixture.putIntResource(
@@ -6955,6 +6975,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), new HashMap<>(),
                 dataServicePolicyMap, new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
 
         // when Available satellite services is not configured with data service
         mCarrierConfigBundle.putInt(
@@ -7034,6 +7055,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                 dataServicePolicyMap,
                 new HashMap<>(),
                 mIIntegerConsumer);
+        processAllMessages();
 
         // when Available satellite services is not configured with data service
         mCarrierConfigBundle.putInt(
@@ -7143,6 +7165,7 @@ public class SatelliteControllerTest extends TelephonyTest {
                 entitlementPlmnList, new ArrayList<>(), new HashMap<>(),
                 new HashMap<>() /*serviceTypeListMap*/, new HashMap<>(), new HashMap<>(),
                 mIIntegerConsumer);
+        processAllMessages();
         verify(mPhone, times(2)).notifyCarrierRoamingNtnAvailableServicesChanged(
                 (int[]) ArgumentMatchers.any());
     }
@@ -7170,6 +7193,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         int[] expectedServices = new int[]{1, 2, 3};
         int[] supportedServices = mSatelliteControllerUT.getSupportedServicesOnCarrierRoamingNtn(
                 SUB_ID);
@@ -7202,6 +7226,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         int[] expectedServices = new int[]{1, 2, 3};
         int[] supportedServices = mSatelliteControllerUT.getSupportedServicesOnCarrierRoamingNtn(
                 SUB_ID);
@@ -7212,6 +7237,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         // There is no change in services between 2 calls, so notify should not invoke again.
         supportedServices = mSatelliteControllerUT.getSupportedServicesOnCarrierRoamingNtn(SUB_ID);
         assertArrayEquals(expectedServices, supportedServices);
@@ -7243,6 +7269,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         int[] expectedServices = new int[]{1, 2, 3};
         int[] supportedServices = mSatelliteControllerUT.getSupportedServicesOnCarrierRoamingNtn(
                 SUB_ID);
@@ -7255,6 +7282,7 @@ public class SatelliteControllerTest extends TelephonyTest {
         mSatelliteControllerUT.onSatelliteEntitlementStatusUpdated(SUB_ID, false,
                 entitlementPlmnList, barredPlmnList, new HashMap<>(), serviceTypeListMap,
                 new HashMap<>(), new HashMap<>(), mIIntegerConsumer);
+        processAllMessages();
         expectedServices = new int[]{1, 3};
         supportedServices = mSatelliteControllerUT.getSupportedServicesOnCarrierRoamingNtn(SUB_ID);
         assertArrayEquals(expectedServices, supportedServices);

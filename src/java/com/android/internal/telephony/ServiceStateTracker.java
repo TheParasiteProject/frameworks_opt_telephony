@@ -230,7 +230,8 @@ public class ServiceStateTracker extends Handler {
 
     /* Radio power off pending flag */
     private volatile boolean mPendingRadioPowerOffAfterDataOff = false;
-    private volatile int mPendingRadioPowerOffReason = -1;
+    private volatile @DataNetwork.TearDownReason int mPendingRadioPowerOffReason =
+            DataNetwork.TEAR_DOWN_REASON_NONE;
 
     /** Waiting period before recheck gprs and voice registration. */
     public static final int DEFAULT_GPRS_CHECK_PERIOD_MILLIS = 60 * 1000;
@@ -1307,8 +1308,14 @@ public class ServiceStateTracker extends Handler {
         switch (msg.what) {
             case EVENT_SET_RADIO_POWER_OFF:
                 synchronized(this) {
-                    mPendingRadioPowerOffAfterDataOff = false;
-                    log("Wait for all data networks torn down timed out. Power off now.");
+                    if (mFeatureFlags.keepWfcOnApm()) {
+                        mPendingRadioPowerOffReason = DataNetwork.TEAR_DOWN_REASON_NONE;
+                    } else {
+                        mPendingRadioPowerOffAfterDataOff = false;
+                    }
+                    log("Wait for all data networks due to "
+                            + DataNetwork.tearDownReasonToString(mPendingRadioPowerOffReason)
+                            + " torn down timed out. Power off now.");
                     hangupAndPowerOff();
                 }
                 break;
@@ -1589,21 +1596,32 @@ public class ServiceStateTracker extends Handler {
             case EVENT_ALL_DATA_DISCONNECTED:
                 log("EVENT_ALL_DATA_DISCONNECTED");
                 synchronized (this) {
-                    if (!mPendingRadioPowerOffAfterDataOff) return;
+                    if (mFeatureFlags.keepWfcOnApm()) {
+                        if (mPendingRadioPowerOffReason == DataNetwork.TEAR_DOWN_REASON_NONE) {
+                            return;
+                        }
+                    } else if (!mPendingRadioPowerOffAfterDataOff) {
+                        return;
+                    }
                     boolean areAllDataDisconnectedOnAllPhones = true;
                     for (Phone phone : PhoneFactory.getPhones()) {
-                        if (phone.getDataNetworkController().areAllDataDisconnected()) {
+                        if (phone.getDataNetworkController()
+                                .areAllDataDisconnected(!mDeviceShuttingDown/*cellularOnly*/)) {
                             phone.getDataNetworkController()
                                 .unregisterDataNetworkControllerCallback(
                                         mDataDisconnectedCallback);
                         } else {
                             log("Still waiting for all data disconnected on phone: "
-                                    + phone.getSubId());
+                                    + phone.getPhoneId());
                             areAllDataDisconnectedOnAllPhones = false;
                         }
                     }
                     if (areAllDataDisconnectedOnAllPhones) {
-                        mPendingRadioPowerOffAfterDataOff = false;
+                        if (mFeatureFlags.keepWfcOnApm()) {
+                            mPendingRadioPowerOffReason = DataNetwork.TEAR_DOWN_REASON_NONE;
+                        } else {
+                            mPendingRadioPowerOffAfterDataOff = false;
+                        }
                         removeMessages(EVENT_SET_RADIO_POWER_OFF);
                         if (DBG) log("Data disconnected for all phones, turn radio off now.");
                         hangupAndPowerOff();
@@ -3275,13 +3293,18 @@ public class ServiceStateTracker extends Handler {
 
         if (mDesiredPowerState && mDeviceShuttingDown) {
             log("setPowerStateToDesired powering on of radio failed because the device is " +
-                    "powering off");
+                    "shutting down");
             return;
         }
 
         // If we want it on and it's off, turn it on
         if (mDesiredPowerState && mRadioPowerOffReasons.isEmpty()
-                && (forceApply || mCi.getRadioState() == TelephonyManager.RADIO_POWER_OFF)) {
+                && (forceApply || mCi.getRadioState() == TelephonyManager.RADIO_POWER_OFF
+                  // When dynamic_modem_shutdown feature is enabled, allow turn on the modem at
+                  // RADIO_POWER_UNAVAILABLE state.
+                     || (mFeatureFlags.dynamicModemShutdown()
+                             && mCi.getRadioState()
+                                     == TelephonyManager.RADIO_POWER_UNAVAILABLE))) {
             mCi.setRadioPower(true, forEmergencyCall, isSelectedPhoneForEmergencyCall, null);
         } else if ((!mDesiredPowerState || !mRadioPowerOffReasons.isEmpty()) && mCi.getRadioState()
                 == TelephonyManager.RADIO_POWER_ON) {
@@ -3370,7 +3393,7 @@ public class ServiceStateTracker extends Handler {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected final void log(String s) {
-        Rlog.d(LOG_TAG, "[" + mPhone.getPhoneId() + "] " + s);
+        Rlog.d(LOG_TAG, "-" + mPhone.getPhoneId() + s);
     }
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -3476,6 +3499,9 @@ public class ServiceStateTracker extends Handler {
         switch (mCi.getRadioState()) {
             case TelephonyManager.RADIO_POWER_UNAVAILABLE:
                 handlePollStateInternalForRadioOffOrUnavailable(false);
+                if (mFeatureFlags.dynamicModemShutdown()) {
+                    mDeviceShuttingDown = false;
+                }
                 pollStateDone();
                 break;
 
@@ -5139,7 +5165,46 @@ public class ServiceStateTracker extends Handler {
                 EmergencyStateTracker.getInstance().onCellularRadioPowerOffRequested();
             }
             if (mFeatureFlags.keepWfcOnApm()) {
-                // TODO
+                int reason = mDeviceShuttingDown
+                        ? DataNetwork.TEAR_DOWN_REASON_DEVICE_SHUT_DOWN
+                        : DataNetwork.TEAR_DOWN_REASON_AIRPLANE_MODE_ON;
+                if (reason != mPendingRadioPowerOffReason) {
+                    if (mPendingRadioPowerOffReason == DataNetwork
+                            .TEAR_DOWN_REASON_DEVICE_SHUT_DOWN) {
+                        log("powerOffRadioSafely: Ignore because device is shutting down.");
+                        return;
+                    }
+                    log("powerOffRadioSafely: due to "
+                            + DataNetwork.tearDownReasonToString(reason));
+                    // hang up all active voice calls first
+                    if (mPhone.isPhoneTypeGsm() && mPhone.isInCall()) {
+                        mPhone.mCT.mRingingCall.hangupIfAlive();
+                        mPhone.mCT.mBackgroundCall.hangupIfAlive();
+                        mPhone.mCT.mForegroundCall.hangupIfAlive();
+                    }
+
+                    for (Phone phone : PhoneFactory.getPhones()) {
+                        if (!phone.getDataNetworkController().areAllDataDisconnected(
+                                !mDeviceShuttingDown/*cellularOnly*/)) {
+                            log("powerOffRadioSafely: Data is active on phone " + phone.getSubId()
+                                    + ". Wait for all data disconnect.");
+                            mPendingRadioPowerOffReason = reason;
+                            phone.getDataNetworkController().registerDataNetworkControllerCallback(
+                                    mDataDisconnectedCallback);
+                        }
+                    }
+
+                    // Tear down outside of the disconnected check to prevent race conditions.
+                    mPhone.getDataNetworkController().tearDownAllDataNetworks(reason);
+
+                    if (mPendingRadioPowerOffReason == DataNetwork.TEAR_DOWN_REASON_NONE) {
+                        log("powerOffRadioSafely: No data is connected, turn off radio now.");
+                        hangupAndPowerOff();
+                    } else if (!hasMessages(EVENT_SET_RADIO_POWER_OFF)) {
+                        sendEmptyMessageDelayed(EVENT_SET_RADIO_POWER_OFF,
+                                POWER_OFF_ALL_DATA_NETWORKS_DISCONNECTED_TIMEOUT);
+                    }
+                }
             } else {
                 if (!mPendingRadioPowerOffAfterDataOff) {
                     // hang up all active voice calls first
@@ -5150,7 +5215,8 @@ public class ServiceStateTracker extends Handler {
                     }
 
                     for (Phone phone : PhoneFactory.getPhones()) {
-                        if (!phone.getDataNetworkController().areAllDataDisconnected()) {
+                        if (!phone.getDataNetworkController()
+                                .areAllDataDisconnected(false/*placeholder*/)) {
                             log("powerOffRadioSafely: Data is active on phone " + phone.getSubId()
                                     + ". Wait for all data disconnect.");
                             mPendingRadioPowerOffAfterDataOff = true;
@@ -5179,6 +5245,9 @@ public class ServiceStateTracker extends Handler {
      * return true if there is pending disconnect data request to process; false otherwise.
      */
     public boolean isPendingRadioPowerOffAfterDataOff() {
+        if (mFeatureFlags.keepWfcOnApm()) {
+            return mPendingRadioPowerOffReason != DataNetwork.TEAR_DOWN_REASON_NONE;
+        }
         return mPendingRadioPowerOffAfterDataOff;
     }
 
@@ -5409,6 +5478,8 @@ public class ServiceStateTracker extends Handler {
         pw.println(" mDesiredPowerState=" + mDesiredPowerState);
         pw.println(" mRestrictedState=" + mRestrictedState);
         pw.println(" mPendingRadioPowerOffAfterDataOff=" + mPendingRadioPowerOffAfterDataOff);
+        pw.println(" mPendingRadioPowerOffReason=" + DataNetwork.tearDownReasonToString(
+                mPendingRadioPowerOffReason));
         pw.println(" mCellIdentity=" + Rlog.pii(VDBG, mCellIdentity));
         pw.println(" mLastCellInfoReqTime=" + mLastCellInfoReqTime);
         dumpCellInfoList(pw);

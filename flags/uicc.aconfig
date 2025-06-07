@@ -9,14 +9,6 @@ flag {
     bug:"298567545"
 }
 
-# OWNER=arunvoddu TARGET=24Q3
-flag {
-    name: "imsi_key_retry_download_on_phone_unlock"
-    namespace: "telephony"
-    description: "This flag controls to download the IMSI encryption keys after user unlocks the phone."
-    bug:"303780982"
-}
-
 # OWNER=arunvoddu TARGET=24Q4
 flag {
     name: "carrier_restriction_status"
@@ -44,17 +36,6 @@ flag {
     is_exported: true
 }
 
-# OWNER=arunvoddu TARGET=24Q4
-flag {
-    name: "uicc_app_count_check_to_create_channel"
-    namespace: "telephony"
-    description: "This flag controls to create the open channel when uicc application count is greater than 0."
-    bug:"349966950"
-    metadata {
-        purpose: PURPOSE_BUGFIX
-    }
-}
-
 # OWNER=mewan TARGET=24Q4
 flag {
     name: "optimization_apdu_sender"
@@ -79,17 +60,6 @@ flag {
     description: "This flag controls to get a carrier id using a carrier identifier."
     bug:"378778278"
     is_exported: true
-}
-
-# OWNER=arunvoddu TARGET=25Q2
-flag {
-    name: "force_imsi_certificate_delete"
-    namespace: "telephony"
-    description: "This flag controls the IMSI certificate delete with out any condition."
-    bug:"235296888"
-    metadata {
-        purpose: PURPOSE_BUGFIX
-    }
 }
 
 # OWNER=jinjeong TARGET=25Q2
