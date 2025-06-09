@@ -69,14 +69,6 @@ flag {
 
 # OWNER=joonhunshin TARGET=24Q3
 flag {
-    name: "enable_sip_subscribe_retry"
-    namespace: "telephony"
-    description: "This flag controls whether framework supports SIP subscribe retry or not"
-    bug:"297023230"
-}
-
-# OWNER=joonhunshin TARGET=24Q3
-flag {
     name: "answer_audio_only_when_answering_via_mmi_code"
     namespace: "telephony"
     description: "This flag changes the media type when answering incoming call via MMI code"
