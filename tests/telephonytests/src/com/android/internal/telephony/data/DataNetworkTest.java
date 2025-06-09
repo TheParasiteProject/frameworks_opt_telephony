@@ -1229,13 +1229,32 @@ public class DataNetworkTest extends TelephonyTest {
         // Access network change
         serviceStateChanged(TelephonyManager.NETWORK_TYPE_NR,
                 NetworkRegistrationInfo.REGISTRATION_STATE_HOME, /*isNtn=*/false);
-        processAllMessages();
         verifyImsDataNetwork(3, List.of(AccessNetworkType.EUTRAN, AccessNetworkType.EUTRAN,
                 AccessNetworkType.NGRAN), List.of(TelephonyManager.DATA_CONNECTING,
                 TelephonyManager.DATA_CONNECTED, TelephonyManager.DATA_CONNECTED),
                 List.of(AccessNetworkConstants.TRANSPORT_TYPE_WWAN,
                 AccessNetworkConstants.TRANSPORT_TYPE_WWAN,
                 AccessNetworkConstants.TRANSPORT_TYPE_WWAN), List.of(0, 0, 0));
+    }
+
+    @Test
+    public void testImsDataNetwork_SuspendedToConnected() throws Exception {
+        testCreateImsDataNetwork();
+        // Became to OOS
+        serviceStateChanged(TelephonyManager.NETWORK_TYPE_LTE,
+                NetworkRegistrationInfo.REGISTRATION_STATE_NOT_REGISTERED_OR_SEARCHING,
+                false/*isNtn*/);
+        setSuccessfulSetupDataResponse(mMockedWlanDataServiceManager, 456);
+        // Now handover to IWLAN
+        mDataNetworkUT.startHandover(AccessNetworkConstants.TRANSPORT_TYPE_WLAN, null);
+        processAllMessages();
+        verifyImsDataNetwork(3, List.of(AccessNetworkType.EUTRAN, AccessNetworkType.EUTRAN,
+                AccessNetworkType.IWLAN), List.of(TelephonyManager.DATA_CONNECTING,
+                TelephonyManager.DATA_CONNECTED, TelephonyManager.DATA_CONNECTED),
+                List.of(AccessNetworkConstants.TRANSPORT_TYPE_WWAN,
+                AccessNetworkConstants.TRANSPORT_TYPE_WWAN,
+                AccessNetworkConstants.TRANSPORT_TYPE_WLAN),
+                List.of(0, 0, SubscriptionManager.INVALID_SIM_SLOT_INDEX));
     }
 
     @Test
