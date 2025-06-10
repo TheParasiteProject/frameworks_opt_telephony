@@ -690,8 +690,10 @@ public class SatelliteControllerTest extends TelephonyTest {
         doNothing().when(mMockSatelliteSessionController).setDemoMode(anyBoolean());
         doNothing().when(mMockSatelliteSessionController).cleanUpResource();
         doNothing().when(mMockControllerMetricsStats).onSatelliteEnabled();
-        doNothing().when(mMockControllerMetricsStats).reportServiceEnablementSuccessCount();
-        doNothing().when(mMockControllerMetricsStats).reportServiceEnablementFailCount();
+        doNothing().when(mMockControllerMetricsStats).reportServiceEnablementSuccessCount(
+                anyBoolean());
+        doNothing().when(mMockControllerMetricsStats).reportServiceEnablementFailCount(
+                anyBoolean());
         doReturn(mMockSessionMetricsStats)
                 .when(mMockSessionMetricsStats).setInitializationResult(anyInt());
         doReturn(mMockSessionMetricsStats)
@@ -1111,7 +1113,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         verify(mMockSatelliteSessionController, times(2)).setDemoMode(eq(false));
         verify(mMockDatagramController, times(2)).setDemoMode(eq(false));
         verify(mMockControllerMetricsStats, times(1)).onSatelliteEnabled();
-        verify(mMockControllerMetricsStats, times(1)).reportServiceEnablementSuccessCount();
+        verify(mMockControllerMetricsStats, times(1)).reportServiceEnablementSuccessCount(
+                anyBoolean());
         verify(mTelephonyRegistryManager).notifySatelliteStateChanged(eq(true));
 
         // Successfully disable satellite when radio is turned off.
@@ -1172,7 +1175,8 @@ public class SatelliteControllerTest extends TelephonyTest {
                 anyBoolean());
         assertFalse(mSatelliteControllerUT.setSettingsKeyForSatelliteModeCalled);
         assertFalse(mSatelliteControllerUT.setSettingsKeyToAllowDeviceRotationCalled);
-        verify(mMockControllerMetricsStats, times(1)).reportServiceEnablementFailCount();
+        verify(mMockControllerMetricsStats, times(1)).reportServiceEnablementFailCount(
+                anyBoolean());
 
         // Successfully enable satellite when radio is on.
         reset(mTelephonyRegistryManager);
@@ -1193,7 +1197,8 @@ public class SatelliteControllerTest extends TelephonyTest {
         verify(mMockSatelliteSessionController, times(3)).setDemoMode(eq(false));
         verify(mMockDatagramController, times(3)).setDemoMode(eq(false));
         verify(mMockControllerMetricsStats, times(2)).onSatelliteEnabled();
-        verify(mMockControllerMetricsStats, times(2)).reportServiceEnablementSuccessCount();
+        verify(mMockControllerMetricsStats, times(2)).reportServiceEnablementSuccessCount(
+                anyBoolean());
         verify(mTelephonyRegistryManager).notifySatelliteStateChanged(eq(true));
 
         // Successfully enable satellite when it is already enabled.
