@@ -2137,6 +2137,9 @@ public class SatelliteController extends Handler {
             case EVENT_WAIT_FOR_REGULAR_METRICS_REPORT_HYSTERESIS_TIMED_OUT: {
                 handleEntireEntitlementMetricReport();
                 handleEntireProvisionMetricReport();
+                handleCarrierRoamingConfigVersionReport();
+                handleMaxAllowedDataMetricsReport();
+                scheduleRegularMetricReportTimer();
                 break;
             }
 
@@ -5498,6 +5501,7 @@ public class SatelliteController extends Handler {
         updateCachedDeviceProvisionStatus();
         // Report updated provisioned status to metrics.
         handleEntireProvisionMetricReport();
+        scheduleRegularMetricReportTimer();
         selectBindingSatelliteSubscription(false);
         handleCarrierRoamingNtnAvailableServicesChanged();
     }
@@ -9758,6 +9762,41 @@ public class SatelliteController extends Handler {
         return mWifiStateEnabled.get();
     }
 
+    private void handleCarrierRoamingConfigVersionReport() {
+        logd("handleCarrierRoamingConfigVersionReport");
+        int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
+        if (activeSubIds != null && activeSubIds.length > 0) {
+            for (int subId : activeSubIds) {
+                SatelliteConfig satelliteConfig = getSatelliteConfig();
+                if (satelliteConfig != null) {
+                    int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
+                    mControllerMetricsStats.reportCurrentVersionOfCarrierRoamingSatelliteConfig(
+                            carrierId, satelliteConfig.getSatelliteConfigDataVersion());
+                } else {
+                    loge("handleCarrierRoamingConfigVersionReport: "
+                            + "no satellite config by configupdater");
+                }
+            }
+        } else {
+            loge("handleMaxAllowedDataMetricsReport: no active subId");
+        }
+    }
+
+    private void handleMaxAllowedDataMetricsReport() {
+        logd("handleMaxAllowedDataMetricsReport");
+        int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
+        if (activeSubIds != null && activeSubIds.length > 0) {
+            for (int subId : activeSubIds) {
+                int maxAllowedDataMode = getMaxAllowedDataMode();
+                int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
+                mControllerMetricsStats
+                        .reportCurrentMaxAllowedDataMode(carrierId, maxAllowedDataMode);
+            }
+        } else {
+            loge("handleMaxAllowedDataMetricsReport: no active subId");
+        }
+    }
+
     private void handleEntireEntitlementMetricReport() {
         int[] activeSubIds = mSubscriptionManagerService.getActiveSubIdList(true);
         if (activeSubIds != null && activeSubIds.length > 0) {
@@ -9772,7 +9811,6 @@ public class SatelliteController extends Handler {
         } else {
             loge("handleEntireEntitlementMetricReport: no active subId");
         }
-        scheduleRegularMetricReportTimer();
     }
 
     private void handleIndividualEntitlementMetricReport(int subId,
@@ -9836,7 +9874,6 @@ public class SatelliteController extends Handler {
                         info.mIsNtnOnlyCarrier);
             }
         }
-        scheduleRegularMetricReportTimer();
     }
 
     // Helper class to store aggregated information per carrierId.
