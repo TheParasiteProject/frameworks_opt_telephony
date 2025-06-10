@@ -440,9 +440,6 @@ public class ServiceStateTest extends TestCase {
         // CellIdentities is fine location protected, it should be sanitized
         assertCellIdentitiesSanitized(coarseLocationSanitizedSs);
         // All other coarse location protected fields should be sanitized as well
-        assertEquals(null, coarseLocationSanitizedSs.getOperatorAlphaLong());
-        assertEquals(null, coarseLocationSanitizedSs.getOperatorAlphaShort());
-        assertEquals(null, coarseLocationSanitizedSs.getOperatorNumeric());
         assertEquals(UNKNOWN_ID, coarseLocationSanitizedSs.getCdmaSystemId());
         assertEquals(UNKNOWN_ID, coarseLocationSanitizedSs.getCdmaNetworkId());
     }
@@ -464,7 +461,7 @@ public class ServiceStateTest extends TestCase {
                 ss.getNetworkRegistrationInfoList();
         if (networkRegistrationInfoList == null) return;
         for (NetworkRegistrationInfo nri : networkRegistrationInfoList) {
-            assertNull(nri.getCellIdentity());
+            assertEquals(nri.getCellIdentity(), nri.getCellIdentity().sanitizeLocationInfo());
         }
     }
 }

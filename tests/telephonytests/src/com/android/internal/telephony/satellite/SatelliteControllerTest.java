@@ -197,6 +197,7 @@ import com.android.internal.telephony.TelephonyTest;
 import com.android.internal.telephony.configupdate.ConfigProviderAdaptor;
 import com.android.internal.telephony.configupdate.TelephonyConfigUpdateInstallReceiver;
 import com.android.internal.telephony.flags.FeatureFlags;
+import com.android.internal.telephony.satellite.metrics.CarrierRoamingSatelliteControllerStats;
 import com.android.internal.telephony.satellite.metrics.ControllerMetricsStats;
 import com.android.internal.telephony.satellite.metrics.ProvisionMetricsStats;
 import com.android.internal.telephony.satellite.metrics.SessionMetricsStats;
@@ -275,6 +276,8 @@ public class SatelliteControllerTest extends TelephonyTest {
     @Mock private SatelliteSessionController mMockSatelliteSessionController;
     @Mock private PointingAppControllerTest.TestPointingAppController mMockPointingAppController;
     @Mock private ControllerMetricsStats mMockControllerMetricsStats;
+    @Mock private CarrierRoamingSatelliteControllerStats
+            mMockCarrierRoamingSatelliteControllerStats;
     @Mock private ProvisionMetricsStats mMockProvisionMetricsStats;
     @Mock private SessionMetricsStats mMockSessionMetricsStats;
     @Mock private SubscriptionManagerService mMockSubscriptionManagerService;
@@ -611,6 +614,8 @@ public class SatelliteControllerTest extends TelephonyTest {
                 mMockPointingAppController);
         replaceInstance(ControllerMetricsStats.class, "sInstance", null,
                 mMockControllerMetricsStats);
+        replaceInstance(CarrierRoamingSatelliteControllerStats.class, "sInstance", null,
+                mMockCarrierRoamingSatelliteControllerStats);
         replaceInstance(ProvisionMetricsStats.class, "sInstance", null,
                 mMockProvisionMetricsStats);
         replaceInstance(SessionMetricsStats.class, "sInstance", null,
@@ -5843,6 +5848,11 @@ public class SatelliteControllerTest extends TelephonyTest {
                 61 /* CMD_EVALUATE_CARRIER_ROAMING_NTN_ELIGIBILITY_CHANGE */).sendToTarget();
     }
 
+    private void sendEventWaitForRegularMetricsReportHysteresisTimedOut() {
+        mSatelliteControllerUT.obtainMessage(
+                53 /* EVENT_WAIT_FOR_REGULAR_METRICS_REPORT_HYSTERESIS_TIMED_OUT */).sendToTarget();
+    }
+
     private void sendCmdGetSatelliteEnabledForCarrier(Phone phone) {
         SatelliteController.SatelliteControllerHandlerRequest request =
                 new SatelliteController.SatelliteControllerHandlerRequest(null, phone);
@@ -6834,6 +6844,33 @@ public class SatelliteControllerTest extends TelephonyTest {
         dataSupportModeForPlmn = mSatelliteControllerUT
                 .getSatelliteDataServicePolicyForPlmn(SUB_ID, "00101");
         assertEquals(SATELLITE_DATA_SUPPORT_BANDWIDTH_CONSTRAINED, dataSupportModeForPlmn);
+    }
+
+    @Test
+    public void testRegularMetricsDataReport() throws Exception {
+        setSatelliteSubscriberTesting(false);
+        doReturn(new int[]{SUB_ID, SUB_ID1}).when(mMockSubscriptionManagerService)
+                .getActiveSubIdList(true);
+        doReturn(mMockConfig).when(mMockConfigParser).getConfig();
+
+        sendEventWaitForRegularMetricsReportHysteresisTimedOut();
+        processAllMessages();
+
+        verify(mMockControllerMetricsStats, times(1))
+                .setIsProvisioned(anyInt(), anyBoolean(), anyBoolean());
+        verify(mMockCarrierRoamingSatelliteControllerStats, times(2))
+                .reportIsDeviceEntitled(anyInt(), anyBoolean());
+        verify(mMockControllerMetricsStats, times(2))
+                .reportCurrentVersionOfCarrierRoamingSatelliteConfig(anyInt(), anyInt());
+        verify(mMockControllerMetricsStats, times(2))
+                .reportCurrentMaxAllowedDataMode(anyInt(), anyInt());
+
+        verify(mMockAlarmManager, atLeast(1))
+                .cancel(any(AlarmManager.OnAlarmListener.class));
+        verify(mMockAlarmManager, atLeast(1))
+                .setExact(eq(AlarmManager.ELAPSED_REALTIME_WAKEUP), anyLong(), anyString(),
+                        any(Executor.class), any(WorkSource.class),
+                        any(AlarmManager.OnAlarmListener.class));
     }
 
     @Test

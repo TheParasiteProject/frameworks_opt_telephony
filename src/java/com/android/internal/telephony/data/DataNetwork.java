@@ -1778,8 +1778,8 @@ public class DataNetwork extends StateMachine {
             mDataNetworkCallback.invokeFromExecutor(
                     () -> mDataNetworkCallback.onLinkStatusChanged(DataNetwork.this, mLinkStatus));
             notifyPreciseDataConnectionState();
-            notifyImsDataNetwork();
             updateSuspendState();
+            notifyImsDataNetwork();
         }
 
         @Override
