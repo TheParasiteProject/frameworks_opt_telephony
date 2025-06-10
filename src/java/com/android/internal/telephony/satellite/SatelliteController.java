@@ -6318,7 +6318,6 @@ public class SatelliteController extends Handler {
                     mSubscriptionManagerService.getSatelliteEntitlementBarredPlmnList(subId);
             if (entitlementBarredPlmnList.isEmpty()) {
                 plogd("updateEntitlementBarredPlmnList: read empty list");
-                return;
             }
             plogd("updateEntitlementBarredPlmnList: entitlementBarredPlmnList=" + String.join(
                     ",", entitlementBarredPlmnList));
@@ -6332,7 +6331,6 @@ public class SatelliteController extends Handler {
                     mSubscriptionManagerService.getSatelliteEntitlementDataPlanForPlmns(subId);
             if (entitlementDataPlanForPlmns.isEmpty()) {
                 plogd("updateEntitlementBarredPlmnList: read empty list");
-                return;
             }
             plogd("updateEntitlementDataPlanForPlmns: entitlementDataPlanForPlmns="
                     + entitlementDataPlanForPlmns);
@@ -6347,7 +6345,6 @@ public class SatelliteController extends Handler {
                             subId);
             if (entitlementTypeMapPerCarrier.isEmpty()) {
                 plogd("updateEntitlementTypeMapPerCarrier: read empty list");
-                return;
             }
             plogd("updateEntitlementTypeMapPerCarrier: entitlementTypeMapPerCarrier="
                     + entitlementTypeMapPerCarrier);
@@ -6362,7 +6359,6 @@ public class SatelliteController extends Handler {
                             subId);
             if (entitlementDataServicePolicy.isEmpty()) {
                 plogd("updateEntitlementDataServicePolicy: read empty list");
-                return;
             }
             plogd("updateEntitlementDataServicePolicy: entitlementDataServicePolicy="
                     + entitlementDataServicePolicy);
@@ -6377,7 +6373,6 @@ public class SatelliteController extends Handler {
                             subId);
             if (entitlementVoiceServicePolicy.isEmpty()) {
                 plogd("updateEntitlementVoiceServicePolicy: read empty list");
-                return;
             }
             plogd("updateEntitlementVoiceServicePolicy: entitlementVoiceServicePolicy="
                     + entitlementVoiceServicePolicy);
