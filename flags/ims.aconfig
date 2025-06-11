@@ -162,6 +162,18 @@ flag {
     }
 }
 
+# OWNER=yongnamcha TARGET=26Q2
+flag {
+    name: "support_throttle_time_for_deregistration"
+    namespace: "telephony"
+    description: "This flag controls whether the IMS registration throttling time is sent to the modem upon deregistration to support time-based carrier requirements."
+    bug:"408139522"
+    is_exported: true
+    metadata {
+        purpose: PURPOSE_FEATURE
+    }
+}
+
 # OWNER=grantmenke TARGET=25Q4
 flag {
     name: "reuse_original_conn_remote_conf_behavior"

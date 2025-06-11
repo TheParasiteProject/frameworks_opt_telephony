@@ -188,6 +188,9 @@ public class RIL extends BaseCommands implements CommandsInterface {
     /** @hide */
     public static final HalVersion RADIO_HAL_VERSION_2_4 = new HalVersion(2, 4);
 
+    /** @hide */
+    public static final HalVersion RADIO_HAL_VERSION_2_5 = new HalVersion(2, 5);
+
     // Hal version
     private final Map<Integer, HalVersion> mHalVersion = new HashMap<>();
 
@@ -5029,6 +5032,40 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
+    public void updateImsRegistrationInfo(
+            @RegistrationManager.ImsRegistrationState int state,
+            @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
+            @RegistrationManager.SuggestedAction int suggestedAction,
+            int capabilities, int throttlingTimeSec, Message result) {
+        RadioImsProxy imsProxy = getRadioServiceProxy(RadioImsProxy.class);
+        if (!canMakeRequest("updateImsRegistrationInfo", imsProxy, result, RADIO_HAL_VERSION_2_5)) {
+            return;
+        }
+
+        RILRequest rr = obtainRequest(RIL_REQUEST_UPDATE_IMS_REGISTRATION_INFO, result,
+                mRILDefaultWorkSource);
+
+        if (RILJ_LOGD) {
+            riljLog(rr.serialString() + "> " + RILUtils.requestToString(rr.mRequest)
+                    + " state=" + state + ", radioTech=" + imsRadioTech
+                    + ", suggested=" + suggestedAction + ", cap=" + capabilities
+                    + ", throttlingTimeSec=" + throttlingTimeSec);
+        }
+
+        android.hardware.radio.ims.ImsRegistration registrationInfo =
+                new android.hardware.radio.ims.ImsRegistration();
+        registrationInfo.regState = RILUtils.convertImsRegistrationState(state);
+        registrationInfo.accessNetworkType = RILUtils.convertImsRegistrationTech(imsRadioTech);
+        registrationInfo.suggestedAction = suggestedAction;
+        registrationInfo.capabilities = RILUtils.convertImsCapability(capabilities);
+        registrationInfo.throttlingTimeSec = throttlingTimeSec;
+
+        radioServiceInvokeHelper(HAL_SERVICE_IMS, rr, "updateImsRegistrationInfo", () -> {
+            imsProxy.updateImsRegistrationInfo(rr.mSerial, registrationInfo);
+        });
+    }
+
+    @Override
     public void startImsTraffic(int token, int trafficType, int accessNetworkType,
             int trafficDirection, Message result) {
         RadioImsProxy imsProxy = getRadioServiceProxy(RadioImsProxy.class);
@@ -6440,6 +6477,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
             case 3: return RADIO_HAL_VERSION_2_2;
             case 4: return RADIO_HAL_VERSION_2_3;
             case 5: return RADIO_HAL_VERSION_2_4;
+            case 6: return RADIO_HAL_VERSION_2_5;
             default: return RADIO_HAL_VERSION_UNKNOWN;
         }
     }
