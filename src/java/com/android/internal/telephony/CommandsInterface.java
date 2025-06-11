@@ -2847,6 +2847,20 @@ public interface CommandsInterface {
             int capabilities, Message result) {}
 
     /**
+     * Updates the IMS registration information to the radio.
+     *
+     * @param state The current IMS registration state.
+     * @param imsRadioTech The type of underlying radio access network used.
+     * @param suggestedAction The suggested action for the radio to perform.
+     * @param capabilities IMS capabilities such as VOICE, VIDEO and SMS.
+     * @param throttlingTimeSec The registration throttling time in seconds.
+     */
+    default void updateImsRegistrationInfo(int state,
+            @ImsRegistrationImplBase.ImsRegistrationTech int imsRadioTech,
+            @RegistrationManager.SuggestedAction int suggestedAction,
+            int capabilities,  int throttlingTimeSec, Message result) {}
+
+    /**
      * Notifies the NAS and RRC layers of the radio the type of upcoming IMS traffic.
      *
      * @param token A nonce to identify the request.

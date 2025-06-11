@@ -189,7 +189,7 @@ public class SimulatedCommands extends BaseCommands
     // mode for Icc Sim Authentication
     private int mAuthenticationMode;
 
-    private int[] mImsRegistrationInfo = new int[4];
+    private int[] mImsRegistrationInfo = new int[5];
 
     private boolean mN1ModeEnabled = false;
     private boolean mVonrEnabled = false;
@@ -2503,6 +2503,16 @@ public class SimulatedCommands extends BaseCommands
         mImsRegistrationInfo[1] = imsRadioTech;
         mImsRegistrationInfo[2] = suggestedAction;
         mImsRegistrationInfo[3] = capabilities;
+    }
+
+    @Override
+    public void updateImsRegistrationInfo(int regState, int imsRadioTech, int suggestedAction,
+            int capabilities, int throttleTimeSec, Message result) {
+        mImsRegistrationInfo[0] = regState;
+        mImsRegistrationInfo[1] = imsRadioTech;
+        mImsRegistrationInfo[2] = suggestedAction;
+        mImsRegistrationInfo[3] = capabilities;
+        mImsRegistrationInfo[4] = throttleTimeSec;
     }
 
     public int[] getImsRegistrationInfo() {
