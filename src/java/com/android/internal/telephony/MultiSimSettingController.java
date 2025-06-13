@@ -90,9 +90,10 @@ public class MultiSimSettingController extends Handler {
     private static final int EVENT_SUBSCRIPTION_GROUP_CHANGED        = 5;
     private static final int EVENT_DEFAULT_DATA_SUBSCRIPTION_CHANGED = 6;
     @VisibleForTesting
-    public static final int EVENT_MULTI_SIM_CONFIG_CHANGED          = 8;
+    public static final int EVENT_MULTI_SIM_CONFIG_CHANGED           = 8;
     @VisibleForTesting
     public static final int EVENT_RADIO_STATE_CHANGED                = 9;
+    private static final int EVENT_PROVISIONED_CHANGED               = 10;
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef(prefix = {"PRIMARY_SUB_"},
@@ -128,6 +129,7 @@ public class MultiSimSettingController extends Handler {
 
     protected final Context mContext;
     private final SubscriptionManagerService mSubscriptionManagerService;
+    private final SettingsObserver mSettingsObserver;
     private final @NonNull FeatureFlags mFeatureFlags;
 
     // Keep a record of active primary (non-opportunistic) subscription list.
@@ -229,6 +231,7 @@ public class MultiSimSettingController extends Handler {
     public MultiSimSettingController(Context context, @NonNull FeatureFlags featureFlags) {
         mContext = context;
         mSubscriptionManagerService = SubscriptionManagerService.getInstance();
+        mSettingsObserver = new SettingsObserver(context, this);
         mFeatureFlags = featureFlags;
 
         // Initialize mCarrierConfigLoadedSubIds and register to listen to carrier config change.
@@ -242,6 +245,9 @@ public class MultiSimSettingController extends Handler {
 
         PhoneConfigurationManager.registerForMultiSimConfigChange(
                 this, EVENT_MULTI_SIM_CONFIG_CHANGED, null);
+
+        mSettingsObserver.observe(Settings.Global.getUriFor(Settings.Global.DEVICE_PROVISIONED),
+                EVENT_PROVISIONED_CHANGED);
 
         mIsAskEverytimeSupportedForSms = mContext.getResources()
                 .getBoolean(com.android.internal.R.bool.config_sms_ask_every_time_support);
@@ -368,6 +374,9 @@ public class MultiSimSettingController extends Handler {
                         break;
                     }
                 }
+                break;
+            case EVENT_PROVISIONED_CHANGED:
+                disableDataForNonDefaultNonOpportunisticSubscriptions();
                 break;
         }
     }
