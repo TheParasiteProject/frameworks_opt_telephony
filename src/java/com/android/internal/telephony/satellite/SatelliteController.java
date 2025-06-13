@@ -238,6 +238,8 @@ public class SatelliteController extends Handler {
     public static final int TIMEOUT_TYPE_EVALUATE_ESOS_PROFILES_PRIORITIZATION_DURATION_MILLIS = 4;
     /** This is used by CTS to override evaluate carrier roaming ntn eligibility change duration. */
     public static final int TIMEOUT_TYPE_EMERGENCY_CALL_MONITORING_DURATION_MILLIS = 5;
+    /** This is used by CTS to override last emergency call time. */
+    public static final int TIMEOUT_TYPE_LAST_EMERGENCY_CALL_TIME = 6;
     /** Key used to read/write OEM-enabled satellite provision status in shared preferences. */
     private static final String OEM_ENABLED_SATELLITE_PROVISION_STATUS_KEY =
             "oem_enabled_satellite_provision_status_key";
@@ -4222,6 +4224,12 @@ public class SatelliteController extends Handler {
             } else {
                 mEmergencyCallMonitoringDurationMillisForCtsTest.set(timeoutMillis);
             }
+        } else if (timeoutType == TIMEOUT_TYPE_LAST_EMERGENCY_CALL_TIME) {
+            if (reset) {
+                mLastEmergencyCallTime.set(0);
+            } else {
+                mLastEmergencyCallTime.set(timeoutMillis);
+            }
         } else {
             plogw("Invalid timeoutType=" + timeoutType);
             return false;
@@ -7933,7 +7941,10 @@ public class SatelliteController extends Handler {
      * Check if satellite is in emergency mode.
      */
     public boolean isInEmergencyMode() {
-        if (mLastEmergencyCallTime.get() == 0) return false;
+        if (mLastEmergencyCallTime.get() == 0) {
+            plogd("mLastEmergencyCallTime is 0, isInEmergencyMode() return false");
+            return false;
+        }
 
         long currentTime = getElapsedRealtime();
         if ((currentTime - mLastEmergencyCallTime.get())
@@ -7941,6 +7952,8 @@ public class SatelliteController extends Handler {
             plogd("Satellite is in emergency mode");
             return true;
         }
+
+        plogd("isInEmergencyMode() return false");
         return false;
     }
 
