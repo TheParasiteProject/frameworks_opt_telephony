@@ -1895,7 +1895,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_CARRIER_ROAMING_NB_IOT_NTN)
     public void testNotifyCarrierRoamingNtnEligibleStateChanged() {
         int subId = INVALID_SUBSCRIPTION_ID;
         doReturn(mMockSubInfo).when(mSubscriptionManager).getActiveSubscriptionInfo(anyInt());
@@ -1911,7 +1910,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_CARRIER_ROAMING_NB_IOT_NTN)
     public void testNotifyCarrierRoamingNtnAvailableServicesChanged() {
         int subId = INVALID_SUBSCRIPTION_ID;
         doReturn(mMockSubInfo).when(mSubscriptionManager).getActiveSubscriptionInfo(anyInt());
@@ -1959,7 +1957,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_CARRIER_ROAMING_NB_IOT_NTN)
     public void testNotifyCarrierRoamingNtnSignalStrengthChanged() {
         int subId = 2;
         doReturn(mMockSubInfo).when(mSubscriptionManager).getActiveSubscriptionInfo(anyInt());

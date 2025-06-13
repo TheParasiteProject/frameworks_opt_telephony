@@ -3376,7 +3376,6 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
     @SmallTest
     public void testShouldExitSatelliteModeWhenCarrierRoamingNbIotNtnEnabledAndNtnNonEmergency() {
         // carrierRoamingNbIotNtn feature enabled
-        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
         doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
         doReturn(false).when(mSatelliteController).isDemoModeEnabled();
         // NTN non-emergency session is in progress
@@ -3391,7 +3390,6 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
     @SmallTest
     public void testShouldExitSatelliteModeWhenNtnEmergency() {
         // carrierRoamingNbIotNtn feature enabled
-        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(true);
         doReturn(true).when(mSatelliteController).isSatelliteEnabledOrBeingEnabled();
         doReturn(false).when(mSatelliteController).isDemoModeEnabled();
         doReturn(true).when(mSatelliteController).getRequestIsEmergency();
@@ -3418,12 +3416,6 @@ public class EmergencyStateTrackerTest extends TelephonyTest {
         emergencyStateTracker.shouldExitSatelliteMode();
 
         verify(mSatelliteController).shouldTurnOffCarrierSatelliteForEmergencyCall();
-
-        // carrierRoamingNbIotNtn feature disabled
-        when(mFeatureFlags.carrierRoamingNbIotNtn()).thenReturn(false);
-
-        assertEquals(turnOffOemEnabledSatelliteDuringEmergencyCall,
-                emergencyStateTracker.shouldExitSatelliteMode());
     }
 
     /**
