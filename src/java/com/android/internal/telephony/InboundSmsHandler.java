@@ -1486,7 +1486,7 @@ public abstract class InboundSmsHandler extends StateMachine {
                 }
                 // Only pass in the resultReceiver when the MAIN user is processed.
                 sendBroadcast(intent, permission, appOp, opts,
-                        isMainUser(users[i]) ? resultReceiver : null, user);
+                        isMainUser(users[i]) ? resultReceiver : null, targetUser);
             }
         } else {
             resultReceiver.setWaitingForIntent(intent);
