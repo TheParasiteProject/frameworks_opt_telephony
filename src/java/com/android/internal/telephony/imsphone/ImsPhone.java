@@ -2475,9 +2475,7 @@ public class ImsPhone extends ImsPhoneBase {
 
         if (mCT.getState() == PhoneConstants.State.IDLE) {
             if (DBG) logd("updateRoamingState now: " + newRoamingState);
-            if (!mFeatureFlags.updateRoamingStateToSetWfcMode()) {
-                mLastKnownRoamingState = newRoamingState;
-            }
+
             CarrierConfigManager configManager = (CarrierConfigManager)
                     getContext().getSystemService(Context.CARRIER_CONFIG_SERVICE);
             // Don't set wfc mode if carrierconfig has not loaded. It will be set by GsmCdmaPhone
@@ -2486,9 +2484,7 @@ public class ImsPhone extends ImsPhoneBase {
                     configManager.getConfigForSubId(getSubId()))) {
                 ImsManager imsManager = mImsManagerFactory.create(mContext, mPhoneId);
                 imsManager.setWfcMode(imsManager.getWfcMode(newRoamingState), newRoamingState);
-                if (mFeatureFlags.updateRoamingStateToSetWfcMode()) {
-                    mLastKnownRoamingState = newRoamingState;
-                }
+                mLastKnownRoamingState = newRoamingState;
             }
         } else {
             if (DBG) logd("updateRoamingState postponed: " + newRoamingState);
