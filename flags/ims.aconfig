@@ -42,14 +42,6 @@ flag {
     bug:"290573256"
 }
 
-# OWNER=joonhunshin TARGET=24Q3
-flag {
-    name: "terminate_active_video_call_when_accepting_second_video_call_as_audio_only"
-    namespace: "telephony"
-    description: "This flag terminates active video call instead holding when accepting 2nd incoming video call as audio only"
-    bug:"309548300"
-}
-
 # OWNER=sewookseo TARGET=24Q3
 flag {
     name: "emergency_registration_state"
