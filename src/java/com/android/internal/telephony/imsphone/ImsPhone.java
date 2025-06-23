@@ -1001,16 +1001,9 @@ public class ImsPhone extends ImsPhoneBase {
         // Need to make sure dialString gets parsed properly
         String newDialString = PhoneNumberUtils.stripSeparators(dialString);
 
-        if (mFeatureFlags.skipMmiCodeCheckForEmergencyCall()) {
-            // If not emergency number, handle in-call MMI first if applicable
-            if (!dialArgs.isEmergency && handleInCallMmiCommands(newDialString)) {
-                return null;
-            }
-        } else {
-            // handle in-call MMI first if applicable
-            if (handleInCallMmiCommands(newDialString)) {
-                return null;
-            }
+        // If not emergency number, handle in-call MMI first if applicable
+        if (!dialArgs.isEmergency && handleInCallMmiCommands(newDialString)) {
+            return null;
         }
 
         ImsDialArgs.Builder imsDialArgsBuilder;
@@ -1022,12 +1015,10 @@ public class ImsPhone extends ImsPhoneBase {
             return mCT.dial(dialString, imsDialArgsBuilder.build());
         }
 
-        if (mFeatureFlags.skipMmiCodeCheckForEmergencyCall()) {
-            // Skip to check mmi code if outgoing call is emergency
-            if (dialArgs.isEmergency) {
-                logd("dialInternal: emergency number, skip to check mmi code");
-                return mCT.dial(dialString, imsDialArgsBuilder.build());
-            }
+        // Skip to check mmi code if outgoing call is emergency
+        if (dialArgs.isEmergency) {
+            logd("dialInternal: emergency number, skip to check mmi code");
+            return mCT.dial(dialString, imsDialArgsBuilder.build());
         }
 
         // Only look at the Network portion for mmi
@@ -2475,9 +2466,7 @@ public class ImsPhone extends ImsPhoneBase {
 
         if (mCT.getState() == PhoneConstants.State.IDLE) {
             if (DBG) logd("updateRoamingState now: " + newRoamingState);
-            if (!mFeatureFlags.updateRoamingStateToSetWfcMode()) {
-                mLastKnownRoamingState = newRoamingState;
-            }
+
             CarrierConfigManager configManager = (CarrierConfigManager)
                     getContext().getSystemService(Context.CARRIER_CONFIG_SERVICE);
             // Don't set wfc mode if carrierconfig has not loaded. It will be set by GsmCdmaPhone
@@ -2486,9 +2475,7 @@ public class ImsPhone extends ImsPhoneBase {
                     configManager.getConfigForSubId(getSubId()))) {
                 ImsManager imsManager = mImsManagerFactory.create(mContext, mPhoneId);
                 imsManager.setWfcMode(imsManager.getWfcMode(newRoamingState), newRoamingState);
-                if (mFeatureFlags.updateRoamingStateToSetWfcMode()) {
-                    mLastKnownRoamingState = newRoamingState;
-                }
+                mLastKnownRoamingState = newRoamingState;
             }
         } else {
             if (DBG) logd("updateRoamingState postponed: " + newRoamingState);
