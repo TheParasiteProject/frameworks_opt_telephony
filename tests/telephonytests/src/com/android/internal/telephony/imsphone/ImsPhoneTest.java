@@ -478,11 +478,6 @@ public class ImsPhoneTest extends TelephonyTest {
 
         Connection connection = mImsPhoneUT.dial(dialString, imsDialArgs);
         assertEquals(null, connection);
-        verify(mImsCT, never()).dial(eq(dialString), any(ImsPhone.ImsDialArgs.class));
-
-        doReturn(true).when(mFeatureFlags).skipMmiCodeCheckForEmergencyCall();
-
-        mImsPhoneUT.dial(dialString, imsDialArgs);
         verify(mImsCT).dial(eq(dialString), any(ImsPhone.ImsDialArgs.class));
     }
 
