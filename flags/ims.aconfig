@@ -53,14 +53,6 @@ flag {
 
 # OWNER=joonhunshin TARGET=24Q3
 flag {
-    name: "update_roaming_state_to_set_wfc_mode"
-    namespace: "telephony"
-    description: "This flag updates roaming state to set wfc mode"
-    bug:"317298331"
-}
-
-# OWNER=joonhunshin TARGET=24Q3
-flag {
     name: "answer_audio_only_when_answering_via_mmi_code"
     namespace: "telephony"
     description: "This flag changes the media type when answering incoming call via MMI code"

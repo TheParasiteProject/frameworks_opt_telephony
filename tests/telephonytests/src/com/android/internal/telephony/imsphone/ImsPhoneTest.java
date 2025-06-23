@@ -850,7 +850,6 @@ public class ImsPhoneTest extends TelephonyTest {
     @Test
     @SmallTest
     public void testSetWfcModeInRoaming() throws Exception {
-        doReturn(true).when(mFeatureFlags).updateRoamingStateToSetWfcMode();
         doReturn(PhoneConstants.State.IDLE).when(mImsCT).getState();
         doReturn(true).when(mPhone).isRadioOn();
 
