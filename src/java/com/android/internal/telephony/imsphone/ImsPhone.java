@@ -2522,13 +2522,9 @@ public class ImsPhone extends ImsPhoneBase {
                     imsTransportType);
 
             AsyncResult ar;
-            if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
-                ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
-                        attributes.getRegistrationTechnology(), REGISTRATION_STATE_REGISTERED),
-                        null);
-            } else {
-                ar = new AsyncResult(null, null, null);
-            }
+            ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                    attributes.getRegistrationTechnology(), REGISTRATION_STATE_REGISTERED),
+                    null);
             mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
         }
 
@@ -2547,13 +2543,9 @@ public class ImsPhone extends ImsPhoneBase {
             mImsStats.onImsRegistering(imsRadioTech);
 
             AsyncResult ar;
-            if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
-                ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
-                        imsRadioTech, REGISTRATION_STATE_REGISTERING),
-                        null);
-            } else {
-                ar = new AsyncResult(null, null, null);
-            }
+            ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                    imsRadioTech, REGISTRATION_STATE_REGISTERING),
+                    null);
             mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
         }
 
@@ -2603,13 +2595,9 @@ public class ImsPhone extends ImsPhoneBase {
                 }
 
                 AsyncResult ar;
-                if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
-                    ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
-                            REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
-                            null);
-                } else {
-                    ar = new AsyncResult(null, null, null);
-                }
+                ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                        REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
+                        null);
                 mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
             }
         }
@@ -2675,13 +2663,9 @@ public class ImsPhone extends ImsPhoneBase {
         }
 
         AsyncResult ar;
-        if (mFeatureFlags.changeMethodOfObtainingImsRegistrationRadioTech()) {
-            ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
-                    REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
-                    null);
-        } else {
-            ar = new AsyncResult(null, null, null);
-        }
+        ar = new AsyncResult(null, new ImsRegistrationRadioTechInfo(mPhoneId,
+                REGISTRATION_TECH_NONE, REGISTRATION_STATE_NOT_REGISTERED),
+                null);
         mImsRegistrationUpdateRegistrants.notifyRegistrants(ar);
     }
 
