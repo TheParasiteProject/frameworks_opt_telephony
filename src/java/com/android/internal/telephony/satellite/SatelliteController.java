@@ -1583,16 +1583,19 @@ public class SatelliteController extends Handler {
                                     getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                             .setIsDemoMode(mIsDemoModeEnabled.get())
                             .setCarrierId(getSatelliteCarrierId())
+                            .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                             .setIsEmergency(argument.isEmergency);
                     mSessionProcessingTimeStamp.set(0);
 
                     if (error == SATELLITE_RESULT_SUCCESS) {
                         mControllerMetricsStats.onSatelliteEnabled();
-                        mControllerMetricsStats.reportServiceEnablementSuccessCount();
+                        mControllerMetricsStats.reportServiceEnablementSuccessCount(
+                                argument.enableDemoMode);
                     } else {
                         mSessionMetricsStats.reportSessionMetrics();
                         mSessionStartTimeStamp.set(0);
-                        mControllerMetricsStats.reportServiceEnablementFailCount();
+                        mControllerMetricsStats.reportServiceEnablementFailCount(
+                                argument.enableDemoMode);
                     }
                 } else {
                     mSessionMetricsStats.setTerminationResult(error)
@@ -2972,9 +2975,8 @@ public class SatelliteController extends Handler {
             if (resultCode != SatelliteManager.SATELLITE_RESULT_SUCCESS) {
                 plogd("requestSatelliteEnabled enable satellite is already in progress.");
             }
-            sendErrorAndReportSessionMetrics(resultCode, result);
+            result.accept(resultCode);
         }
-        return;
     }
 
     /**
@@ -7382,13 +7384,14 @@ public class SatelliteController extends Handler {
                 sendRequestAsync(CMD_SET_SATELLITE_ENABLED, request, null);
             }
 
-            mControllerMetricsStats.reportServiceEnablementFailCount();
+            mControllerMetricsStats.reportServiceEnablementFailCount(argument.enableDemoMode);
             mSessionMetricsStats.setInitializationResult(SATELLITE_RESULT_MODEM_TIMEOUT)
                     .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                     .setInitializationProcessingTime(
                             getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                     .setIsDemoMode(mIsDemoModeEnabled.get())
                     .setCarrierId(getSatelliteCarrierId())
+                    .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                     .reportSessionMetrics();
         } else {
             resetSatelliteDisabledRequest();
@@ -8423,13 +8426,7 @@ public class SatelliteController extends Handler {
 
         setSatellitePhone(selectedSubId);
         if (selectedSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-            int carrierId = getSatelliteCarrierId();
-            if (carrierId != UNKNOWN_CARRIER_ID) {
-                mControllerMetricsStats.setCarrierId(carrierId);
-            } else {
-                logd("selectBindingSatelliteSubscription: Carrier ID is UNKNOWN_CARRIER_ID");
-            }
-            mControllerMetricsStats.setIsNtnOnlyCarrier(isNtnOnlyCarrier());
+            mControllerMetricsStats.setCarrierIdInfo(getSatelliteCarrierId(), isNtnOnlyCarrier());
         }
         plogd("selectBindingSatelliteSubscription: SelectedSatelliteSubId=" + selectedSubId);
     }
