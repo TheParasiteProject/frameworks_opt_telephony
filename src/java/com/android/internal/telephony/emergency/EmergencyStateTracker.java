@@ -2424,30 +2424,25 @@ public class EmergencyStateTracker {
         if (satelliteController.isDemoModeEnabled()) {
             // If user makes emergency call in demo mode, end the satellite session
             return true;
-        } else if (mFeatureFlags.carrierRoamingNbIotNtn()
-                && !satelliteController.getRequestIsEmergency()) {
+        } else if (!satelliteController.getRequestIsEmergency()) {
             // If satellite is not for emergency, end the satellite session
             return true;
         } else { // satellite is for emergency
-            if (mFeatureFlags.carrierRoamingNbIotNtn()) {
-                int subId = satelliteController.getSelectedSatelliteSubId();
-                SubscriptionInfoInternal info = SubscriptionManagerService.getInstance()
-                        .getSubscriptionInfoInternal(subId);
-                if (info == null) {
-                    Rlog.e(TAG, "satellite is/being enabled, but satellite sub "
-                            + subId + " is null");
-                    return false;
-                }
+            int subId = satelliteController.getSelectedSatelliteSubId();
+            SubscriptionInfoInternal info = SubscriptionManagerService.getInstance()
+                    .getSubscriptionInfoInternal(subId);
+            if (info == null) {
+                Rlog.e(TAG, "satellite is/being enabled, but satellite sub "
+                        + subId + " is null");
+                return false;
+            }
 
-                if (info.getOnlyNonTerrestrialNetwork() == 1) {
-                    // OEM
-                    return mTurnOffOemEnabledSatelliteDuringEmergencyCall;
-                } else {
-                    // Carrier
-                    return satelliteController.shouldTurnOffCarrierSatelliteForEmergencyCall();
-                }
-            } else {
+            if (info.getOnlyNonTerrestrialNetwork() == 1) {
+                // OEM
                 return mTurnOffOemEnabledSatelliteDuringEmergencyCall;
+            } else {
+                // Carrier
+                return satelliteController.shouldTurnOffCarrierSatelliteForEmergencyCall();
             }
         }
     }
