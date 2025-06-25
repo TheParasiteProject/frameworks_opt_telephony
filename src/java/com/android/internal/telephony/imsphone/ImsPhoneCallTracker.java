@@ -2927,16 +2927,14 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
         ImsPhoneConnection conn = findConnection(imsCall);
         boolean rejectCall = false;
 
-        if (mFeatureFlags.preventHangupDuringCallMerge()) {
-            if (imsCall != null && imsCall.isCallSessionMergePending()) {
-                if (DBG) log("hangup call failed during call merge");
-                // Notify Telecom that the disconnect failed due to an ongoing call merge.
-                if (conn != null && mTelecomFlags.revertDisconnectingDuringMerge()) {
-                    conn.onConnectionEvent(android.telecom.Connection.EVENT_DISCONNECT_FAILED,
-                            null);
-                }
-                throw new CallStateException("can not hangup during call merge");
+        if (imsCall != null && imsCall.isCallSessionMergePending()) {
+            if (DBG) log("hangup call failed during call merge");
+            // Notify Telecom that the disconnect failed due to an ongoing call merge.
+            if (conn != null && mTelecomFlags.revertDisconnectingDuringMerge()) {
+                conn.onConnectionEvent(android.telecom.Connection.EVENT_DISCONNECT_FAILED,
+                        null);
             }
+            throw new CallStateException("can not hangup during call merge");
         }
 
         String logResult = "(undefined)";

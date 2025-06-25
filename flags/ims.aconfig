@@ -43,17 +43,6 @@ flag {
     bug:"312101946"
 }
 
-# OWNER=joonhunshin TARGET=24Q4
-flag {
-    name: "prevent_hangup_during_call_merge"
-    namespace: "telephony"
-    description: "This flag prevents hangup call during call merge"
-    bug:"317070933"
-    metadata {
-        purpose: PURPOSE_BUGFIX
-    }
-}
-
 # OWNER=breadley TARGET=25Q1
 flag {
     name: "ims_resolver_user_aware"
