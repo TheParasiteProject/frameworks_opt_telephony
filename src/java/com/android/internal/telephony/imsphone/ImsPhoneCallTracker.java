@@ -377,7 +377,13 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
 
                 updatePhoneState();
                 mPhone.notifyPreciseCallStateChanged();
-                mImsCallInfoTracker.addImsCallStatus(conn);
+
+                // Do not add auto-rejected incoming calls, which are already disconnected, in order
+                // to prevent unnecessary notification to the modem.
+                if (!conn.isIncomingCallAutoRejected()) {
+                    mImsCallInfoTracker.addImsCallStatus(conn);
+                }
+
                 return iimsCallSessionListener;
             } catch (ImsException | RemoteException e) {
                 loge("processIncomingCall: exception " + e);
@@ -3501,6 +3507,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
             case ImsReasonInfo.CODE_REJECT_ONGOING_CONFERENCE_CALL:
             case ImsReasonInfo.CODE_REJECT_ONGOING_HANDOVER:
             case ImsReasonInfo.CODE_REJECT_ONGOING_CALL_UPGRADE:
+            case ImsReasonInfo.CODE_REJECT_ONGOING_CS_CALL:
                 return DisconnectCause.INCOMING_AUTO_REJECTED;
 
             default:
