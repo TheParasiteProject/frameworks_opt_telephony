@@ -116,3 +116,14 @@ flag {
         purpose: PURPOSE_BUGFIX
     }
 }
+
+# OWNER=gpiecyk TARGET=25Q4
+flag {
+    name: "enable_rtt_hold_carrier_config"
+    namespace: "telephony"
+    description: "This flag controls the availability and functionality of the KEY_ALLOW_HOLD_IN_RTT_CALL_BOOL carrier config."
+    bug: "413765645"
+    metadata {
+        purpose: PURPOSE_FEATURE
+    }
+}
