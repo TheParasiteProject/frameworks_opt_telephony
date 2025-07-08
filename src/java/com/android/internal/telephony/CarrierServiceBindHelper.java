@@ -34,7 +34,6 @@ import android.os.Handler;
 import android.os.HandlerExecutor;
 import android.os.IBinder;
 import android.os.Message;
-import android.os.Process;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.service.carrier.CarrierService;
@@ -164,10 +163,7 @@ public class CarrierServiceBindHelper {
 
     public CarrierServiceBindHelper(Context context) {
         mContext =
-                context.createContextAsUser(
-                        Flags.supportCarrierServicesForHsum()
-                        ? UserHandle.of(ActivityManager.getCurrentUser())
-                        : Process.myUserHandle(), 0);
+                context.createContextAsUser(UserHandle.of(ActivityManager.getCurrentUser()), 0);
 
         updateBindingsAndSimStates();
 
@@ -178,7 +174,7 @@ public class CarrierServiceBindHelper {
                 context, mHandler.getLooper(), UserHandle.ALL);
         try {
             Context contextAsUser = mContext.createPackageContextAsUser(mContext.getPackageName(),
-                0, Flags.supportCarrierServicesForHsum() ? UserHandle.CURRENT : UserHandle.SYSTEM);
+                    0, UserHandle.CURRENT);
             contextAsUser.registerReceiver(mUserUnlockedReceiver,
                 new IntentFilter(Intent.ACTION_USER_UNLOCKED), null /* broadcastPermission */,
                 mHandler);
