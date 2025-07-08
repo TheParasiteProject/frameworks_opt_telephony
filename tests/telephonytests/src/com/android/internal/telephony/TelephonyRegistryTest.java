@@ -1970,7 +1970,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_SATELLITE_STATE_CHANGE_LISTENER)
     public void testNotifySatelliteStateChanged_onRegistration_getNotified() {
         MySatelliteStateChangeListener listener = new MySatelliteStateChangeListener();
         // Set initial satellite enabled state to true
@@ -1992,7 +1991,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_SATELLITE_STATE_CHANGE_LISTENER)
     public void testNotifySatelliteStateChanged_duringRegistration_getNotified() {
         MySatelliteStateChangeListener listener = new MySatelliteStateChangeListener();
         // Set initial satellite enabled state to true
@@ -2016,7 +2014,6 @@ public class TelephonyRegistryTest extends TelephonyTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_SATELLITE_STATE_CHANGE_LISTENER)
     public void testNotifySatelliteStateChanged_removeRegistration_notNotified() {
         MySatelliteStateChangeListener listener = new MySatelliteStateChangeListener();
         // Set initial satellite enabled state to true
