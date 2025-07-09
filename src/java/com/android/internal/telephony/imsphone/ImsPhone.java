@@ -81,6 +81,8 @@ import android.telecom.VideoProfile;
 import android.telephony.AccessNetworkConstants;
 import android.telephony.CarrierConfigManager;
 import android.telephony.NetworkRegistrationInfo;
+import android.telephony.ParsedPhoneNumber;
+import android.telephony.PhoneNumberManager;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionManager;
@@ -328,6 +330,7 @@ public class ImsPhone extends ImsPhoneBase {
     private @AccessNetworkConstants.TransportType int mTransportType = TRANSPORT_TYPE_INVALID;
     private int mImsRegistrationCapabilities;
     private boolean mNotifiedRegisteredState;
+    private PhoneNumberManager mPhoneNumberManager = null;
 
     // A runnable which is used to automatically exit from Ecm after a period of time.
     private Runnable mExitEcmRunnable = new Runnable() {
@@ -2707,6 +2710,29 @@ public class ImsPhone extends ImsPhoneBase {
             return;
         }
         String subCountryIso = subInfo.getCountryIso();
+        if (mFeatureFlags.enablePhoneNumberParsingApi()) {
+            PhoneNumberManager phoneNumberManager = getPhoneNumberManager();
+            if (phoneNumberManager != null) {
+                ParsedPhoneNumber result = phoneNumberManager.parsePhoneNumber(
+                        Arrays.asList(uris),
+                        subCountryIso);
+                if (result.isValidPhoneNumber()) {
+                    mSubscriptionManagerService.setNumberFromIms(subId,
+                            result.getParsedPhoneNumber());
+                    logd("setPhoneNumberForSourceIms: update IMS phone number");
+                    return;
+                } else {
+                    loge("setPhoneNumberForSourceIms: PhoneNumberManager return error "
+                            + result.getErrorCode());
+                    // try to run existing implementation.
+                }
+            } else {
+                logi("setPhoneNumberForSourceIms: can't access PhoneNumberManager");
+            }
+        }
+
+        // When flag enablePhoneNumberParsingApi is not enabled, PhoneNumberManager is unavailable
+        // or parsePhoneNumber() return error, existing implementation is performed.
         String phoneNumber = extractPhoneNumberFromAssociatedUris(uris, /*isGlobalFormat*/true);
         if (phoneNumber != null) {
             phoneNumber = PhoneNumberUtils.formatNumberToE164(phoneNumber, subCountryIso);
@@ -2728,6 +2754,29 @@ public class ImsPhone extends ImsPhoneBase {
         } else {
             logd("extract phone number failed");
         }
+    }
+
+    private PhoneNumberManager getPhoneNumberManager() {
+        if (mPhoneNumberManager == null) {
+            try {
+                mPhoneNumberManager = mContext.getSystemService(PhoneNumberManager.class);
+            } catch (UnsupportedOperationException e) {
+                logd("getPhoneNumberManager: can't access PhoneNumberManager");
+                mPhoneNumberManager = null;
+            }
+        }
+
+        return mPhoneNumberManager;
+    }
+
+    /**
+     * Set PhoneNumberMnager object for testing.
+     *
+     * @param phoneNumberManager PhoneNumberManager object for testing.
+     */
+    @VisibleForTesting
+    public void setPhoneNumberManager(PhoneNumberManager phoneNumberManager) {
+        mPhoneNumberManager = phoneNumberManager;
     }
 
     /**
