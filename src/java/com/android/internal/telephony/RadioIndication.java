@@ -23,7 +23,6 @@ import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CARRIER_INFO
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_CALL_WAITING;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_INFO_REC;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_OTA_PROVISION_STATUS;
-import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_PRL_CHANGED;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_RUIM_SMS_STORAGE_FULL;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CELL_INFO_LIST;
@@ -737,15 +736,6 @@ public class RadioIndication extends IRadioIndication.Stub {
     }
 
     public void cdmaPrlChanged(int indicationType, int version) {
-        mRil.processIndication(HAL_SERVICE_RADIO, indicationType);
-
-        int response[] = new int[1];
-        response[0] = version;
-
-        if (mRil.isLogOrTrace()) mRil.unsljLogRet(RIL_UNSOL_CDMA_PRL_CHANGED, response);
-
-        mRil.mCdmaPrlChangedRegistrants.notifyRegistrants(
-                new AsyncResult (null, response, null));
     }
 
     public void exitEmergencyCallbackMode(int indicationType) {

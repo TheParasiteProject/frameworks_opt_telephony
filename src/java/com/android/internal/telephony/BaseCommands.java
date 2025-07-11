@@ -85,8 +85,6 @@ public abstract class BaseCommands implements CommandsInterface {
     @UnsupportedAppUsage
     protected RegistrantList mCdmaSubscriptionChangedRegistrants = new RegistrantList();
     @UnsupportedAppUsage
-    protected RegistrantList mCdmaPrlChangedRegistrants = new RegistrantList();
-    @UnsupportedAppUsage
     protected RegistrantList mExitEmergencyCallbackModeRegistrants = new RegistrantList();
     protected RegistrantList mRilConnectedRegistrants = new RegistrantList();
     @UnsupportedAppUsage
@@ -768,16 +766,6 @@ public abstract class BaseCommands implements CommandsInterface {
     @Override
     public void unregisterForCdmaSubscriptionChanged(Handler h) {
         mCdmaSubscriptionChangedRegistrants.remove(h);
-    }
-
-    @Override
-    public void registerForCdmaPrlChanged(Handler h, int what, Object obj) {
-        mCdmaPrlChangedRegistrants.addUnique(h, what, obj);
-    }
-
-    @Override
-    public void unregisterForCdmaPrlChanged(Handler h) {
-        mCdmaPrlChangedRegistrants.remove(h);
     }
 
     @Override

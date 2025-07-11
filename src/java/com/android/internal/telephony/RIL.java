@@ -3817,18 +3817,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
-    public void nvReadItem(int itemID, Message result, WorkSource workSource) {
-    }
-
-    @Override
-    public void nvWriteItem(int itemId, String itemValue, Message result, WorkSource workSource) {
-    }
-
-    @Override
-    public void nvWriteCdmaPrl(byte[] preferredRoamingList, Message result) {
-    }
-
-    @Override
     public void nvResetConfig(int resetType, Message result) {
         // Disable all NV reset functions except modem restart.
         if (resetType != 1) return;

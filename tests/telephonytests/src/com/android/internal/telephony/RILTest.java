@@ -58,9 +58,7 @@ import static com.android.internal.telephony.RILConstants.RIL_REQUEST_HANGUP_FOR
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_HANGUP_WAITING_OR_BACKGROUND;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_IMS_SEND_SMS;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_LAST_CALL_FAIL_CAUSE;
-import static com.android.internal.telephony.RILConstants.RIL_REQUEST_NV_READ_ITEM;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_NV_RESET_CONFIG;
-import static com.android.internal.telephony.RILConstants.RIL_REQUEST_NV_WRITE_ITEM;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_OPERATOR;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_RADIO_POWER;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_REPORT_SMS_MEMORY_STATUS;
@@ -94,9 +92,9 @@ import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
@@ -114,7 +112,6 @@ import android.hardware.radio.V1_0.Carrier;
 import android.hardware.radio.V1_0.CdmaSmsMessage;
 import android.hardware.radio.V1_0.GsmSmsMessage;
 import android.hardware.radio.V1_0.ImsSmsMessage;
-import android.hardware.radio.V1_0.NvWriteItem;
 import android.hardware.radio.V1_0.RadioError;
 import android.hardware.radio.V1_0.RadioResponseInfo;
 import android.hardware.radio.V1_0.RadioResponseType;
@@ -1237,30 +1234,6 @@ public class RILTest extends TelephonyTest {
         verify(mRadioProxy).iccCloseLogicalChannel(mSerialNumberCaptor.capture(), eq(channel));
         verifyRILResponse(
                 mRILUnderTest, mSerialNumberCaptor.getValue(), RIL_REQUEST_SIM_CLOSE_CHANNEL);
-    }
-
-    @FlakyTest
-    @Test
-    public void testNvWriteItem() throws Exception {
-        int itemId = 1;
-        String itemValue = "value";
-        mRILUnderTest.nvWriteItem(itemId, itemValue, obtainMessage(), new WorkSource());
-        NvWriteItem item = new NvWriteItem();
-        item.itemId = itemId;
-        item.value = itemValue;
-        verify(mRadioProxy).nvWriteItem(mSerialNumberCaptor.capture(), eq(item));
-        verifyRILResponse(
-                mRILUnderTest, mSerialNumberCaptor.getValue(), RIL_REQUEST_NV_WRITE_ITEM);
-    }
-
-    @FlakyTest
-    @Test
-    public void testNvReadItem() throws Exception {
-        int itemId = 1;
-        mRILUnderTest.nvReadItem(itemId, obtainMessage(), new WorkSource());
-        verify(mRadioProxy).nvReadItem(mSerialNumberCaptor.capture(), eq(itemId));
-        verifyRILResponse(
-                mRILUnderTest, mSerialNumberCaptor.getValue(), RIL_REQUEST_NV_READ_ITEM);
     }
 
     @FlakyTest

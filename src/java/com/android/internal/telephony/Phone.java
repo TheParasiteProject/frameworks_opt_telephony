@@ -2766,40 +2766,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Read one of the NV items defined in {@link RadioNVItems} / {@code ril_nv_items.h}.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param itemID the ID of the item to read
-     * @param response callback message with the String response in the obj field
-     * @param workSource calling WorkSource
-     */
-    public void nvReadItem(int itemID, Message response, WorkSource workSource) {
-    }
-
-    /**
-     * Write one of the NV items defined in {@link RadioNVItems} / {@code ril_nv_items.h}.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param itemID the ID of the item to read
-     * @param itemValue the value to write, as a String
-     * @param response Callback message.
-     * @param workSource calling WorkSource
-     */
-    public void nvWriteItem(int itemID, String itemValue, Message response,
-            WorkSource workSource) {
-    }
-
-    /**
-     * Update the CDMA Preferred Roaming List (PRL) in the radio NV storage.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param preferredRoamingList byte array containing the new PRL
-     * @param response Callback message.
-     */
-    public void nvWriteCdmaPrl(byte[] preferredRoamingList, Message response) {
-    }
-
-    /**
      * Perform the radio modem reboot. The radio will be taken offline. Used for device
      * configuration by some CDMA operators.
      *
@@ -2807,23 +2773,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void rebootModem(Message response) {
         mCi.nvResetConfig(1/* 1: reload NV reset, trigger a modem reboot */, response);
-    }
-
-    /**
-     * Perform the modem configuration reset. Used for device configuration by some CDMA operators.
-     * TODO: reuse nvResetConfig for now, should move to separate HAL API.
-     *
-     * @param response Callback message.
-     */
-    public void resetModemConfig(Message response) {
-    }
-
-    /**
-     * Perform modem configuration erase. Used for network reset
-     *
-     * @param response Callback message.
-     */
-    public void eraseModemConfig(Message response) {
     }
 
     /**
@@ -3233,13 +3182,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public boolean isMinInfoReady() {
         return false;
-    }
-
-    /**
-     *  Retrieves PRL Version for CDMA phones
-     */
-    public String getCdmaPrlVersion(){
-        return null;
     }
 
     /**

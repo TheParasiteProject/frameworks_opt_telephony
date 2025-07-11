@@ -2322,11 +2322,6 @@ public class GsmCdmaPhone extends Phone {
     }
 
     @Override
-    public String getCdmaPrlVersion() {
-        return mSST.getPrlVersion();
-    }
-
-    @Override
     public String getCdmaMin() {
         return mSST.getCdmaMin();
     }

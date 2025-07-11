@@ -269,7 +269,6 @@ public class ServiceStateTracker extends Handler {
     protected static final int EVENT_OTA_PROVISION_STATUS_CHANGE       = 37;
     protected static final int EVENT_SET_RADIO_POWER_OFF               = 38;
     protected static final int EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED  = 39;
-    protected static final int EVENT_CDMA_PRL_VERSION_CHANGED          = 40;
 
     protected static final int EVENT_RADIO_ON                          = 41;
     public    static final int EVENT_ICC_CHANGED                       = 42;
@@ -593,7 +592,6 @@ public class ServiceStateTracker extends Handler {
     private int mHomeSystemId[] = null;
     private int mHomeNetworkId[] = null;
     private String mMin;
-    private String mPrlVersion;
     private boolean mIsMinInfoReady = false;
     private boolean mIsEriTextLoaded = false;
     private String mEriText;
@@ -885,7 +883,6 @@ public class ServiceStateTracker extends Handler {
         mReportedGprsNoReg = false;
         mMdn = null;
         mMin = null;
-        mPrlVersion = null;
         mIsMinInfoReady = false;
         mLastNitzData = null;
         mNitzState.handleNetworkUnavailable();
@@ -903,7 +900,6 @@ public class ServiceStateTracker extends Handler {
             }
 
             if (!mFeatureFlags.phoneTypeCleanup()) {
-                mCi.unregisterForCdmaPrlChanged(this);
                 mCi.unregisterForCdmaOtaProvision(this);
             }
             mPhone.unregisterForSimRecordsLoaded(this);
@@ -917,7 +913,6 @@ public class ServiceStateTracker extends Handler {
                 mIsSubscriptionFromRuim = mCdmaSSM.getCdmaSubscriptionSource()
                         == CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_RUIM;
 
-                mCi.registerForCdmaPrlChanged(this, EVENT_CDMA_PRL_VERSION_CHANGED, null);
                 mCi.registerForCdmaOtaProvision(this, EVENT_OTA_PROVISION_STATUS_CHANGE, null);
             }
 
@@ -1693,10 +1688,8 @@ public class ServiceStateTracker extends Handler {
                             parseSidNid(cdmaSubscription[1], cdmaSubscription[2]);
 
                             mMin = cdmaSubscription[3];
-                            mPrlVersion = cdmaSubscription[4];
                             if (DBG) log("GET_CDMA_SUBSCRIPTION: MDN=" + mMdn);
 
-                            mIsMinInfoReady = true;
 
                             updateOtaspState();
                             // Notify apps subscription info is ready
@@ -1742,8 +1735,6 @@ public class ServiceStateTracker extends Handler {
                             if (ruim.isProvisioned()) {
                                 mMin = ruim.getMin();
                                 parseSidNid(ruim.getSid(), ruim.getNid());
-                                mPrlVersion = ruim.getPrlVersion();
-                                mIsMinInfoReady = true;
                             }
                             updateOtaspState();
                             // Notify apps subscription info is ready
@@ -1766,14 +1757,6 @@ public class ServiceStateTracker extends Handler {
                         if (DBG) log("EVENT_OTA_PROVISION_STATUS_CHANGE: Complete, Reload MDN");
                         mCi.getCDMASubscription( obtainMessage(EVENT_POLL_STATE_CDMA_SUBSCRIPTION));
                     }
-                }
-                break;
-
-            case EVENT_CDMA_PRL_VERSION_CHANGED:
-                ar = (AsyncResult)msg.obj;
-                if (ar.exception == null) {
-                    ints = (int[]) ar.result;
-                    mPrlVersion = Integer.toString(ints[0]);
                 }
                 break;
 
@@ -1931,11 +1914,6 @@ public class ServiceStateTracker extends Handler {
 
     public String getCdmaMin() {
         return mMin;
-    }
-
-    /** Returns null if NV is not yet ready */
-    public String getPrlVersion() {
-        return mPrlVersion;
     }
 
     /**
@@ -2149,9 +2127,6 @@ public class ServiceStateTracker extends Handler {
                 mNewSS.setCdmaDefaultRoamingIndicator(mDefaultRoamingIndicator);
                 mNewSS.setCdmaRoamingIndicator(mRoamingIndicator);
                 boolean isPrlLoaded = true;
-                if (TextUtils.isEmpty(mPrlVersion)) {
-                    isPrlLoaded = false;
-                }
                 if (!isPrlLoaded || (mNewSS.getRilVoiceRadioTechnology()
                         == ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN)) {
                     log("Turn off roaming indicator if !isPrlLoaded or voice RAT is unknown");
@@ -5512,7 +5487,6 @@ public class ServiceStateTracker extends Handler {
         pw.println(" mHomeSystemId=" + Arrays.toString(mHomeSystemId));
         pw.println(" mHomeNetworkId=" + Arrays.toString(mHomeNetworkId));
         pw.println(" mMin=" + mMin);
-        pw.println(" mPrlVersion=" + mPrlVersion);
         pw.println(" mIsMinInfoReady=" + mIsMinInfoReady);
         pw.println(" mIsEriTextLoaded=" + mIsEriTextLoaded);
         pw.println(" mIsSubscriptionFromRuim=" + mIsSubscriptionFromRuim);
