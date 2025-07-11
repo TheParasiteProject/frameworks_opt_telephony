@@ -31,6 +31,8 @@ import com.android.telephony.Rlog;
  */
 public class TelephonyCapabilities {
     private static final String LOG_TAG = "TelephonyCapabilities";
+    private static final int VENDOR_API_LEVEL = SystemProperties.getInt(
+            "ro.vendor.api_level", Build.VERSION.DEVICE_INITIAL_SDK_INT);
 
     /** This class is never instantiated. */
     private TelephonyCapabilities() {
@@ -101,11 +103,9 @@ public class TelephonyCapabilities {
     /**
      * Returns true if Calling/Data/Messaging features should be checked on this device.
      */
-    public static boolean minimalTelephonyCdmCheck(@NonNull FeatureFlags featureFlags) {
+    private static boolean minimalTelephonyCdmCheck(@NonNull FeatureFlags featureFlags) {
         // Check SDK version of the vendor partition.
-        final int vendorApiLevel = SystemProperties.getInt(
-                "ro.vendor.api_level", Build.VERSION.DEVICE_INITIAL_SDK_INT);
-        return vendorApiLevel >= Build.VERSION_CODES.VANILLA_ICE_CREAM;
+        return VENDOR_API_LEVEL >= Build.VERSION_CODES.VANILLA_ICE_CREAM;
     }
 
     /**
@@ -126,5 +126,15 @@ public class TelephonyCapabilities {
         if (!TelephonyCapabilities.minimalTelephonyCdmCheck(featureFlags)) return true;
         return context.getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_TELEPHONY_MESSAGING);
+    }
+
+    /**
+     * @return true if this device supports telephony data, false if it does not.
+     */
+    public static boolean supportsTelephonyData(@NonNull FeatureFlags featureFlags,
+            Context context) {
+        if (!TelephonyCapabilities.minimalTelephonyCdmCheck(featureFlags)) return true;
+        return context.getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_TELEPHONY_DATA);
     }
 }
