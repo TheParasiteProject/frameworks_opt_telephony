@@ -1225,6 +1225,14 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForDisplayNetworkTypeChanged(Handler h) {
+    }
+
+    @Override
+    public void registerForDisplayNetworkTypeChanged(Handler h, int what, Object obj) {
+    }
+
+    @Override
     public void setInitialAttachApn(DataProfile dataProfile, Message result) {
 
     }

@@ -121,6 +121,7 @@ public abstract class BaseCommands implements CommandsInterface {
     protected RegistrantList mImeiInfoRegistrants = new RegistrantList();
     protected RegistrantList mCellularIdentifierDisclosedRegistrants = new RegistrantList();
     protected RegistrantList mSecurityAlgorithmUpdatedRegistrants = new RegistrantList();
+    protected RegistrantList mDisplayNetworkTypeChangedRegistrants = new RegistrantList();
 
     @UnsupportedAppUsage
     protected Registrant mGsmSmsRegistrant;
@@ -948,6 +949,16 @@ public abstract class BaseCommands implements CommandsInterface {
     @Override
     public void registerForSrvccStateChanged(Handler h, int what, Object obj) {
         mSrvccStateRegistrants.addUnique(h, what, obj);
+    }
+
+    @Override
+    public void unregisterForDisplayNetworkTypeChanged(Handler h) {
+        mDisplayNetworkTypeChangedRegistrants.remove(h);
+    }
+
+    @Override
+    public void registerForDisplayNetworkTypeChanged(Handler h, int what, Object obj) {
+        mDisplayNetworkTypeChangedRegistrants.addUnique(h, what, obj);
     }
 
     @Override
