@@ -1995,6 +1995,16 @@ public interface CommandsInterface {
     void unregisterForPhysicalChannelConfiguration(Handler h);
 
     /**
+     * Fires when the display network type changes.
+     */
+    void registerForDisplayNetworkTypeChanged(Handler h, int what, Object obj);
+
+    /**
+     * Unregisters the handler for display network type updates.
+     */
+    void unregisterForDisplayNetworkTypeChanged(Handler h);
+
+    /**
      * Set Initial Attach Apn
      *
      * @param dataProfile
