@@ -1639,7 +1639,7 @@ public abstract class InboundSmsHandler extends StateMachine {
     @SuppressLint("MissingPermission")
     private void sendBroadcastToTrustedPackages(Intent intent, String permission,
             String appOp, Bundle opts, SmsBroadcastReceiver resultReceiver, UserHandle user) {
-        Set<String> trustedPackages = SmsManager.getSmsOtpTrustedPackages(mContext);
+        Set<String> trustedPackages = SmsManager.getSmsOtpTrustedPackages(mContext, user);
         final String[] trustedPackagesArray = new String[trustedPackages.size()];
         int i = 0;
         for (String trusted: trustedPackages) {
