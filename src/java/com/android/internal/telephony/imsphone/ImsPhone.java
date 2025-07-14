@@ -2423,16 +2423,6 @@ public class ImsPhone extends ImsPhoneBase {
         return mCT.isUtEnabled();
     }
 
-    @Override
-    public void sendEmergencyCallStateChange(boolean callActive) {
-        mDefaultPhone.sendEmergencyCallStateChange(callActive);
-    }
-
-    @Override
-    public void setBroadcastEmergencyCallStateChanges(boolean broadcast) {
-        mDefaultPhone.setBroadcastEmergencyCallStateChanges(broadcast);
-    }
-
     @VisibleForTesting
     public PowerManager.WakeLock getWakeLock() {
         return mWakeLock;

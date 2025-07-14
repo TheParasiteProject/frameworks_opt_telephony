@@ -566,16 +566,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void registerForCdmaSubscriptionChanged(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForCdmaSubscriptionChanged(Handler h) {
-
-    }
-
-    @Override
     public void registerForExitEmergencyCallbackMode(Handler h, int what, Object obj) {
 
     }
@@ -1105,16 +1095,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void getCDMASubscription(Message response) {
-
-    }
-
-    @Override
-    public void sendCDMAFeatureCode(String featureCode, Message response) {
-
-    }
-
-    @Override
     public void setPhoneType(int phoneType) {
 
     }
@@ -1126,16 +1106,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
-
-    }
-
-    @Override
-    public void setCdmaSubscriptionSource(int cdmaSubscriptionType, Message response) {
-
-    }
-
-    @Override
-    public void getCdmaSubscriptionSource(Message response) {
 
     }
 

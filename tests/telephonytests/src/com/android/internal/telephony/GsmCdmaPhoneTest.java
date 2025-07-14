@@ -370,9 +370,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
 
         // Ensure the phone type is GSM
         GsmCdmaPhone spyPhone = spy(mPhoneUT);
-        doReturn(false).when(spyPhone).isPhoneTypeCdma();
-        doReturn(false).when(spyPhone).isPhoneTypeCdmaLte();
-        doReturn(true).when(spyPhone).isPhoneTypeGsm();
 
         assertEquals(subscriberId, spyPhone.getSubscriberId());
     }

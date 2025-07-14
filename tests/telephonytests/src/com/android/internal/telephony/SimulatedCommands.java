@@ -1243,11 +1243,6 @@ public class SimulatedCommands extends BaseCommands
         resultSuccess(result, null);
     }
 
-    @Override
-    public void getCdmaSubscriptionSource(Message result) {
-        unimplemented(result);
-    }
-
     private boolean isSimLocked() {
         if (mSimLockedState != SimLockState.NONE) {
             return true;
@@ -1724,24 +1719,6 @@ public class SimulatedCommands extends BaseCommands
     }
 
     @Override
-    public void
-    getCDMASubscription(Message result) {
-        String ret[] = new String[5];
-        ret[0] = "123";
-        ret[1] = "456";
-        ret[2] = "789";
-        ret[3] = "234";
-        ret[4] = "345";
-        resultSuccess(result, ret);
-    }
-
-    @Override
-    public void
-    setCdmaSubscriptionSource(int cdmaSubscriptionType, Message response) {
-        unimplemented(response);
-    }
-
-    @Override
     public void queryCdmaRoamingPreference(Message response) {
         unimplemented(response);
     }
@@ -1794,14 +1771,6 @@ public class SimulatedCommands extends BaseCommands
      */
     @Override
     public void queryTTYMode(Message response) {
-        unimplemented(response);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendCDMAFeatureCode(String FeatureCode, Message response) {
         unimplemented(response);
     }
 
