@@ -490,16 +490,6 @@ public interface CommandsInterface {
     void unSetOnCatCallSetUp(Handler h);
 
     /**
-     * Enables/disbables supplementary service related notifications from
-     * the network.
-     *
-     * @param enable true to enable notifications, false to disable.
-     * @param result Message to be posted when command completes.
-     */
-    void setSuppServiceNotifications(boolean enable, Message result);
-    //void unSetSuppServiceNotifications(Handler h);
-
-    /**
      * Sets the handler for Alpha Notification during STK Call Control.
      * Unlike the register* methods, there's only one notification handler
      *
@@ -571,73 +561,10 @@ public interface CommandsInterface {
     void unregisterForSignalInfo(Handler h);
 
     /**
-     * Registers the handler for CDMA number information record
-     * Unlike the register* methods, there's only one notification handler
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    void registerForNumberInfo(Handler h, int what, Object obj);
-    void unregisterForNumberInfo(Handler h);
-
-    /**
-     * Registers the handler for CDMA redirected number Information record
-     * Unlike the register* methods, there's only one notification handler
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    void registerForRedirectedNumberInfo(Handler h, int what, Object obj);
-    void unregisterForRedirectedNumberInfo(Handler h);
-
-    /**
-     * Registers the handler for CDMA line control information record
-     * Unlike the register* methods, there's only one notification handler
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    void registerForLineControlInfo(Handler h, int what, Object obj);
-    void unregisterForLineControlInfo(Handler h);
-
-    /**
-     * Registers the handler for CDMA T53 CLIR information record
-     * Unlike the register* methods, there's only one notification handler
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    void registerFoT53ClirlInfo(Handler h, int what, Object obj);
-    void unregisterForT53ClirInfo(Handler h);
-
-    /**
-     * Registers the handler for CDMA T53 audio control information record
-     * Unlike the register* methods, there's only one notification handler
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    void registerForT53AudioControlInfo(Handler h, int what, Object obj);
-    void unregisterForT53AudioControlInfo(Handler h);
-
-    /**
      * Fires on if Modem enters Emergency Callback mode
      */
     @UnsupportedAppUsage
     void setEmergencyCallbackMode(Handler h, int what, Object obj);
-
-    /**
-     * Fires on any CDMA OTA provision status change
-     */
-    @UnsupportedAppUsage
-    void registerForCdmaOtaProvision(Handler h, int what, Object obj);
-    @UnsupportedAppUsage
-    void unregisterForCdmaOtaProvision(Handler h);
 
     /**
      * Registers the handler when out-band ringback tone is needed.<p>
@@ -1197,15 +1124,6 @@ public interface CommandsInterface {
     void deleteSmsOnSim(int index, Message response);
 
     /**
-     * Deletes the specified SMS record from RUIM memory (EF_SMS in DF_CDMA).
-     *
-     * @param index index of the SMS record to delete
-     * @param response sent when operation completes
-     */
-    @UnsupportedAppUsage
-    void deleteSmsOnRuim(int index, Message response);
-
-    /**
      * Writes an SMS message to SIM memory (EF_SMS).
      *
      * @param status status of message on SIM.  One of:
@@ -1481,24 +1399,6 @@ public interface CommandsInterface {
     void cancelPendingUssd (Message response);
 
     /**
-     * Assign a specified band for RF configuration.
-     *
-     * @param bandMode one of BM_*_BAND
-     * @param response is callback message
-     */
-    void setBandMode (int bandMode, Message response);
-
-    /**
-     * Query the list of band mode supported by RF.
-     *
-     * @param response is callback message
-     *        ((AsyncResult)response.obj).result  is an int[] where int[0] is
-     *        the size of the array and the rest of each element representing
-     *        one available BM_*_BAND
-     */
-    void queryAvailableBandMode (Message response);
-
-    /**
      *  Requests to set the preferred network type for searching and registering
      * (CS/PS domain, RAT, and operation mode)
      * @param networkType one of  NT_*_TYPE
@@ -1725,20 +1625,6 @@ public interface CommandsInterface {
     /** Set the Phone type created */
     @UnsupportedAppUsage
     void setPhoneType(int phoneType);
-
-    /**
-     *  Query the CDMA roaming preference setting
-     *
-     * @param response is callback message to report one of  CDMA_RM_*
-     */
-    void queryCdmaRoamingPreference(Message response);
-
-    /**
-     *  Requests to set the CDMA roaming preference
-     * @param cdmaRoamingType one of  CDMA_RM_*
-     * @param response is callback message
-     */
-    void setCdmaRoamingPreference(int cdmaRoamingType, Message response);
 
     /**
      *  Set the TTY mode

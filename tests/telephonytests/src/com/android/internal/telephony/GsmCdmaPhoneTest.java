@@ -97,8 +97,6 @@ import com.android.internal.telephony.imsphone.ImsPhone;
 import com.android.internal.telephony.imsphone.ImsPhoneCall;
 import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
-import com.android.internal.telephony.test.SimulatedCommands;
-import com.android.internal.telephony.test.SimulatedCommandsVerifier;
 import com.android.internal.telephony.uicc.AdnRecord;
 import com.android.internal.telephony.uicc.AdnRecordCache;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus;
@@ -809,33 +807,6 @@ public class GsmCdmaPhoneTest extends TelephonyTest {
                 nullable(Message.class));
         processAllMessages();
         verify(mSimRecords).setVoiceCallForwardingFlag(anyInt(), anyBoolean(), eq(cfNumber));
-    }
-
-    @Test
-    public void testZeroMeid() {
-        doReturn(false).when(mSST).isDeviceShuttingDown();
-
-        SimulatedCommands sc = new SimulatedCommands() {
-            @Override
-            public void getDeviceIdentity(Message response) {
-                SimulatedCommandsVerifier.getInstance().getDeviceIdentity(response);
-                resultSuccess(response, new String[] {FAKE_IMEI, FAKE_IMEISV, FAKE_ESN, "0000000"});
-            }
-        };
-
-        Phone phone = new GsmCdmaPhone(mContext, sc, mNotifier, true, 0,
-                PhoneConstants.PHONE_TYPE_GSM, mTelephonyComponentFactory, (c, p) -> mImsManager,
-                mFeatureFlags);
-        phone.setVoiceCallSessionStats(mVoiceCallSessionStats);
-        ArgumentCaptor<Integer> integerArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(mUiccController).registerForIccChanged(eq(phone), integerArgumentCaptor.capture(),
-                nullable(Object.class));
-        Message msg = Message.obtain();
-        msg.what = integerArgumentCaptor.getValue();
-        phone.sendMessage(msg);
-        processAllMessages();
-
-        assertNull(phone.getMeid());
     }
 
     private void verifyEcbmIntentSent(int times, boolean isInEcm) throws Exception {

@@ -85,8 +85,6 @@ import android.util.SparseBooleanArray;
 
 import com.android.internal.R;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.cdma.EriInfo;
-import com.android.internal.telephony.cdma.EriManager;
 import com.android.internal.telephony.cdnr.CarrierDisplayNameData;
 import com.android.internal.telephony.cdnr.CarrierDisplayNameResolver;
 import com.android.internal.telephony.data.AccessNetworksManager;
@@ -257,9 +255,6 @@ public class ServiceStateTracker extends Handler {
     protected static final int EVENT_RESET_ALLOWED_NETWORK_TYPES            = 21;
     protected static final int EVENT_CHECK_REPORT_GPRS                      = 22;
     protected static final int EVENT_RESTRICTED_STATE_CHANGED               = 23;
-
-    /** CDMA events */
-    protected static final int EVENT_OTA_PROVISION_STATUS_CHANGE       = 37;
     protected static final int EVENT_SET_RADIO_POWER_OFF               = 38;
 
     protected static final int EVENT_RADIO_ON                          = 41;
@@ -466,7 +461,6 @@ public class ServiceStateTracker extends Handler {
     @Nullable
     private NitzData mLastNitzData;
 
-    private final EriManager mEriManager;
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private final ContentResolver mCr;
 
@@ -571,7 +565,6 @@ public class ServiceStateTracker extends Handler {
 
     public static final String INVALID_MCC = "000";
     public static final String DEFAULT_MNC = "00";
-    private HbpcdUtils mHbpcdUtils = null;
 
     private String mCurrentCarrier = null;
 
@@ -684,7 +677,6 @@ public class ServiceStateTracker extends Handler {
 
         mCdnr = new CarrierDisplayNameResolver(mPhone);
 
-        mEriManager = null;
         mRatRatcheter = new RatRatcheter(mPhone);
         mVoiceCapable = ((TelephonyManager) mPhone.getContext()
                 .getSystemService(Context.TELEPHONY_SERVICE))
@@ -1531,18 +1523,6 @@ public class ServiceStateTracker extends Handler {
                 }
                 break;
 
-            case EVENT_OTA_PROVISION_STATUS_CHANGE:
-                ar = (AsyncResult)msg.obj;
-                if (ar.exception == null) {
-                    ints = (int[]) ar.result;
-                    int otaStatus = ints[0];
-                    if (otaStatus == Phone.CDMA_OTA_PROVISION_STATUS_COMMITTED
-                            || otaStatus == Phone.CDMA_OTA_PROVISION_STATUS_OTAPA_STOPPED) {
-                        if (DBG) log("EVENT_OTA_PROVISION_STATUS_CHANGE: Complete, Reload MDN");
-                    }
-                }
-                break;
-
             case EVENT_RADIO_POWER_FROM_CARRIER:
                 ar = (AsyncResult) msg.obj;
                 if (ar.exception == null) {
@@ -1722,16 +1702,6 @@ public class ServiceStateTracker extends Handler {
             updateRoamingState();
             pollStateDone();
         }
-    }
-
-    /**
-     * Set roaming state when cdmaRoaming is true and ons is different from spn
-     * @param cdmaRoaming TS 27.007 7.2 CREG registered roaming
-     * @param s ServiceState hold current ons
-     * @return true for roaming state set
-     */
-    private boolean isRoamingBetweenOperators(boolean cdmaRoaming, ServiceState s) {
-        return cdmaRoaming && !isSameOperatorNameFromSimAndSS(s);
     }
 
     private boolean updateNrFrequencyRangeFromPhysicalChannelConfigs(
@@ -2142,38 +2112,6 @@ public class ServiceStateTracker extends Handler {
     }
 
     /**
-     * Determine whether a roaming indicator is in the carrier-specified list of ERIs for
-     * home system
-     *
-     * @param roamInd roaming indicator
-     * @return true if the roamInd is in the carrier-specified list of ERIs for home network
-     */
-    private boolean isRoamIndForHomeSystem(int roamInd) {
-        // retrieve the carrier-specified list of ERIs for home system
-        int[] homeRoamIndicators = mCarrierConfig.getIntArray(CarrierConfigManager
-                    .KEY_CDMA_ENHANCED_ROAMING_INDICATOR_FOR_HOME_NETWORK_INT_ARRAY);
-
-        log("isRoamIndForHomeSystem: homeRoamIndicators=" + Arrays.toString(homeRoamIndicators));
-
-        if (homeRoamIndicators != null) {
-            // searches through the comma-separated list for a match,
-            // return true if one is found.
-            for (int homeRoamInd : homeRoamIndicators) {
-                if (homeRoamInd == roamInd) {
-                    return true;
-                }
-            }
-            // no matches found against the list!
-            log("isRoamIndForHomeSystem: No match found against list for roamInd=" + roamInd);
-            return false;
-        }
-
-        // no system property found for the roaming indicators for home system
-        log("isRoamIndForHomeSystem: No list found");
-        return false;
-    }
-
-    /**
      * Query the carrier configuration to determine if there any network overrides
      * for roaming or not roaming for the current service state.
      */
@@ -2216,17 +2154,6 @@ public class ServiceStateTracker extends Handler {
         }
 
         mNewSS.setRoaming(roaming);
-    }
-
-    private void setRoamingOn() {
-        mNewSS.setRoaming(true);
-        mNewSS.setCdmaEriIconIndex(EriInfo.ROAMING_INDICATOR_ON);
-        mNewSS.setCdmaEriIconMode(EriInfo.ROAMING_ICON_MODE_NORMAL);
-    }
-
-    private void setRoamingOff() {
-        mNewSS.setRoaming(false);
-        mNewSS.setCdmaEriIconIndex(EriInfo.ROAMING_INDICATOR_OFF);
     }
 
     private void notifyCarrierDisplayNameDataChanged() {
@@ -3459,32 +3386,6 @@ public class ServiceStateTracker extends Handler {
                 operatorNumeric.startsWith(INVALID_MCC);
     }
 
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    private String fixUnknownMcc(String operatorNumeric, int sid) {
-        if (sid <= 0) {
-            // no cdma information is available, do nothing
-            return operatorNumeric;
-        }
-
-        // resolve the mcc from sid, using time zone information from the latest NITZ signal when
-        // available.
-        int utcOffsetHours = 0;
-        boolean isDst = false;
-        boolean isNitzTimeZone = false;
-        NitzData lastNitzData = mLastNitzData;
-        if (lastNitzData != null) {
-            utcOffsetHours = lastNitzData.getLocalOffsetMillis() / MS_PER_HOUR;
-            Integer dstAdjustmentMillis = lastNitzData.getDstAdjustmentMillis();
-            isDst = (dstAdjustmentMillis != null) && (dstAdjustmentMillis != 0);
-            isNitzTimeZone = true;
-        }
-        int mcc = mHbpcdUtils.getMcc(sid, utcOffsetHours, (isDst ? 1 : 0), isNitzTimeZone);
-        if (mcc > 0) {
-            operatorNumeric = mcc + DEFAULT_MNC;
-        }
-        return operatorNumeric;
-    }
-
     /**
      * Check if GPRS got registered while voice is registered.
      *
@@ -4401,11 +4302,6 @@ public class ServiceStateTracker extends Handler {
         mCarrierConfig = getCarrierConfig();
         log("CarrierConfigChange " + mCarrierConfig);
 
-        // Load the ERI based on carrier config. Carrier might have their specific ERI.
-        if (mEriManager != null) {
-            mEriManager.loadEriFile();
-        }
-
         updateOperatorNamePattern(mCarrierConfig);
         mCdnr.updateEfFromCarrierConfig(mCarrierConfig);
         mPhone.notifyCallForwardingIndicator();
@@ -4609,7 +4505,6 @@ public class ServiceStateTracker extends Handler {
         pw.println(" mRadioPowerOffReasons=" + mRadioPowerOffReasons);
         pw.println(" mDeviceShuttingDown=" + mDeviceShuttingDown);
         pw.println(" mCellInfoMinIntervalMs=" + mCellInfoMinIntervalMs);
-        pw.println(" mEriManager=" + mEriManager);
 
         mLocaleTracker.dump(fd, pw, args);
         IndentingPrintWriter ipw = new IndentingPrintWriter(pw, "    ");
@@ -4917,10 +4812,6 @@ public class ServiceStateTracker extends Handler {
         return mLocaleTracker;
     }
 
-    String getCdmaEriText(int roamInd, int defRoamInd) {
-        return mEriManager != null ? mEriManager.getCdmaEriText(roamInd, defRoamInd) : "no ERI";
-    }
-
     private void updateOperatorNamePattern(PersistableBundle config) {
         String operatorNamePattern = config.getString(
                 CarrierConfigManager.KEY_OPERATOR_NAME_FILTER_PATTERN_STRING);
@@ -5163,7 +5054,7 @@ public class ServiceStateTracker extends Handler {
 
     /**
      * Get the tech where ims is currently registered.
-     * @return Returns the tech of ims registered. if not registered or no phome for ims, returns
+     * @return Returns the tech of ims registered. if not registered or no phone for ims, returns
      *   {@link ImsRegistrationImplBase#REGISTRATION_TECH_NONE}.
      */
     private @ImsRegistrationImplBase.ImsRegistrationTech int getImsRegistrationTech() {

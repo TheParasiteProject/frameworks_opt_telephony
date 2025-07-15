@@ -30,7 +30,6 @@ import android.text.TextUtils;
 import android.util.SparseArray;
 
 import com.android.ims.ImsManager;
-import com.android.internal.telephony.cdma.EriManager;
 import com.android.internal.telephony.data.AccessNetworksManager;
 import com.android.internal.telephony.data.DataNetworkController;
 import com.android.internal.telephony.data.DataProfileManager;
@@ -369,10 +368,6 @@ public class TelephonyComponentFactory {
                                        int phoneId, UiccCard uiccCard, Object lock,
             @NonNull FeatureFlags flags) {
         return new UiccProfile(context, ci, ics, phoneId, uiccCard, lock, flags);
-    }
-
-    public EriManager makeEriManager(Phone phone, int eriFileSource) {
-        return new EriManager(phone, eriFileSource);
     }
 
     public WspTypeDecoder makeWspTypeDecoder(byte[] pdu) {

@@ -97,7 +97,6 @@ import com.android.ims.ImsCall;
 import com.android.ims.ImsEcbm;
 import com.android.ims.ImsManager;
 import com.android.internal.telephony.analytics.TelephonyAnalytics;
-import com.android.internal.telephony.cdma.EriManager;
 import com.android.internal.telephony.data.AccessNetworksManager;
 import com.android.internal.telephony.data.CellularNetworkValidator;
 import com.android.internal.telephony.data.DataConfigManager;
@@ -224,7 +223,6 @@ public abstract class TelephonyTest {
     protected SmsUsageMonitor mSmsUsageMonitor;
     protected PackageInfo mPackageInfo;
     protected ApplicationInfo mApplicationInfo;
-    protected EriManager mEriManager;
     protected IBinder mConnMetLoggerBinder;
     protected CarrierSignalAgent mCarrierSignalAgent;
     protected CarrierActionAgent mCarrierActionAgent;
@@ -514,7 +512,6 @@ public abstract class TelephonyTest {
         mSmsUsageMonitor = Mockito.mock(SmsUsageMonitor.class);
         mPackageInfo = Mockito.mock(PackageInfo.class);
         mApplicationInfo = Mockito.mock(ApplicationInfo.class);
-        mEriManager = Mockito.mock(EriManager.class);
         mConnMetLoggerBinder = Mockito.mock(IBinder.class);
         mCarrierSignalAgent = Mockito.mock(CarrierSignalAgent.class);
         mCarrierActionAgent = Mockito.mock(CarrierActionAgent.class);
@@ -674,8 +671,6 @@ public abstract class TelephonyTest {
         lenient().doReturn(mLocaleTracker).when(mTelephonyComponentFactory)
                 .makeLocaleTracker(nullable(Phone.class), nullable(NitzStateMachine.class),
                         nullable(Looper.class), any(FeatureFlags.class));
-        lenient().doReturn(mEriManager).when(mTelephonyComponentFactory)
-                .makeEriManager(nullable(Phone.class), anyInt());
         lenient().doReturn(mLinkBandwidthEstimator).when(mTelephonyComponentFactory)
                 .makeLinkBandwidthEstimator(nullable(Phone.class), any(Looper.class));
         lenient().doReturn(mDataProfileManager).when(mTelephonyComponentFactory)
