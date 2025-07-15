@@ -268,7 +268,6 @@ public class ServiceStateTracker extends Handler {
     protected static final int EVENT_NV_READY                          = 35;
     protected static final int EVENT_OTA_PROVISION_STATUS_CHANGE       = 37;
     protected static final int EVENT_SET_RADIO_POWER_OFF               = 38;
-    protected static final int EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED  = 39;
 
     protected static final int EVENT_RADIO_ON                          = 41;
     public    static final int EVENT_ICC_CHANGED                       = 42;
@@ -714,15 +713,7 @@ public class ServiceStateTracker extends Handler {
 
         mCdnr = new CarrierDisplayNameResolver(mPhone);
 
-        // Create EriManager only if phone supports CDMA
-        if (!mFeatureFlags.phoneTypeCleanup()
-                && UiccController.isCdmaSupported(mPhone.getContext())) {
-            mEriManager = TelephonyComponentFactory.getInstance().inject(EriManager.class.getName())
-                    .makeEriManager(mPhone, EriManager.ERI_FROM_XML);
-        } else {
-            mEriManager = null;
-        }
-
+        mEriManager = null;
         mRatRatcheter = new RatRatcheter(mPhone);
         mVoiceCapable = ((TelephonyManager) mPhone.getContext()
                 .getSystemService(Context.TELEPHONY_SERVICE))
@@ -898,27 +889,11 @@ public class ServiceStateTracker extends Handler {
             if (mCdmaSSM != null) {
                 mCdmaSSM.dispose(this);
             }
-
-            if (!mFeatureFlags.phoneTypeCleanup()) {
-                mCi.unregisterForCdmaOtaProvision(this);
-            }
             mPhone.unregisterForSimRecordsLoaded(this);
 
         } else {
             mPhone.registerForSimRecordsLoaded(this, EVENT_SIM_RECORDS_LOADED, null);
-            if (!mFeatureFlags.phoneTypeCleanup()) {
-                mCdmaSSM = CdmaSubscriptionSourceManager.getInstance(mPhone.getContext(), mCi, this,
-                        EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED, null);
-
-                mIsSubscriptionFromRuim = mCdmaSSM.getCdmaSubscriptionSource()
-                        == CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_RUIM;
-
-                mCi.registerForCdmaOtaProvision(this, EVENT_OTA_PROVISION_STATUS_CHANGE, null);
-            }
-
             mHbpcdUtils = new HbpcdUtils(mPhone.getContext());
-            // update OTASP state in case previously set by another service
-            updateOtaspState();
         }
 
         // This should be done after the technology specific initializations above since it relies
@@ -1060,21 +1035,6 @@ public class ServiceStateTracker extends Handler {
             }
             // TODO: Consider not lying and instead have callers know the difference.
             mNewSS.setVoiceRegState(mNewSS.getDataRegistrationState());
-        }
-    }
-
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    protected void updatePhoneObject() {
-        if (mPhone.getContext().getResources().getBoolean(
-                com.android.internal.R.bool.config_switch_phone_on_voice_reg_state_change)) {
-            // If the phone is not registered on a network, no need to update.
-            boolean isRegistered = mSS.getState() == ServiceState.STATE_IN_SERVICE
-                    || mSS.getState() == ServiceState.STATE_EMERGENCY_ONLY;
-            if (!isRegistered) {
-                log("updatePhoneObject: Ignore update");
-                return;
-            }
-            mPhone.updatePhoneObject(mSS.getRilVoiceRadioTechnology());
         }
     }
 
@@ -1324,11 +1284,6 @@ public class ServiceStateTracker extends Handler {
                     mMdn = null;
                     mMin = null;
                     mIsMinInfoReady = false;
-
-                    // Remove the EF records that come from UICC.
-                    if (!mFeatureFlags.phoneTypeCleanup()) {
-                        mCdnr.updateEfFromRuim(null /* ruim */);
-                    }
                     mCdnr.updateEfFromUsim(null /* Usim */);
                 }
                 onUpdateIccAvailability();
@@ -1439,10 +1394,6 @@ public class ServiceStateTracker extends Handler {
                 RadioPowerStateStats.onRadioStateChanged(mCi.getRadioState());
                 // fall through, the code above only logs metrics when radio state changes
             case EVENT_PHONE_TYPE_SWITCHED:
-                if(!mPhone.isPhoneTypeGsm() &&
-                        mCi.getRadioState() == TelephonyManager.RADIO_POWER_ON) {
-                    handleCdmaSubscriptionSource(mCdmaSSM.getCdmaSubscriptionSource());
-                }
                 // This will do nothing in the 'radio not available' case
                 setPowerStateToDesired();
                 // These events are modem triggered, so pollState() needs to be forced
@@ -1510,8 +1461,6 @@ public class ServiceStateTracker extends Handler {
 
             case EVENT_SIM_RECORDS_LOADED:
                 log("EVENT_SIM_RECORDS_LOADED: what=" + msg.what);
-                updatePhoneObject();
-                updateOtaspState();
                 if (mPhone.isPhoneTypeGsm()) {
                     mCdnr.updateEfFromUsim((SIMRecords) mIccRecords);
                     updateCarrierDisplayName();
@@ -1645,20 +1594,9 @@ public class ServiceStateTracker extends Handler {
                 }
                 break;
 
-            //CDMA
-            case EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED:
-                handleCdmaSubscriptionSource(mCdmaSSM.getCdmaSubscriptionSource());
-                break;
-
             case EVENT_RUIM_READY:
-                if (mPhone.getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) {
-                    // Subscription will be read from SIM I/O
-                    if (DBG) log("Receive EVENT_RUIM_READY");
-                    pollStateInternal(false);
-                } else {
-                    if (DBG) log("Receive EVENT_RUIM_READY and Send Request getCDMASubscription.");
-                    getSubscriptionInfoAndStartPollingThreads();
-                }
+                if (DBG) log("Receive EVENT_RUIM_READY and Send Request getCDMASubscription.");
+                getSubscriptionInfoAndStartPollingThreads();
 
                 // Only support automatic selection mode in CDMA.
                 mCi.getNetworkSelectionMode(obtainMessage(EVENT_POLL_STATE_NETWORK_SELECTION_MODE));
@@ -1666,8 +1604,6 @@ public class ServiceStateTracker extends Handler {
                 break;
 
             case EVENT_NV_READY:
-                updatePhoneObject();
-
                 // Only support automatic selection mode in CDMA.
                 mCi.getNetworkSelectionMode(obtainMessage(EVENT_POLL_STATE_NETWORK_SELECTION_MODE));
 
@@ -1691,7 +1627,6 @@ public class ServiceStateTracker extends Handler {
                             if (DBG) log("GET_CDMA_SUBSCRIPTION: MDN=" + mMdn);
 
 
-                            updateOtaspState();
                             // Notify apps subscription info is ready
                             notifyCdmaSubscriptionInfoReady();
 
@@ -1720,7 +1655,6 @@ public class ServiceStateTracker extends Handler {
                 if (!mPhone.isPhoneTypeGsm()) {
                     log("EVENT_RUIM_RECORDS_LOADED: what=" + msg.what);
                     mCdnr.updateEfFromRuim((RuimRecords) mIccRecords);
-                    updatePhoneObject();
                     if (mPhone.isPhoneTypeCdma()) {
                         updateCarrierDisplayName();
                     } else {
@@ -1736,7 +1670,6 @@ public class ServiceStateTracker extends Handler {
                                 mMin = ruim.getMin();
                                 parseSidNid(ruim.getSid(), ruim.getNid());
                             }
-                            updateOtaspState();
                             // Notify apps subscription info is ready
                             notifyCdmaSubscriptionInfoReady();
                         }
@@ -2002,22 +1935,6 @@ public class ServiceStateTracker extends Handler {
             }
         }
         if (DBG) log("CDMA_SUBSCRIPTION: NID=" + nidStr);
-    }
-
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    protected void updateOtaspState() {
-        if (mFeatureFlags.phoneTypeCleanup()) return;
-        int otaspMode = getOtasp();
-        int oldOtaspMode = mCurrentOtaspMode;
-        mCurrentOtaspMode = otaspMode;
-
-        if (oldOtaspMode != mCurrentOtaspMode) {
-            if (DBG) {
-                log("updateOtaspState: call notifyOtaspChanged old otaspMode=" +
-                        oldOtaspMode + " new otaspMode=" + mCurrentOtaspMode);
-            }
-            mPhone.notifyOtaspChanged(mCurrentOtaspMode);
-        }
     }
 
     public void onAirplaneModeChanged(boolean isAirplaneModeOn) {
@@ -3842,10 +3759,6 @@ public class ServiceStateTracker extends Handler {
             mAreaCodeChangedRegistrants.notifyRegistrants();
         }
 
-        if (hasRilVoiceRadioTechnologyChanged) {
-            updatePhoneObject();
-        }
-
         TelephonyManager tm = (TelephonyManager) mPhone.getContext().getSystemService(
                 Context.TELEPHONY_SERVICE);
         if (anyDataRatChanged) {
@@ -5407,19 +5320,6 @@ public class ServiceStateTracker extends Handler {
 
         // Get Registration Information
         pollStateInternal(false);
-    }
-
-    private void handleCdmaSubscriptionSource(int newSubscriptionSource) {
-        if (mFeatureFlags.phoneTypeCleanup()) return;
-        log("Subscription Source : " + newSubscriptionSource);
-        mIsSubscriptionFromRuim =
-                (newSubscriptionSource == CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_RUIM);
-        log("isFromRuim: " + mIsSubscriptionFromRuim);
-        saveCdmaSubscriptionSource(newSubscriptionSource);
-        if (!mIsSubscriptionFromRuim) {
-            // NV is ready when subscription source is NV
-            sendMessage(obtainMessage(EVENT_NV_READY));
-        }
     }
 
     /** Called when telecom has reported a voice service state change. */

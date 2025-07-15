@@ -163,7 +163,6 @@ public class GsmCdmaPhone extends Phone {
     // log.  (Use "adb logcat -b radio" to see them.)
     public static final String LOG_TAG = "GsmCdmaPhone";
     private static final boolean DBG = true;
-    private static final boolean VDBG = false; /* STOPSHIP if true */
 
     /** Required throughput change between unsolicited LinkCapacityEstimate reports. */
     private static final int REPORTING_HYSTERESIS_KBPS = 50;
@@ -286,15 +285,12 @@ public class GsmCdmaPhone extends Phone {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private IccSmsInterfaceManager mIccSmsInterfaceManager;
 
-    private boolean mResetModemOnRadioTechnologyChange = false;
     private boolean mSsOverCdmaSupported = false;
 
-    private int mRilVersion;
     private boolean mBroadcastEmergencyCallStateChanges = false;
     private @ServiceState.RegState int mTelecomVoiceServiceStateOverride =
             ServiceState.STATE_OUT_OF_SERVICE;
 
-    private CarrierKeyDownloadManager mCDM;
     private CarrierInfoManager mCIM;
 
     private final ImsManagerFactory mImsManagerFactory;
@@ -522,10 +518,6 @@ public class GsmCdmaPhone extends Phone {
         mCarrierOtaSpNumSchema = TelephonyManager.from(mContext).getOtaSpNumberSchemaForPhone(
                 getPhoneId(), "");
 
-        mResetModemOnRadioTechnologyChange = TelephonyProperties.reset_on_radio_tech_change()
-                .orElse(false);
-
-        mCi.registerForRilConnected(this, EVENT_RIL_CONNECTED, null);
         mCi.registerForVoiceRadioTechChanged(this, EVENT_VOICE_RADIO_TECH_CHANGED, null);
         mCi.registerForLceInfo(this, EVENT_LINK_CAPACITY_CHANGED, null);
         mCi.registerForCarrierInfoForImsiEncryption(this,
@@ -543,7 +535,6 @@ public class GsmCdmaPhone extends Phone {
         mContext.registerReceiver(mBroadcastReceiver, filter,
                 android.Manifest.permission.MODIFY_PHONE_STATE, null, Context.RECEIVER_EXPORTED);
 
-        mCDM = new CarrierKeyDownloadManager(this);
         mCIM = new CarrierInfoManager();
 
         mCi.registerForImeiMappingChanged(this, EVENT_IMEI_MAPPING_CHANGED, null);
@@ -684,37 +675,6 @@ public class GsmCdmaPhone extends Phone {
 
     public boolean isPhoneTypeCdmaLte() {
         return mPrecisePhoneType == PhoneConstants.PHONE_TYPE_CDMA_LTE;
-    }
-
-    private void switchPhoneType(int precisePhoneType) {
-        removeCallbacks(mExitEcmRunnable);
-
-        initRatSpecific(precisePhoneType);
-
-        mSST.updatePhoneType();
-        setPhoneName(precisePhoneType == PhoneConstants.PHONE_TYPE_GSM ? "GSM" : "CDMA");
-        onUpdateIccAvailability();
-        // if is possible that onUpdateIccAvailability() does not unregister and re-register for
-        // ICC events, for example if mUiccApplication does not change which can happen if phone
-        // type is transitioning from CDMA to GSM but 3gpp2 application was not available.
-        // To handle such cases, unregister and re-register here. They still need to be called in
-        // onUpdateIccAvailability(), since in normal cases register/unregister calls can be on
-        // different IccRecords objects. Here they are on the same IccRecords object.
-        unregisterForIccRecordEvents();
-        registerForIccRecordEvents();
-
-        if (mCT != null) mCT.updatePhoneType();
-
-        int radioState = mCi.getRadioState();
-        if (radioState != TelephonyManager.RADIO_POWER_UNAVAILABLE) {
-            handleRadioAvailable();
-            if (radioState == TelephonyManager.RADIO_POWER_ON) {
-                handleRadioOn();
-            }
-        }
-        if (radioState != TelephonyManager.RADIO_POWER_ON) {
-            handleRadioOffOrNotAvailable();
-        }
     }
 
     private void updateLinkCapacityEstimate(List<LinkCapacityEstimate> linkCapacityEstimateList) {
@@ -3325,16 +3285,6 @@ public class GsmCdmaPhone extends Phone {
                 handleRadioOn();
                 break;
 
-            case EVENT_RIL_CONNECTED:
-                ar = (AsyncResult) msg.obj;
-                if (ar.exception == null && ar.result != null) {
-                    mRilVersion = (Integer) ar.result;
-                } else {
-                    logd("Unexpected exception on EVENT_RIL_CONNECTED");
-                    mRilVersion = -1;
-                }
-                break;
-
             case EVENT_VOICE_RADIO_TECH_CHANGED:
             case EVENT_REQUEST_VOICE_RADIO_TECH_DONE:
                 String what = (msg.what == EVENT_VOICE_RADIO_TECH_CHANGED) ?
@@ -3344,7 +3294,6 @@ public class GsmCdmaPhone extends Phone {
                     if ((ar.result != null) && (((int[]) ar.result).length != 0)) {
                         int newVoiceTech = ((int[]) ar.result)[0];
                         logd(what + ": newVoiceTech=" + newVoiceTech);
-                        phoneObjectUpdater(newVoiceTech);
                     } else {
                         loge(what + ": has no tech!");
                     }
@@ -3360,10 +3309,6 @@ public class GsmCdmaPhone extends Phone {
                 } else {
                     logd("Unexpected exception on EVENT_LINK_CAPACITY_CHANGED");
                 }
-                break;
-
-            case EVENT_UPDATE_PHONE_OBJECT:
-                phoneObjectUpdater(msg.arg1);
                 break;
 
             case EVENT_CARRIER_CONFIG_CHANGED:
@@ -4567,136 +4512,6 @@ public class GsmCdmaPhone extends Phone {
                 cdmaApplication.getType() == AppType.APPTYPE_RUIM);
     }
 
-    protected void phoneObjectUpdater(int newVoiceRadioTech) {
-        logd("phoneObjectUpdater: newVoiceRadioTech=" + newVoiceRadioTech);
-        if (mFeatureFlags.phoneTypeCleanup()) {
-            logd("phoneObjectUpdater: no-op as CDMA cleanup flag is set");
-            return;
-        }
-
-        // Check for a voice over LTE/NR replacement
-        if (ServiceState.isPsOnlyTech(newVoiceRadioTech)
-                || (newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN)) {
-            CarrierConfigManager configMgr = (CarrierConfigManager)
-                    getContext().getSystemService(Context.CARRIER_CONFIG_SERVICE);
-            PersistableBundle b = configMgr.getConfigForSubId(getSubId());
-            if (b != null) {
-                int volteReplacementRat =
-                        b.getInt(CarrierConfigManager.KEY_VOLTE_REPLACEMENT_RAT_INT);
-                logd("phoneObjectUpdater: volteReplacementRat=" + volteReplacementRat);
-                if (volteReplacementRat != ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN &&
-                           //In cdma case, replace rat only if csim or ruim app present
-                           (ServiceState.isGsm(volteReplacementRat) ||
-                           isCdmaSubscriptionAppPresent())) {
-                    newVoiceRadioTech = volteReplacementRat;
-                }
-            } else {
-                loge("phoneObjectUpdater: didn't get volteReplacementRat from carrier config");
-            }
-        }
-
-        if(mRilVersion == 6 && getLteOnCdmaMode() == PhoneConstants.LTE_ON_CDMA_TRUE) {
-            /*
-             * On v6 RIL, when LTE_ON_CDMA is TRUE, always create CDMALTEPhone
-             * irrespective of the voice radio tech reported.
-             */
-            if (getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
-                logd("phoneObjectUpdater: LTE ON CDMA property is set. Use CDMA Phone" +
-                        " newVoiceRadioTech=" + newVoiceRadioTech +
-                        " mActivePhone=" + getPhoneName());
-                return;
-            } else {
-                logd("phoneObjectUpdater: LTE ON CDMA property is set. Switch to CDMALTEPhone" +
-                        " newVoiceRadioTech=" + newVoiceRadioTech +
-                        " mActivePhone=" + getPhoneName());
-                newVoiceRadioTech = ServiceState.RIL_RADIO_TECHNOLOGY_1xRTT;
-            }
-        } else {
-
-            // If the device is shutting down, then there is no need to switch to the new phone
-            // which might send unnecessary attach request to the modem.
-            if (isShuttingDown()) {
-                logd("Device is shutting down. No need to switch phone now.");
-                return;
-            }
-
-            boolean matchCdma = ServiceState.isCdma(newVoiceRadioTech);
-            boolean matchGsm = ServiceState.isGsm(newVoiceRadioTech);
-            if ((matchCdma && getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) ||
-                    (matchGsm && getPhoneType() == PhoneConstants.PHONE_TYPE_GSM)) {
-                // Nothing changed. Keep phone as it is.
-                logd("phoneObjectUpdater: No change ignore," +
-                        " newVoiceRadioTech=" + newVoiceRadioTech +
-                        " mActivePhone=" + getPhoneName());
-                return;
-            }
-            if (!matchCdma && !matchGsm) {
-                loge("phoneObjectUpdater: newVoiceRadioTech=" + newVoiceRadioTech +
-                        " doesn't match either CDMA or GSM - error! No phone change");
-                return;
-            }
-        }
-
-        if (newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN) {
-            // We need some voice phone object to be active always, so never
-            // delete the phone without anything to replace it with!
-            logd("phoneObjectUpdater: Unknown rat ignore, "
-                    + " newVoiceRadioTech=Unknown. mActivePhone=" + getPhoneName());
-            return;
-        }
-
-        boolean oldPowerState = false; // old power state to off
-        if (mResetModemOnRadioTechnologyChange) {
-            if (mCi.getRadioState() == TelephonyManager.RADIO_POWER_ON) {
-                oldPowerState = true;
-                logd("phoneObjectUpdater: Setting Radio Power to Off");
-                mCi.setRadioPower(false, null);
-            }
-        }
-
-        switchVoiceRadioTech(newVoiceRadioTech);
-
-        if (mResetModemOnRadioTechnologyChange && oldPowerState) { // restore power state
-            logd("phoneObjectUpdater: Resetting Radio");
-            mCi.setRadioPower(oldPowerState, null);
-        }
-
-        // update voice radio tech in UiccProfile
-        UiccProfile uiccProfile = getUiccProfile();
-        if (uiccProfile != null) {
-            uiccProfile.setVoiceRadioTech(newVoiceRadioTech);
-        }
-
-        // Send an Intent to the PhoneApp that we had a radio technology change
-        Intent intent = new Intent(TelephonyIntents.ACTION_RADIO_TECHNOLOGY_CHANGED);
-        intent.putExtra(PhoneConstants.PHONE_NAME_KEY, getPhoneName());
-        SubscriptionManager.putPhoneIdAndSubIdExtra(intent, mPhoneId);
-        mContext.sendStickyBroadcastAsUser(intent, UserHandle.ALL);
-    }
-
-    private void switchVoiceRadioTech(int newVoiceRadioTech) {
-
-        String outgoingPhoneName = getPhoneName();
-
-        logd("Switching Voice Phone : " + outgoingPhoneName + " >>> "
-                + (ServiceState.isGsm(newVoiceRadioTech) ? "GSM" : "CDMA"));
-
-        if (ServiceState.isCdma(newVoiceRadioTech)) {
-            UiccCardApplication cdmaApplication =
-                    mUiccController.getUiccCardApplication(mPhoneId, UiccController.APP_FAM_3GPP2);
-            if (cdmaApplication != null && cdmaApplication.getType() == AppType.APPTYPE_RUIM) {
-                switchPhoneType(PhoneConstants.PHONE_TYPE_CDMA);
-            } else {
-                switchPhoneType(PhoneConstants.PHONE_TYPE_CDMA_LTE);
-            }
-        } else if (ServiceState.isGsm(newVoiceRadioTech)) {
-            switchPhoneType(PhoneConstants.PHONE_TYPE_GSM);
-        } else {
-            loge("deleteAndCreatePhone: newVoiceRadioTech=" + newVoiceRadioTech +
-                    " is not CDMA or GSM (error) - aborting!");
-        }
-    }
-
     @Override
     public void setLinkCapacityReportingCriteria(int[] dlThresholds, int[] ulThresholds, int ran) {
         mCi.setLinkCapacityReportingCriteria(REPORTING_HYSTERESIS_MILLIS, REPORTING_HYSTERESIS_KBPS,
@@ -4706,12 +4521,6 @@ public class GsmCdmaPhone extends Phone {
     @Override
     public IccSmsInterfaceManager getIccSmsInterfaceManager(){
         return mIccSmsInterfaceManager;
-    }
-
-    @Override
-    public void updatePhoneObject(int voiceRadioTech) {
-        logd("updatePhoneObject: radioTechnology=" + voiceRadioTech);
-        sendMessage(obtainMessage(EVENT_UPDATE_PHONE_OBJECT, voiceRadioTech, 0, null));
     }
 
     @Override
@@ -5129,26 +4938,6 @@ public class GsmCdmaPhone extends Phone {
     @VisibleForTesting
     public PowerManager.WakeLock getWakeLock() {
         return mWakeLock;
-    }
-
-    public int getLteOnCdmaMode() {
-        if (mFeatureFlags.phoneTypeCleanup()) return PhoneConstants.LTE_ON_CDMA_FALSE;
-        int currentConfig = TelephonyProperties.lte_on_cdma_device()
-                .orElse(PhoneConstants.LTE_ON_CDMA_FALSE);
-        int lteOnCdmaModeDynamicValue = currentConfig;
-
-        UiccCardApplication cdmaApplication =
-                    mUiccController.getUiccCardApplication(mPhoneId, UiccController.APP_FAM_3GPP2);
-        if (cdmaApplication != null && cdmaApplication.getType() == AppType.APPTYPE_RUIM) {
-            //Legacy RUIM cards don't support LTE.
-            lteOnCdmaModeDynamicValue = RILConstants.LTE_ON_CDMA_FALSE;
-
-            //Override only if static configuration is TRUE.
-            if (currentConfig == RILConstants.LTE_ON_CDMA_TRUE) {
-                return lteOnCdmaModeDynamicValue;
-            }
-        }
-        return currentConfig;
     }
 
     private void updateTtyMode(int ttyMode) {

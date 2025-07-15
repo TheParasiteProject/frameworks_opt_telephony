@@ -18,8 +18,6 @@ package com.android.internal.telephony;
 
 import static android.telephony.TelephonyManager.HAL_SERVICE_RADIO;
 
-import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_CDMA;
-import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_CDMA_LTE;
 import static com.android.internal.telephony.PhoneConstants.PHONE_TYPE_GSM;
 
 import static java.util.Arrays.copyOf;
@@ -326,22 +324,13 @@ public class PhoneFactory {
     }
 
     private static Phone createPhone(Context context, int phoneId) {
-        int phoneType;
-        if (sFeatureFlags.phoneTypeCleanup()) {
-            phoneType = PHONE_TYPE_GSM;
-        } else {
-            phoneType = TelephonyManager.getPhoneType(RILConstants.PREFERRED_NETWORK_MODE);
-            // We always use PHONE_TYPE_CDMA_LTE now.
-            if (phoneType == PHONE_TYPE_CDMA) phoneType = PHONE_TYPE_CDMA_LTE;
-        }
-
-        Rlog.i(LOG_TAG, "Creating Phone with type = " + phoneType + " phoneId = " + phoneId);
+        Rlog.i(LOG_TAG, "Creating Phone phoneId = " + phoneId);
 
         TelephonyComponentFactory injectedComponentFactory =
                 TelephonyComponentFactory.getInstance().inject(GsmCdmaPhone.class.getName());
 
         return injectedComponentFactory.makePhone(context,
-                sCommandsInterfaces[phoneId], sPhoneNotifier, phoneId, phoneType,
+                sCommandsInterfaces[phoneId], sPhoneNotifier, phoneId, PHONE_TYPE_GSM,
                 TelephonyComponentFactory.getInstance(), sFeatureFlags);
     }
 
