@@ -2287,8 +2287,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response is callback message to report one of TelephonyManager#CDMA_ROAMING_MODE_*
      */
     public void queryCdmaRoamingPreference(Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.queryCdmaRoamingPreference(response);
     }
 
     /**
@@ -2297,8 +2295,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response is callback message to report one of TelephonyManager#CDMA_SUBSCRIPTION_*
      */
     public void queryCdmaSubscriptionMode(Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.getCdmaSubscriptionSource(response);
     }
 
     /**
@@ -2335,8 +2331,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response is callback message
      */
     public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.setCdmaRoamingPreference(cdmaRoamingType, response);
     }
 
     /**
@@ -2345,8 +2339,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response is callback message
      */
     public void setCdmaSubscriptionMode(int cdmaSubscriptionType, Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.setCdmaSubscriptionSource(cdmaSubscriptionType, response);
     }
 
     /**
@@ -2782,8 +2774,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param workSource calling WorkSource
      */
     public void nvReadItem(int itemID, Message response, WorkSource workSource) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.nvReadItem(itemID, response, workSource);
     }
 
     /**
@@ -2797,8 +2787,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void nvWriteItem(int itemID, String itemValue, Message response,
             WorkSource workSource) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.nvWriteItem(itemID, itemValue, response, workSource);
     }
 
     /**
@@ -2809,19 +2797,16 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response Callback message.
      */
     public void nvWriteCdmaPrl(byte[] preferredRoamingList, Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.nvWriteCdmaPrl(preferredRoamingList, response);
     }
 
     /**
      * Perform the radio modem reboot. The radio will be taken offline. Used for device
      * configuration by some CDMA operators.
-     * TODO: reuse nvResetConfig for now, should move to separate HAL API.
      *
      * @param response Callback message.
      */
     public void rebootModem(Message response) {
-        mCi.nvResetConfig(1 /* 1: reload NV reset, trigger a modem reboot */, response);
+        mCi.nvResetConfig(1/* 1: reload NV reset, trigger a modem reboot */, response);
     }
 
     /**
@@ -2831,8 +2816,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response Callback message.
      */
     public void resetModemConfig(Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.nvResetConfig(3 /* factory NV reset */, response);
     }
 
     /**
@@ -2841,8 +2824,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response Callback message.
      */
     public void eraseModemConfig(Message response) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.nvResetConfig(2 /* erase NV */, response);
     }
 
     /**
@@ -3505,59 +3486,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Register for CDMA number information record notification from the network.
-     * Message.obj will contain an AsyncResult.
-     * AsyncResult.result will be a CdmaInformationRecords.CdmaNumberInfoRec
-     * instance.
-     *
-     * @param h Handler that receives the notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerForNumberInfo(Handler h, int what, Object obj) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.registerForNumberInfo(h, what, obj);
-    }
-
-    /**
-     * Unregisters for number information record notifications.
-     * Extraneous calls are tolerated silently
-     *
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForNumberInfo(Handler h) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.unregisterForNumberInfo(h);
-    }
-
-    /**
-     * Register for CDMA redirected number information record notification
-     * from the network.
-     * Message.obj will contain an AsyncResult.
-     * AsyncResult.result will be a CdmaInformationRecords.CdmaRedirectingNumberInfoRec
-     * instance.
-     *
-     * @param h Handler that receives the notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerForRedirectedNumberInfo(Handler h, int what, Object obj) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.registerForRedirectedNumberInfo(h, what, obj);
-    }
-
-    /**
-     * Unregisters for redirected number information record notification.
-     * Extraneous calls are tolerated silently
-     *
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForRedirectedNumberInfo(Handler h) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.unregisterForRedirectedNumberInfo(h);
-    }
-
-    /**
      * Register for CDMA line control information record notification
      * from the network.
      * Message.obj will contain an AsyncResult.
@@ -3569,8 +3497,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param obj User object.
      */
     public void registerForLineControlInfo(Handler h, int what, Object obj) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.registerForLineControlInfo(h, what, obj);
     }
 
     /**
@@ -3580,62 +3506,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param h Handler to be removed from the registrant list.
      */
     public void unregisterForLineControlInfo(Handler h) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.unregisterForLineControlInfo(h);
-    }
-
-    /**
-     * Register for CDMA T53 CLIR information record notifications
-     * from the network.
-     * Message.obj will contain an AsyncResult.
-     * AsyncResult.result will be a CdmaInformationRecords.CdmaT53ClirInfoRec
-     * instance.
-     *
-     * @param h Handler that receives the notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerFoT53ClirlInfo(Handler h, int what, Object obj) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.registerFoT53ClirlInfo(h, what, obj);
-    }
-
-    /**
-     * Unregisters for T53 CLIR information record notification
-     * Extraneous calls are tolerated silently
-     *
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForT53ClirInfo(Handler h) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.unregisterForT53ClirInfo(h);
-    }
-
-    /**
-     * Register for CDMA T53 audio control information record notifications
-     * from the network.
-     * Message.obj will contain an AsyncResult.
-     * AsyncResult.result will be a CdmaInformationRecords.CdmaT53AudioControlInfoRec
-     * instance.
-     *
-     * @param h Handler that receives the notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerForT53AudioControlInfo(Handler h, int what, Object obj) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.registerForT53AudioControlInfo(h, what, obj);
-    }
-
-    /**
-     * Unregisters for T53 audio control information record notifications.
-     * Extraneous calls are tolerated silently
-     *
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForT53AudioControlInfo(Handler h) {
-        if (mFeatureFlags.cleanupCdma()) return;
-        mCi.unregisterForT53AudioControlInfo(h);
     }
 
     /**
@@ -4192,11 +4062,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
 
         setRoamingOverrideHelper(gsmRoamingList, GSM_ROAMING_LIST_OVERRIDE_PREFIX, iccId);
         setRoamingOverrideHelper(gsmNonRoamingList, GSM_NON_ROAMING_LIST_OVERRIDE_PREFIX, iccId);
-        if (!mFeatureFlags.cleanupCdma()) {
-            setRoamingOverrideHelper(cdmaRoamingList, CDMA_ROAMING_LIST_OVERRIDE_PREFIX, iccId);
-            setRoamingOverrideHelper(cdmaNonRoamingList, CDMA_NON_ROAMING_LIST_OVERRIDE_PREFIX,
-                    iccId);
-        }
 
         // Refresh.
         ServiceStateTracker tracker = getServiceStateTracker();
