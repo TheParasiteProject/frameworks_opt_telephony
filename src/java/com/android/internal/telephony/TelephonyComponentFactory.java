@@ -21,7 +21,6 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.content.res.XmlResourceParser;
 import android.database.Cursor;
-import android.os.Handler;
 import android.os.Looper;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -31,7 +30,6 @@ import android.text.TextUtils;
 import android.util.SparseArray;
 
 import com.android.ims.ImsManager;
-import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
 import com.android.internal.telephony.cdma.EriManager;
 import com.android.internal.telephony.data.AccessNetworksManager;
 import com.android.internal.telephony.data.DataNetworkController;
@@ -468,30 +466,12 @@ public class TelephonyComponentFactory {
      *
      * @param phone The phone instance
      * @param looper Looper for the handler.
-     * @return The access networks manager
-     * @deprecated {@link #makeAccessNetworksManager(Phone, Looper, FeatureFlags)} instead
-     */
-    public AccessNetworksManager makeAccessNetworksManager(Phone phone, Looper looper) {
-        return new AccessNetworksManager(phone, looper, new FeatureFlagsImpl());
-    }
-
-    /**
-     * Make access networks manager
-     *
-     * @param phone The phone instance
-     * @param looper Looper for the handler.
      * @param featureFlags feature flags.
      * @return The access networks manager
      */
     public AccessNetworksManager makeAccessNetworksManager(Phone phone, Looper looper,
             @NonNull FeatureFlags featureFlags) {
         return new AccessNetworksManager(phone, looper, featureFlags);
-    }
-
-    public CdmaSubscriptionSourceManager
-    getCdmaSubscriptionSourceManagerInstance(Context context, CommandsInterface ci, Handler h,
-                                             int what, Object obj) {
-        return CdmaSubscriptionSourceManager.getInstance(context, ci, h, what, obj);
     }
 
     public LocaleTracker makeLocaleTracker(Phone phone, NitzStateMachine nitzStateMachine,

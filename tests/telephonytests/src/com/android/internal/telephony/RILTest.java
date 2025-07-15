@@ -24,7 +24,6 @@ import static android.telephony.TelephonyManager.HAL_SERVICE_SIM;
 
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_ACKNOWLEDGE_INCOMING_GSM_SMS_WITH_PDU;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_ALLOW_DATA;
-import static com.android.internal.telephony.RILConstants.RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_CDMA_SEND_SMS;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_CDMA_SEND_SMS_EXPECT_MORE;
 import static com.android.internal.telephony.RILConstants.RIL_REQUEST_CHANGE_SIM_PIN;
@@ -327,7 +326,7 @@ public class RILTest extends TelephonyTest {
         proxies.put(HAL_SERVICE_MODEM, mRadioModemProxy);
         mRILInstance = new RIL(context,
                 RadioAccessFamily.getRafFromNetworkType(RILConstants.PREFERRED_NETWORK_MODE),
-                Phone.PREFERRED_CDMA_SUBSCRIPTION, 0, proxies, mFeatureFlags);
+                0, proxies, mFeatureFlags);
         mRILUnderTest = spy(mRILInstance);
         doReturn(mRadioProxy).when(mRILUnderTest).getRadioProxy();
         doReturn(mDataProxy).when(mRILUnderTest).getRadioServiceProxy(eq(RadioDataProxy.class));
@@ -1056,17 +1055,6 @@ public class RILTest extends TelephonyTest {
                 mRILUnderTest,
                 mSerialNumberCaptor.getValue(),
                 RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING);
-    }
-
-    @FlakyTest
-    @Test
-    public void testGetCdmaSubscriptionSource() throws Exception {
-        mRILUnderTest.getCdmaSubscriptionSource(obtainMessage());
-        verify(mRadioProxy).getCdmaSubscriptionSource(mSerialNumberCaptor.capture());
-        verifyRILResponse(
-                mRILUnderTest,
-                mSerialNumberCaptor.getValue(),
-                RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE);
     }
 
     @FlakyTest

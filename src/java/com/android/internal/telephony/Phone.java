@@ -211,7 +211,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     @VisibleForTesting
     public static final int EVENT_EMERGENCY_CALLBACK_MODE_ENTER  = 25;
     protected static final int EVENT_EXIT_EMERGENCY_CALLBACK_RESPONSE = 26;
-    protected static final int EVENT_CDMA_SUBSCRIPTION_SOURCE_CHANGED = 27;
     // other
     protected static final int EVENT_SET_NETWORK_AUTOMATIC          = 28;
     protected static final int EVENT_ICC_RECORD_EVENTS              = 29;
@@ -456,7 +455,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
 
     private final RegistrantList mPhysicalChannelConfigRegistrants = new RegistrantList();
 
-    private final RegistrantList mOtaspRegistrants = new RegistrantList();
 
     private final RegistrantList mPreferredNetworkTypeRegistrants = new RegistrantList();
 
@@ -1133,11 +1131,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
         migrate(mSuppServiceFailedRegistrants, from.mSuppServiceFailedRegistrants);
         migrate(mCellInfoRegistrants, from.mCellInfoRegistrants);
         migrate(mRedialRegistrants, from.mRedialRegistrants);
-        // The emergency state of IMS phone will be cleared in ImsPhone#notifySrvccState after
-        // receive SRVCC completed
-        if (from.isInEmergencyCall()) {
-            setIsInEmergencyCall();
-        }
         setEcmCanceledForEmergency(from.isEcmCanceledForEmergency());
     }
 
@@ -2288,14 +2281,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Get the CDMA subscription mode setting.
-     *
-     * @param response is callback message to report one of TelephonyManager#CDMA_SUBSCRIPTION_*
-     */
-    public void queryCdmaSubscriptionMode(Message response) {
-    }
-
-    /**
      * Get current signal strength. No change notification available on this
      * interface. Use <code>PhoneStateNotifier</code> or an equivalent.
      * An ASU is 0-31 or -1 if unknown (for GSM, dBm = -113 - 2 * asu).
@@ -2329,14 +2314,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @param response is callback message
      */
     public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
-    }
-
-    /**
-     * Requests to set the CDMA subscription mode
-     * @param cdmaSubscriptionType one of TelephonyManager#CDMA_SUBSCRIPTION_*
-     * @param response is callback message
-     */
-    public void setCdmaSubscriptionMode(int cdmaSubscriptionType, Message response) {
     }
 
     /**
@@ -2817,11 +2794,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
         mNotifier.notifyDataConnection(this, state);
     }
 
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    public void notifyOtaspChanged(int otaspMode) {
-        mOtaspRegistrants.notifyRegistrants(new AsyncResult(null, otaspMode, null));
-    }
-
     public void notifyVoiceActivationStateChanged(int state) {
         mNotifier.notifyVoiceActivationStateChanged(this, state);
     }
@@ -3297,51 +3269,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public boolean needsOtaServiceProvisioning() {
         return false;
-    }
-
-    /**
-     * this decides if the dial number is OTA(Over the air provision) number or not
-     * @param dialStr is string representing the dialing digit(s)
-     * @return  true means the dialStr is OTA number, and false means the dialStr is not OTA number
-     */
-    public  boolean isOtaSpNumber(String dialStr) {
-        return false;
-    }
-
-    /**
-     * Register for notifications when OTA Service Provisioning mode has changed.
-     *
-     * <p>The mode is integer. {@link TelephonyManager#OTASP_UNKNOWN}
-     * means the value is currently unknown and the system should wait until
-     * {@link TelephonyManager#OTASP_NEEDED} or {@link TelephonyManager#OTASP_NOT_NEEDED} is
-     * received before making the decision to perform OTASP or not.
-     *
-     * @param h Handler that receives the notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerForOtaspChange(Handler h, int what, Object obj) {
-        checkCorrectThread(h);
-        mOtaspRegistrants.addUnique(h, what, obj);
-        // notify first
-        new Registrant(h, what, obj).notifyRegistrant(new AsyncResult(null, getOtasp(), null));
-    }
-
-    /**
-     * Unegister for notifications when OTA Service Provisioning mode has changed.
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForOtaspChange(Handler h) {
-        mOtaspRegistrants.remove(h);
-    }
-
-    /**
-     * Returns the current OTA Service Provisioning mode.
-     *
-     * @see registerForOtaspChange
-     */
-    public int getOtasp() {
-        return TelephonyManager.OTASP_UNKNOWN;
     }
 
     /**
@@ -4522,13 +4449,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Set boolean broadcastEmergencyCallStateChanges
-     */
-    public abstract void setBroadcastEmergencyCallStateChanges(boolean broadcast);
-
-    public abstract void sendEmergencyCallStateChange(boolean callActive);
-
-    /**
      * This function returns the parent phone of the current phone. It is applicable
      * only for IMS phone (function is overridden by ImsPhone). For others the phone
      * object itself is returned.
@@ -4603,11 +4523,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
             }
         }
         return isEmergencyCallOnly;
-    }
-
-    // Return true if either CSIM or RUIM app is present. By default it returns false.
-    public boolean isCdmaSubscriptionAppPresent() {
-        return false;
     }
 
     /**
@@ -5386,7 +5301,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
         pw.println(" getPhoneName()=" + getPhoneName());
         pw.println(" getPhoneType()=" + getPhoneType());
         pw.println(" getVoiceMessageCount()=" + getVoiceMessageCount());
-        pw.println(" needsOtaServiceProvisioning=" + needsOtaServiceProvisioning());
         pw.println(" isInEmergencySmsMode=" + isInEmergencySmsMode());
         pw.println(" isEcmCanceledForEmergency=" + isEcmCanceledForEmergency());
         pw.println(" service state=" + getServiceState());

@@ -41,7 +41,6 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.LocalLog;
 
-import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
 import com.android.internal.telephony.data.CellularNetworkValidator;
 import com.android.internal.telephony.data.PhoneSwitcher;
 import com.android.internal.telephony.data.TelephonyNetworkProvider;
@@ -165,9 +164,6 @@ public class PhoneFactory {
 
                 sPhoneNotifier = new DefaultPhoneNotifier(context, featureFlags);
 
-                int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
-                Rlog.i(LOG_TAG, "Cdma Subscription set to " + cdmaSubscription);
-
                 /* In case of multi SIM mode two instances of Phone, RIL are created,
                    where as in single SIM mode only instance. isMultiSimEnabled() function checks
                    whether it is single SIM or multi SIM mode */
@@ -184,8 +180,8 @@ public class PhoneFactory {
 
                     Rlog.i(LOG_TAG, "Network Mode set to " + Integer.toString(networkModes[i]));
                     sCommandsInterfaces[i] = new RIL(context,
-                            RadioAccessFamily.getRafFromNetworkType(networkModes[i]),
-                            cdmaSubscription, i, featureFlags);
+                            RadioAccessFamily.getRafFromNetworkType(networkModes[i]), i,
+                            featureFlags);
                 }
 
                 if (numPhones > 0) {
@@ -309,11 +305,9 @@ public class PhoneFactory {
             sPhones = copyOf(sPhones, activeModemCount);
             sCommandsInterfaces = copyOf(sCommandsInterfaces, activeModemCount);
 
-            int cdmaSubscription = CdmaSubscriptionSourceManager.getDefault(context);
             for (int i = prevActiveModemCount; i < activeModemCount; i++) {
                 sCommandsInterfaces[i] = new RIL(context, RadioAccessFamily.getRafFromNetworkType(
-                        RILConstants.PREFERRED_NETWORK_MODE),
-                        cdmaSubscription, i, sFeatureFlags);
+                        RILConstants.PREFERRED_NETWORK_MODE), i, sFeatureFlags);
                 sPhones[i] = createPhone(context, i);
                 if (context.getPackageManager().hasSystemFeature(
                         PackageManager.FEATURE_TELEPHONY_IMS)) {

@@ -1061,24 +1061,21 @@ public class RIL extends BaseCommands implements CommandsInterface {
     //***** Constructors
 
     @UnsupportedAppUsage
-    public RIL(Context context, int allowedNetworkTypes, int cdmaSubscription, Integer instanceId,
-            @NonNull FeatureFlags flags) {
-        this(context, allowedNetworkTypes, cdmaSubscription, instanceId, null, flags);
+    public RIL(Context context, int allowedNetworkTypes, Integer instanceId,
+               @NonNull FeatureFlags flags) {
+        this(context, allowedNetworkTypes, instanceId, null, flags);
     }
 
     @VisibleForTesting
-    public RIL(Context context, int allowedNetworkTypes, int cdmaSubscription, Integer instanceId,
+    public RIL(Context context, int allowedNetworkTypes, Integer instanceId,
             SparseArray<RadioServiceProxy> proxies, @NonNull FeatureFlags flags) {
         super(context);
         mFeatureFlags = flags;
-        cdmaSubscription = TelephonyManager.CDMA_SUBSCRIPTION_UNKNOWN;
         if (RILJ_LOGD) {
-            riljLog("RIL: init allowedNetworkTypes=" + allowedNetworkTypes
-                    + " cdmaSubscription=" + cdmaSubscription + ")");
+            riljLog("RIL: init allowedNetworkTypes=" + allowedNetworkTypes);
         }
 
         mContext = context;
-        mCdmaSubscription  = cdmaSubscription;
         mAllowedNetworkTypesBitmask = allowedNetworkTypes;
         mPhoneType = RILConstants.NO_PHONE;
         mPhoneId = instanceId == null ? 0 : instanceId;
@@ -3180,10 +3177,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
-    public void setCdmaSubscriptionSource(int cdmaSubscription, Message result) {
-    }
-
-    @Override
     public void queryCdmaRoamingPreference(Message result) {
     }
 
@@ -3267,10 +3260,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
         radioServiceInvokeHelper(HAL_SERVICE_VOICE, rr, "getPreferredVoicePrivacy", () -> {
             voiceProxy.getPreferredVoicePrivacy(rr.mSerial);
         });
-    }
-
-    @Override
-    public void sendCDMAFeatureCode(String featureCode, Message result) {
     }
 
     @Override
@@ -3380,10 +3369,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
     @Override
     public void setCdmaBroadcastActivation(boolean activate, Message result) {
-    }
-
-    @Override
-    public void getCDMASubscription(Message result) {
     }
 
     @Override
@@ -3542,10 +3527,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
         radioServiceInvokeHelper(HAL_SERVICE_SIM, rr, "reportStkServiceIsRunning", () -> {
             simProxy.reportStkServiceIsRunning(rr.mSerial);
         });
-    }
-
-    @Override
-    public void getCdmaSubscriptionSource(Message result) {
     }
 
     @Override
