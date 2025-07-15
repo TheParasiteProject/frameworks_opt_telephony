@@ -577,9 +577,6 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
                                             int p3, String data, Message response) {}
 
     @Override
-    public void nvWriteCdmaPrl(byte[] preferredRoamingList, Message response) {}
-
-    @Override
     public void nvResetConfig(int resetType, Message response) {}
 
     @Override

@@ -681,17 +681,6 @@ public interface CommandsInterface {
      * @param obj User object.
      *
      */
-    void registerForCdmaPrlChanged(Handler h, int what, Object obj);
-    void unregisterForCdmaPrlChanged(Handler h);
-
-    /**
-     * Registers the handler for when Cdma prl changed events
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     *
-     */
     void registerForExitEmergencyCallbackMode(Handler h, int what, Object obj);
     void unregisterForExitEmergencyCallbackMode(Handler h);
 
@@ -2094,37 +2083,6 @@ public interface CommandsInterface {
      */
     public void iccTransmitApduBasicChannel(int cla, int instruction, int p1, int p2,
             int p3, String data, Message response);
-
-    /**
-     * Read one of the NV items defined in {@link RadioNVItems} / {@code ril_nv_items.h}.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param itemID the ID of the item to read
-     * @param response callback message with the String response in the obj field
-     * @param workSource calling WorkSource
-     */
-    default void nvReadItem(int itemID, Message response, WorkSource workSource) {}
-
-    /**
-     * Write one of the NV items defined in {@link RadioNVItems} / {@code ril_nv_items.h}.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param itemID the ID of the item to read
-     * @param itemValue the value to write, as a String
-     * @param response Callback message.
-     * @param workSource calling WorkSource
-     */
-    default void nvWriteItem(int itemID, String itemValue, Message response,
-            WorkSource workSource) {}
-
-    /**
-     * Update the CDMA Preferred Roaming List (PRL) in the radio NV storage.
-     * Used for device configuration by some CDMA operators.
-     *
-     * @param preferredRoamingList byte array containing the new PRL
-     * @param response Callback message.
-     */
-    void nvWriteCdmaPrl(byte[] preferredRoamingList, Message response);
 
     /**
      * Perform the specified type of NV config reset. The radio will be taken offline

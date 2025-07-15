@@ -576,16 +576,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void registerForCdmaPrlChanged(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForCdmaPrlChanged(Handler h) {
-
-    }
-
-    @Override
     public void registerForExitEmergencyCallbackMode(Handler h, int what, Object obj) {
 
     }
@@ -1267,11 +1257,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     @Override
     public void iccTransmitApduBasicChannel(int cla, int instruction, int p1, int p2, int p3,
                                             String data, Message response) {
-
-    }
-
-    @Override
-    public void nvWriteCdmaPrl(byte[] preferredRoamingList, Message response) {
 
     }
 
