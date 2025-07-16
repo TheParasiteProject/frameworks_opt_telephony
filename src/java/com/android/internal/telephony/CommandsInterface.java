@@ -663,17 +663,6 @@ public interface CommandsInterface {
     void unregisterForResendIncallMute(Handler h);
 
     /**
-     * Registers the handler for when Cdma subscription changed events
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     *
-     */
-    void registerForCdmaSubscriptionChanged(Handler h, int what, Object obj);
-    void unregisterForCdmaSubscriptionChanged(Handler h);
-
-    /**
      * Registers the handler for when Cdma prl changed events
      *
      * @param h Handler for notification message.
@@ -1733,26 +1722,6 @@ public interface CommandsInterface {
 
     public void registerForImeiMappingChanged(Handler h, int what, Object obj);
 
-    /**
-     * Request the device MDN / H_SID / H_NID / MIN.
-     * "response" is const char **
-     *   [0] is MDN if CDMA subscription is available
-     *   [1] is a comma separated list of H_SID (Home SID) in decimal format
-     *       if CDMA subscription is available
-     *   [2] is a comma separated list of H_NID (Home NID) in decimal format
-     *       if CDMA subscription is available
-     *   [3] is MIN (10 digits, MIN2+MIN1) if CDMA subscription is available
-     */
-    @UnsupportedAppUsage
-    public void getCDMASubscription(Message response);
-
-    /**
-     * Send Flash Code.
-     * "response" is is NULL
-     *   [0] is a FLASH string
-     */
-    public void sendCDMAFeatureCode(String FeatureCode, Message response);
-
     /** Set the Phone type created */
     @UnsupportedAppUsage
     void setPhoneType(int phoneType);
@@ -1770,19 +1739,6 @@ public interface CommandsInterface {
      * @param response is callback message
      */
     void setCdmaRoamingPreference(int cdmaRoamingType, Message response);
-
-    /**
-     *  Requests to set the CDMA subscription mode
-     * @param cdmaSubscriptionType one of  CDMA_SUBSCRIPTION_*
-     * @param response is callback message
-     */
-    void setCdmaSubscriptionSource(int cdmaSubscriptionType, Message response);
-
-    /**
-     *  Requests to get the CDMA subscription srouce
-     * @param response is callback message
-     */
-    void getCdmaSubscriptionSource(Message response);
 
     /**
      *  Set the TTY mode

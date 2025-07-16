@@ -83,8 +83,6 @@ public abstract class BaseCommands implements CommandsInterface {
     @UnsupportedAppUsage
     protected RegistrantList mResendIncallMuteRegistrants = new RegistrantList();
     @UnsupportedAppUsage
-    protected RegistrantList mCdmaSubscriptionChangedRegistrants = new RegistrantList();
-    @UnsupportedAppUsage
     protected RegistrantList mExitEmergencyCallbackModeRegistrants = new RegistrantList();
     protected RegistrantList mRilConnectedRegistrants = new RegistrantList();
     @UnsupportedAppUsage
@@ -173,8 +171,6 @@ public abstract class BaseCommands implements CommandsInterface {
     // vendor ril so it starts up in the correct mode.
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected int mAllowedNetworkTypesBitmask;
-    // CDMA subscription received from PhoneFactory
-    protected int mCdmaSubscription;
     // Type of Phone, GSM or CDMA. Set by GsmCdmaPhone.
     @UnsupportedAppUsage
     protected int mPhoneType;
@@ -756,16 +752,6 @@ public abstract class BaseCommands implements CommandsInterface {
     @Override
     public void unregisterForResendIncallMute(Handler h) {
         mResendIncallMuteRegistrants.remove(h);
-    }
-
-    @Override
-    public void registerForCdmaSubscriptionChanged(Handler h, int what, Object obj) {
-        mCdmaSubscriptionChangedRegistrants.addUnique(h, what, obj);
-    }
-
-    @Override
-    public void unregisterForCdmaSubscriptionChanged(Handler h) {
-        mCdmaSubscriptionChangedRegistrants.remove(h);
     }
 
     @Override

@@ -3114,7 +3114,6 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
                     mPhone.handleTimerInEmergencyCallbackMode(ImsPhone.RESTART_ECM_TIMER);
                 }
                 mIsInEmergencyCall = false;
-                mPhone.sendEmergencyCallStateChange(false);
             }
         }
     }
@@ -3124,7 +3123,6 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
         mConnections.add(conn);
         if (conn.isEmergency()) {
             mIsInEmergencyCall = true;
-            mPhone.sendEmergencyCallStateChange(true);
         }
     }
 

@@ -128,7 +128,6 @@ public class UiccProfile extends IccCard {
     private UiccCarrierPrivilegeRules mTestOverrideCarrierPrivilegeRules;
     private boolean mDisposed = false;
 
-    private RegistrantList mOperatorBrandOverrideRegistrants = new RegistrantList();
 
     private final int mPhoneId;
     private final PinStorage mPinStorage;
@@ -506,7 +505,6 @@ public class UiccProfile extends IccCard {
 
         if (!TextUtils.isEmpty(newCarrierName)) {
             mTelephonyManager.setSimOperatorNameForPhone(mPhoneId, newCarrierName);
-            mOperatorBrandOverrideRegistrants.notifyRegistrants();
         }
 
         updateCarrierNameForSubscription(subId, nameSource);
@@ -1221,13 +1219,7 @@ public class UiccProfile extends IccCard {
     private boolean isSupportedApplication(UiccCardApplication app) {
         // TODO: 2/15/18 Add check to see if ISIM app will go to READY state, and if yes, check for
         // ISIM also (currently ISIM is considered as not supported in this function)
-        if (app.getType() == AppType.APPTYPE_USIM || app.getType() == AppType.APPTYPE_SIM
-                || (UiccController.isCdmaSupported(mContext)
-                && (app.getType() == AppType.APPTYPE_CSIM
-                || app.getType() == AppType.APPTYPE_RUIM))) {
-            return true;
-        }
-        return false;
+        return (app.getType() == AppType.APPTYPE_USIM || app.getType() == AppType.APPTYPE_SIM);
     }
 
     private void checkAndUpdateIfAnyAppToBeIgnored() {
@@ -1305,31 +1297,6 @@ public class UiccProfile extends IccCard {
 
         // Seems to be valid
         return index;
-    }
-
-    /**
-     * Registers the handler when operator brand name is overridden.
-     *
-     * @param h Handler for notification message.
-     * @param what User-defined message code.
-     * @param obj User object.
-     */
-    public void registerForOpertorBrandOverride(Handler h, int what, Object obj) {
-        synchronized (mLock) {
-            Registrant r = new Registrant(h, what, obj);
-            mOperatorBrandOverrideRegistrants.add(r);
-        }
-    }
-
-    /**
-     * Unregister for notifications when operator brand name is overriden.
-     *
-     * @param h Handler to be removed from the registrant list.
-     */
-    public void unregisterForOperatorBrandOverride(Handler h) {
-        synchronized (mLock) {
-            mOperatorBrandOverrideRegistrants.remove(h);
-        }
     }
 
     static boolean isPackageBundled(Context context, String pkgName) {
@@ -1767,7 +1734,6 @@ public class UiccProfile extends IccCard {
         } else {
             spEditor.putString(key, brand).commit();
         }
-        mOperatorBrandOverrideRegistrants.notifyRegistrants();
         return true;
     }
 
@@ -1864,10 +1830,6 @@ public class UiccProfile extends IccCard {
         IndentingPrintWriter pw = new IndentingPrintWriter(printWriter, "  ");
         pw.increaseIndent();
         pw.println("mCatService=" + mCatService);
-        for (int i = 0; i < mOperatorBrandOverrideRegistrants.size(); i++) {
-            pw.println("mOperatorBrandOverrideRegistrants[" + i + "]="
-                    + ((Registrant) mOperatorBrandOverrideRegistrants.get(i)).getHandler());
-        }
         pw.println("mUniversalPinState=" + mUniversalPinState);
         pw.println("mGsmUmtsSubscriptionAppIndex=" + mGsmUmtsSubscriptionAppIndex);
         pw.println("mCdmaSubscriptionAppIndex=" + mCdmaSubscriptionAppIndex);
