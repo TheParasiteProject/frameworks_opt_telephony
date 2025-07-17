@@ -5078,8 +5078,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void startEmergencyCallbackMode(@TelephonyManager.EmergencyCallbackModeType int type,
             long durationMillis) {
-        if (!mFeatureFlags.emergencyCallbackModeNotification()) return;
-
         Rlog.d(mLogTag, "startEmergencyCallbackMode:type=" + type);
         mNotifier.notifyCallbackModeStarted(this, type, durationMillis);
     }
@@ -5092,8 +5090,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void restartEmergencyCallbackMode(@TelephonyManager.EmergencyCallbackModeType int type,
             long durationMillis) {
-        if (!mFeatureFlags.emergencyCallbackModeNotification()) return;
-
         Rlog.d(mLogTag, "restartEmergencyCallbackMode:type=" + type);
         mNotifier.notifyCallbackModeRestarted(this, type, durationMillis);
     }
@@ -5105,8 +5101,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      */
     public void stopEmergencyCallbackMode(@TelephonyManager.EmergencyCallbackModeType int type,
             @TelephonyManager.EmergencyCallbackModeStopReason int reason) {
-        if (!mFeatureFlags.emergencyCallbackModeNotification()) return;
-
         Rlog.d(mLogTag, "stopEmergencyCallbackMode:type=" + type + ", reason=" + reason);
         mNotifier.notifyCallbackModeStopped(this, type, reason);
     }
