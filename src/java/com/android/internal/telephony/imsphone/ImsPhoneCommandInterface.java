@@ -245,10 +245,6 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
     }
 
     @Override
-    public void deleteSmsOnRuim(int index, Message response) {
-    }
-
-    @Override
     public void writeSmsToSim(int status, String smsc, String pdu, Message response) {
     }
 
@@ -268,10 +264,6 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
 
     @Override
     public void setRadioPower(boolean on, Message result) {
-    }
-
-    @Override
-    public void setSuppServiceNotifications(boolean enable, Message result) {
     }
 
     @Override
@@ -386,14 +378,6 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
     }
 
     @Override
-    public void setBandMode (int bandMode, Message response) {
-    }
-
-    @Override
-    public void queryAvailableBandMode (Message response) {
-    }
-
-    @Override
     public void sendTerminalResponse(String contents, Message response) {
     }
 
@@ -470,14 +454,6 @@ class ImsPhoneCommandInterface extends BaseCommands implements CommandsInterface
 
     @Override
     public void setPhoneType(int phoneType) { //Set by CDMAPhone and GSMPhone constructor
-    }
-
-    @Override
-    public void queryCdmaRoamingPreference(Message response) {
-    }
-
-    @Override
-    public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
     }
 
     @Override

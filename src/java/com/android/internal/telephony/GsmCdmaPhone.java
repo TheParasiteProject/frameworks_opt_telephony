@@ -94,7 +94,6 @@ import android.telephony.ims.ImsCallProfile;
 import android.telephony.ims.stub.ImsRegistrationImplBase;
 import android.text.TextUtils;
 import android.util.ArraySet;
-import android.util.Log;
 import android.util.Pair;
 
 import com.android.ims.ImsManager;
@@ -109,7 +108,6 @@ import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.flags.Flags;
 import com.android.internal.telephony.gsm.GsmMmiCode;
 import com.android.internal.telephony.gsm.SsData;
-import com.android.internal.telephony.gsm.SuppServiceNotification;
 import com.android.internal.telephony.imsphone.ImsPhone;
 import com.android.internal.telephony.imsphone.ImsPhoneCallTracker;
 import com.android.internal.telephony.imsphone.ImsPhoneMmiCode;
@@ -203,8 +201,6 @@ public class GsmCdmaPhone extends Phone {
             exitEmergencyCallbackMode();
         }
     };
-    public static final String PROPERTY_CDMA_HOME_OPERATOR_NUMERIC =
-            "ro.cdma.home.operator.numeric";
 
     //CDMALTE
     /** PHONE_TYPE_CDMA_LTE in addition to RuimRecords needs access to SIMRecords and
@@ -713,12 +709,6 @@ public class GsmCdmaPhone extends Phone {
     public List<? extends MmiCode>
     getPendingMmiCodes() {
         return mPendingMMIs;
-    }
-
-    @Override
-    public boolean isDataSuspended() {
-        if (mCT == null) return false;
-        return mCT.mState != PhoneConstants.State.IDLE && !mSST.isConcurrentVoiceAndDataAllowed();
     }
 
     @Override
@@ -1815,27 +1805,6 @@ public class GsmCdmaPhone extends Phone {
         return mImeiType;
     }
 
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    @Override
-    public String getEsn() {
-        loge("[GsmCdmaPhone] getEsn() is a CDMA method");
-        return "0";
-    }
-
-    @Override
-    public String getMeid() {
-        return mMeid;
-    }
-
-    @Override
-    public String getNai() {
-        IccRecords r = mUiccController.getIccRecords(mPhoneId, UiccController.APP_FAM_3GPP2);
-        if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
-            Rlog.v(LOG_TAG, "IccRecords is " + r);
-        }
-        return (r != null) ? r.getNAI() : null;
-    }
-
     @Override
     @Nullable
     public String getSubscriberId() {
@@ -2875,7 +2844,6 @@ public class GsmCdmaPhone extends Phone {
                         getContext().getSystemService(Context.CARRIER_CONFIG_SERVICE);
                 final PersistableBundle b = configMgr.getConfigForSubId(getSubId());
                 if (b != null) {
-                    updateCdmaRoamingSettingsAfterCarrierConfigChanged(b);
                     if (hasCalling()) {
                         updateNrSettingsAfterCarrierConfigChanged(b);
                         updateVoNrSettings(b);
@@ -2969,7 +2937,6 @@ public class GsmCdmaPhone extends Phone {
             case EVENT_SSN:
                 logd("Event EVENT_SSN Received");
                 ar = (AsyncResult) msg.obj;
-                SuppServiceNotification not = (SuppServiceNotification) ar.result;
                 mSsnRegistrants.notifyRegistrants(ar);
                 break;
 
@@ -4429,43 +4396,6 @@ public class GsmCdmaPhone extends Phone {
                 && (setting == 1 || (setting == -1 && mDefaultVonr));
         mCi.setVoNrEnabled(enbleVonr, obtainMessage(EVENT_SET_VONR_ENABLED_DONE), null);
         super.setAllowedImsServicesForAny(ImsRegistrationImplBase.REGISTRATION_TECH_NR, enbleVonr);
-    }
-
-    private void updateCdmaRoamingSettingsAfterCarrierConfigChanged(
-            @NonNull PersistableBundle config) {
-        // Changing the cdma roaming settings based carrier config.
-        int config_cdma_roaming_mode = config.getInt(
-                CarrierConfigManager.KEY_CDMA_ROAMING_MODE_INT);
-        int current_cdma_roaming_mode =
-                Settings.Global.getInt(getContext().getContentResolver(),
-                        Settings.Global.CDMA_ROAMING_MODE,
-                        TelephonyManager.CDMA_ROAMING_MODE_RADIO_DEFAULT);
-        switch (config_cdma_roaming_mode) {
-            // Carrier's cdma_roaming_mode will overwrite the user's previous settings
-            // Keep the user's previous setting in global variable which will be used
-            // when carrier's setting is turn off.
-            case TelephonyManager.CDMA_ROAMING_MODE_HOME:
-            case TelephonyManager.CDMA_ROAMING_MODE_AFFILIATED:
-            case TelephonyManager.CDMA_ROAMING_MODE_ANY:
-                logd("cdma_roaming_mode is going to changed to "
-                        + config_cdma_roaming_mode);
-                setCdmaRoamingPreference(config_cdma_roaming_mode,
-                        obtainMessage(EVENT_SET_ROAMING_PREFERENCE_DONE));
-                break;
-
-            // When carrier's setting is turn off, change the cdma_roaming_mode to the
-            // previous user's setting
-            case TelephonyManager.CDMA_ROAMING_MODE_RADIO_DEFAULT:
-                if (current_cdma_roaming_mode != config_cdma_roaming_mode) {
-                    logd("cdma_roaming_mode is going to changed to "
-                            + current_cdma_roaming_mode);
-                    setCdmaRoamingPreference(current_cdma_roaming_mode,
-                            obtainMessage(EVENT_SET_ROAMING_PREFERENCE_DONE));
-                }
-                break;
-            default:
-                loge("Invalid cdma_roaming_mode settings: " + config_cdma_roaming_mode);
-        }
     }
 
     /**

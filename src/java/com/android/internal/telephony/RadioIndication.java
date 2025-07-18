@@ -20,8 +20,6 @@ import static android.telephony.TelephonyManager.HAL_SERVICE_RADIO;
 
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CALL_RING;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CARRIER_INFO_IMSI_ENCRYPTION;
-import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_OTA_PROVISION_STATUS;
-import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CDMA_RUIM_SMS_STORAGE_FULL;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_CELL_INFO_LIST;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_DATA_CALL_LIST_CHANGED;
 import static com.android.internal.telephony.RILConstants.RIL_UNSOL_EMERGENCY_NUMBER_LIST;
@@ -530,13 +528,6 @@ public class RadioIndication extends IRadioIndication.Stub {
     }
 
     public void cdmaRuimSmsStorageFull(int indicationType) {
-        mRil.processIndication(HAL_SERVICE_RADIO, indicationType);
-
-        if (mRil.isLogOrTrace()) mRil.unsljLog(RIL_UNSOL_CDMA_RUIM_SMS_STORAGE_FULL);
-
-        if (mRil.mIccSmsFullRegistrant != null) {
-            mRil.mIccSmsFullRegistrant.notifyRegistrant();
-        }
     }
 
     public void restrictedStateChanged(int indicationType, int state) {
@@ -563,16 +554,6 @@ public class RadioIndication extends IRadioIndication.Stub {
     }
 
     public void cdmaOtaProvisionStatus(int indicationType, int status) {
-        mRil.processIndication(HAL_SERVICE_RADIO, indicationType);
-
-        int response[] = new int[1];
-        response[0] = status;
-
-        if (mRil.isLogOrTrace()) {
-            mRil.unsljLogRet(RIL_UNSOL_CDMA_OTA_PROVISION_STATUS, response);
-        }
-
-        mRil.mOtaProvisionRegistrants.notifyRegistrants(new AsyncResult (null, response, null));
     }
 
     public void cdmaInfoRec(int indicationType,

@@ -2273,14 +2273,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Query the CDMA roaming preference setting.
-     *
-     * @param response is callback message to report one of TelephonyManager#CDMA_ROAMING_MODE_*
-     */
-    public void queryCdmaRoamingPreference(Message response) {
-    }
-
-    /**
      * Get current signal strength. No change notification available on this
      * interface. Use <code>PhoneStateNotifier</code> or an equivalent.
      * An ASU is 0-31 or -1 if unknown (for GSM, dBm = -113 - 2 * asu).
@@ -2306,14 +2298,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     public boolean isConcurrentVoiceAndDataAllowed() {
         ServiceStateTracker sst = getServiceStateTracker();
         return sst == null ? false : sst.isConcurrentVoiceAndDataAllowed();
-    }
-
-    /**
-     * Requests to set the CDMA roaming preference
-     * @param cdmaRoamingType one of TelephonyManager#CDMA_ROAMING_MODE_*
-     * @param response is callback message
-     */
-    public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
     }
 
     /**
@@ -2719,28 +2703,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     /**
-     * Assign a specified band for RF configuration.
-     *
-     * @param bandMode one of BM_*_BAND
-     * @param response is callback message
-     */
-    public void setBandMode(int bandMode, Message response) {
-        mCi.setBandMode(bandMode, response);
-    }
-
-    /**
-     * Query the list of band mode supported by RF.
-     *
-     * @param response is callback message
-     *        ((AsyncResult)response.obj).result  is an int[] where int[0] is
-     *        the size of the array and the rest of each element representing
-     *        one available BM_*_BAND
-     */
-    public void queryAvailableBandMode(Message response) {
-        mCi.queryAvailableBandMode(response);
-    }
-
-    /**
      * Perform the radio modem reboot. The radio will be taken offline. Used for device
      * configuration by some CDMA operators.
      *
@@ -3113,52 +3075,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
             mContext.sendBroadcastAsUser(secrectCodeIntent, UserHandle.ALL, null,
                     options.toBundle());
         }
-    }
-
-    /**
-     * Returns the CDMA ERI icon index to display
-     */
-    public int getCdmaEriIconIndex() {
-        return -1;
-    }
-
-    /**
-     * Returns the CDMA ERI icon mode,
-     * 0 - ON
-     * 1 - FLASHING
-     */
-    public int getCdmaEriIconMode() {
-        return -1;
-    }
-
-    /**
-     * Returns the CDMA ERI text,
-     */
-    public String getCdmaEriText() {
-        return "GSM nw, no ERI";
-    }
-
-    /**
-     * Retrieves the MIN for CDMA phones.
-     */
-    public String getCdmaMin() {
-        return null;
-    }
-
-    /**
-     * Check if subscription data has been assigned to mMin
-     *
-     * return true if MIN info is ready; false otherwise.
-     */
-    public boolean isMinInfoReady() {
-        return false;
-    }
-
-    /**
-     * @return {@code true} if data is suspended.
-     */
-    public boolean isDataSuspended() {
-        return false;
     }
 
     /**

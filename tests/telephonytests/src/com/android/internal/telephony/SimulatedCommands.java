@@ -423,18 +423,6 @@ public class SimulatedCommands extends BaseCommands
     }
 
     @Override
-    public void
-    setSuppServiceNotifications(boolean enable, Message result) {
-        resultSuccess(result, null);
-
-        if (enable && mSsnNotifyOn) {
-            Rlog.w(LOG_TAG, "Supp Service Notifications already enabled!");
-        }
-
-        mSsnNotifyOn = enable;
-    }
-
-    @Override
     public void queryFacilityLock(String facility, String pin,
                                    int serviceClass, Message result) {
         queryFacilityLockForApp(facility, pin, serviceClass, null, result);
@@ -856,37 +844,6 @@ public class SimulatedCommands extends BaseCommands
         resultSuccess(result, mSignalStrength);
     }
 
-     /**
-     * Assign a specified band for RF configuration.
-     *
-     * @param bandMode one of BM_*_BAND
-     * @param result is callback message
-     */
-    @Override
-    public void setBandMode (int bandMode, Message result) {
-        resultSuccess(result, null);
-    }
-
-    /**
-     * Query the list of band mode supported by RF.
-     *
-     * @param result is callback message
-     *        ((AsyncResult)response.obj).result  is an int[] where int[0] is
-     *        the size of the array and the rest of each element representing
-     *        one available BM_*_BAND
-     */
-    @Override
-    public void queryAvailableBandMode (Message result) {
-        int ret[] = new int [4];
-
-        ret[0] = 4;
-        ret[1] = Phone.BM_US_BAND;
-        ret[2] = Phone.BM_JPN_BAND;
-        ret[3] = Phone.BM_AUS_BAND;
-
-        resultSuccess(result, ret);
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -1087,12 +1044,6 @@ public class SimulatedCommands extends BaseCommands
     @Override
     public void deleteSmsOnSim(int index, Message response) {
         Rlog.d(LOG_TAG, "Delete message at index " + index);
-        unimplemented(response);
-    }
-
-    @Override
-    public void deleteSmsOnRuim(int index, Message response) {
-        Rlog.d(LOG_TAG, "Delete RUIM message at index " + index);
         unimplemented(response);
     }
 
@@ -1716,16 +1667,6 @@ public class SimulatedCommands extends BaseCommands
         imeiInfo.svn = FAKE_IMEISV;
         imeiInfo.type = ImeiInfo.ImeiType.SECONDARY;
         resultSuccess(response, imeiInfo);
-    }
-
-    @Override
-    public void queryCdmaRoamingPreference(Message response) {
-        unimplemented(response);
-    }
-
-    @Override
-    public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
-        unimplemented(response);
     }
 
     @Override
