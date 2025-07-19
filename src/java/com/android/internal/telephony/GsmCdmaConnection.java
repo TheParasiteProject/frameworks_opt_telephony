@@ -96,7 +96,6 @@ public class GsmCdmaConnection extends Connection {
 
     //***** Constants
     static final int PAUSE_DELAY_MILLIS_GSM = 3 * 1000;
-    static final int PAUSE_DELAY_MILLIS_CDMA = 2 * 1000;
     static final int WAKE_LOCK_TIMEOUT_MILLIS = 60 * 1000;
 
     //***** Inner Classes

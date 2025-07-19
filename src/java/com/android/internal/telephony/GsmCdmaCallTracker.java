@@ -755,16 +755,12 @@ public class GsmCdmaCallTracker extends CallTracker {
 
         Connection newRinging = null; //or waiting
         ArrayList<Connection> newUnknownConnectionsGsm = new ArrayList<Connection>();
-        Connection newUnknownConnectionCdma = null;
         boolean hasNonHangupStateChanged = false;   // Any change besides
                                                     // a dropped connection
         boolean hasAnyCallDisconnected = false;
         boolean needsPollDelay = false;
         boolean unknownConnectionAppeared = false;
         int handoverConnectionsSize = mHandoverConnections.size();
-
-        //CDMA
-        boolean noConnectionExists = true;
 
         for (int i = 0, curDC = 0, dcSize = polledCalls.size()
                 ; i < mConnections.length; i++) {
@@ -780,11 +776,6 @@ public class GsmCdmaCallTracker extends CallTracker {
                 } else {
                     dc = null;
                 }
-            }
-
-            //CDMA
-            if (conn != null || dc != null) {
-                noConnectionExists = false;
             }
 
             if (DBG_POLL) log("poll: conn[i=" + i + "]=" +

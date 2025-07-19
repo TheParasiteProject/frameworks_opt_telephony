@@ -426,11 +426,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void setSuppServiceNotifications(boolean enable, Message result) {
-
-    }
-
-    @Override
     public void setOnCatCcAlphaNotify(Handler h, int what, Object obj) {
 
     }
@@ -481,67 +476,7 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void registerForNumberInfo(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForNumberInfo(Handler h) {
-
-    }
-
-    @Override
-    public void registerForRedirectedNumberInfo(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForRedirectedNumberInfo(Handler h) {
-
-    }
-
-    @Override
-    public void registerForLineControlInfo(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForLineControlInfo(Handler h) {
-
-    }
-
-    @Override
-    public void registerFoT53ClirlInfo(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForT53ClirInfo(Handler h) {
-
-    }
-
-    @Override
-    public void registerForT53AudioControlInfo(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForT53AudioControlInfo(Handler h) {
-
-    }
-
-    @Override
     public void setEmergencyCallbackMode(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void registerForCdmaOtaProvision(Handler h, int what, Object obj) {
-
-    }
-
-    @Override
-    public void unregisterForCdmaOtaProvision(Handler h) {
 
     }
 
@@ -840,11 +775,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void deleteSmsOnRuim(int index, Message response) {
-
-    }
-
-    @Override
     public void writeSmsToSim(int status, String smsc, String pdu, Message response) {
 
     }
@@ -994,16 +924,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
-    public void setBandMode(int bandMode, Message response) {
-
-    }
-
-    @Override
-    public void queryAvailableBandMode(Message response) {
-
-    }
-
-    @Override
     public void setPreferredNetworkType(int networkType, Message response) {
 
     }
@@ -1096,16 +1016,6 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void setPhoneType(int phoneType) {
-
-    }
-
-    @Override
-    public void queryCdmaRoamingPreference(Message response) {
-
-    }
-
-    @Override
-    public void setCdmaRoamingPreference(int cdmaRoamingType, Message response) {
 
     }
 
