@@ -2624,7 +2624,7 @@ public class DataNetwork extends StateMachine {
                                 NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
                 case CarrierConfigManager.SATELLITE_DATA_SUPPORT_BANDWIDTH_CONSTRAINED -> {
                     try {
-                        builder.removeCapability(DataUtils
+                        builder.removeCapability(NetworkCapabilities
                                 .NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED);
                     } catch (Exception ignored) { }
                 }
