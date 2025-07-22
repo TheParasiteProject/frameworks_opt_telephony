@@ -5261,9 +5261,7 @@ public class SatelliteController extends Handler {
         if (!enabled) {
             mIsModemEnabledReportingNtnSignalStrength.set(false);
         }
-        if (mFeatureFlags.satelliteStateChangeListener()) {
-            notifyEnabledStateChanged(enabled);
-        }
+        notifyEnabledStateChanged(enabled);
     }
 
     private void registerForPendingDatagramCount() {
