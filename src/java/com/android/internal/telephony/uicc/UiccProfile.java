@@ -612,6 +612,9 @@ public class UiccProfile extends IccCard {
      */
     @VisibleForTesting(visibility = VisibleForTesting.Visibility.PRIVATE)
     public void updateExternalState() {
+        if (DBG) {
+            log("updateExternalState: mUiccCard.getCardState() = " + mUiccCard.getCardState());
+        }
         // First check if card state is IO_ERROR or RESTRICTED
         if (mUiccCard.getCardState() == IccCardStatus.CardState.CARDSTATE_ERROR) {
             setExternalState(IccCardConstants.State.CARD_IO_ERROR);
@@ -1306,10 +1309,10 @@ public class UiccProfile extends IccCard {
             // mechanism (like CarrierAppUtils) would automatically enable such an app, so we
             // shouldn't prompt the user about it.
             pm.getApplicationInfo(pkgName, PackageManager.MATCH_HIDDEN_UNTIL_INSTALLED_COMPONENTS);
-            if (DBG) log(pkgName + " is installed.");
+            if (DBG) Rlog.d(LOG_TAG, pkgName + " is installed.");
             return true;
         } catch (PackageManager.NameNotFoundException e) {
-            if (DBG) log(pkgName + " is not installed.");
+            if (DBG) Rlog.d(LOG_TAG, pkgName + " is not installed.");
             return false;
         }
     }
@@ -1432,8 +1435,9 @@ public class UiccProfile extends IccCard {
             if (keyValue.length == 2) {
                 map.put(keyValue[0].toUpperCase(Locale.ROOT), keyValue[1]);
             } else {
-                loge("Incorrect length of key-value pair in carrier app allow list map.  "
-                        + "Length should be exactly 2");
+                Rlog.e(LOG_TAG,
+                        "Incorrect length of key-value pair in carrier app allow list map. Length"
+                                + " should be exactly 2");
             }
         }
 
@@ -1788,16 +1792,16 @@ public class UiccProfile extends IccCard {
         }
     }
 
-    private static void log(String msg) {
-        Rlog.d(LOG_TAG, msg);
+    private void log(String message) {
+        Rlog.d(LOG_TAG + " [" + mPhoneId + "]", message);
     }
 
-    private static void loge(String msg) {
-        Rlog.e(LOG_TAG, msg);
+    private void loge(String msg) {
+        Rlog.e(LOG_TAG + " [" + mPhoneId + "]", msg);
     }
 
     private void logWithLocalLog(String msg) {
-        Rlog.d(LOG_TAG, msg);
+        Rlog.d(LOG_TAG + " [" + mPhoneId + "]", msg);
         if (DBG) UiccController.addLocalLog("UiccProfile[" + mPhoneId + "]: " + msg);
     }
 
