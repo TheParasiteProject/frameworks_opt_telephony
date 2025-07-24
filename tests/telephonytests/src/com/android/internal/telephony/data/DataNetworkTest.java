@@ -2840,8 +2840,8 @@ public class DataNetworkTest extends TelephonyTest {
         assertThat(mDataNetworkUT.getNetworkCapabilities()
                 .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)).isTrue();
         try {
-            assertThat(mDataNetworkUT.getNetworkCapabilities()
-                    .hasCapability(DataUtils.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)).isFalse();
+            assertThat(mDataNetworkUT.getNetworkCapabilities().hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)).isFalse();
         } catch (Exception ignored) { }
 
         // Test unconstrained traffic
@@ -2878,8 +2878,8 @@ public class DataNetworkTest extends TelephonyTest {
         assertThat(mDataNetworkUT.getNetworkCapabilities()
                 .hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED)).isTrue();
         try {
-            assertThat(mDataNetworkUT.getNetworkCapabilities()
-                    .hasCapability(DataUtils.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)).isFalse();
+            assertThat(mDataNetworkUT.getNetworkCapabilities().hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)).isFalse();
         } catch (Exception ignored) { }
 
         // Test not constrained traffic
