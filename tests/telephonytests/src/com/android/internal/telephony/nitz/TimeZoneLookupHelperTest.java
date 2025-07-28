@@ -457,9 +457,8 @@ public class TimeZoneLookupHelperTest {
     @Test
     public void testLookupByMobileCountries() {
         // Test with a single country MCC.
-        MobileCountries usMobileCountries = mock(MobileCountries.class);
-        when(usMobileCountries.getCountryIsoCodes()).thenReturn(Set.of("us"));
-        when(usMobileCountries.getDefaultCountryIsoCode()).thenReturn("us");
+        MobileCountries usMobileCountries =
+                MobileCountries.createForTest("310", null, Set.of("us"), "us");
 
         CountryResult expectedUsResult =
                 new CountryResult(
@@ -474,19 +473,16 @@ public class TimeZoneLookupHelperTest {
 
         // Test with a multi-country MCC where countries have different offsets.
         // French Guiana (gf, UTC-3) and Guadeloupe (gp, UTC-4).
-        MobileCountries frMobileCountries = mock(MobileCountries.class);
-        when(frMobileCountries.getCountryIsoCodes()).thenReturn(Set.of("gf", "gp"));
-        when(frMobileCountries.getDefaultCountryIsoCode()).thenReturn("gp");
+        MobileCountries frMobileCountries =
+                MobileCountries.createForTest("340", null, Set.of("gf", "gp"), "gp");
         assertNull(
                 mTimeZoneLookupHelper.lookupByMobileCountries(
                         frMobileCountries, NH_SUMMER_TIME_MILLIS));
 
         // Test with a multi-country MCC where countries have the same offset.
         // Guadeloupe (gp) and Martinique (mq) are both UTC-4.
-        MobileCountries frMobileCountriesSameOffset = mock(MobileCountries.class);
-        when(frMobileCountriesSameOffset.getCountryIsoCodes())
-                .thenReturn(Set.of("gp", "mq"));
-        when(frMobileCountriesSameOffset.getDefaultCountryIsoCode()).thenReturn("gp");
+        MobileCountries frMobileCountriesSameOffset =
+                MobileCountries.createForTest("340", null, Set.of("gp", "mq"), "gp");
 
         // The result should be for the default country "gp".
         CountryResult expectedGpResult =
@@ -505,9 +501,8 @@ public class TimeZoneLookupHelperTest {
         NitzData nitzData = NitzData.parse(nitzString);
 
         // Test with a single country MCC.
-        MobileCountries usMobileCountries = mock(MobileCountries.class);
-        when(usMobileCountries.getCountryIsoCodes()).thenReturn(Set.of("us"));
-        when(usMobileCountries.getDefaultCountryIsoCode()).thenReturn("us");
+        MobileCountries usMobileCountries =
+                MobileCountries.createForTest("310", null, Set.of("us"), "us");
 
         OffsetResult expectedUsResult = mTimeZoneLookupHelper.lookupByNitzCountry(nitzData, "us");
         assertNotNull(expectedUsResult);
@@ -519,9 +514,8 @@ public class TimeZoneLookupHelperTest {
         // French Guiana (gf, UTC-3) and Guadeloupe (gp, UTC-4).
         // NITZ for UTC-3.
         NitzData nitzDataGf = NitzData.parse("15/06/01,00:00:00-12,0"); // UTC-3, no DST
-        MobileCountries frMobileCountries = mock(MobileCountries.class);
-        when(frMobileCountries.getCountryIsoCodes()).thenReturn(Set.of("gf", "gp"));
-        when(frMobileCountries.getDefaultCountryIsoCode()).thenReturn("gp");
+        MobileCountries frMobileCountries =
+                MobileCountries.createForTest("340", null, Set.of("gf", "gp"), "gp");
 
         OffsetResult expectedGfResult = mTimeZoneLookupHelper.lookupByNitzCountry(nitzDataGf, "gf");
         assertNotNull(expectedGfResult);
@@ -535,10 +529,8 @@ public class TimeZoneLookupHelperTest {
         // Test with a multi-country MCC where NITZ resolves to multiple countries.
         // Guadeloupe (gp) and Martinique (mq) are both UTC-4.
         NitzData nitzDataGpMq = NitzData.parse("15/06/01,00:00:00-16,0"); // UTC-4, no DST
-        MobileCountries frMobileCountriesSameOffset = mock(MobileCountries.class);
-        when(frMobileCountriesSameOffset.getCountryIsoCodes())
-                .thenReturn(Set.of("gp", "mq"));
-        when(frMobileCountriesSameOffset.getDefaultCountryIsoCode()).thenReturn("gp");
+        MobileCountries frMobileCountriesSameOffset =
+                MobileCountries.createForTest("340", null, Set.of("gp", "mq"), "gp");
 
         OffsetResult expectedGpResult =
                 mTimeZoneLookupHelper.lookupByNitzCountry(nitzDataGpMq, "gp");
