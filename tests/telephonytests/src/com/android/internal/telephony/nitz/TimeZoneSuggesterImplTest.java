@@ -682,9 +682,8 @@ public class TimeZoneSuggesterImplTest {
         // Test with a single country MCC (US).
         Scenario usScenario = UNIQUE_US_ZONE_SCENARIO1;
         String usCountryCode = usScenario.getNetworkCountryIsoCode();
-        MobileCountries usMobileCountries = mock(MobileCountries.class);
-        when(usMobileCountries.getCountryIsoCodes()).thenReturn(Set.of(usCountryCode));
-        when(usMobileCountries.getDefaultCountryIsoCode()).thenReturn(usCountryCode);
+        MobileCountries usMobileCountries =
+                MobileCountries.createForTest("310", null, Set.of(usCountryCode), usCountryCode);
 
         // Country only.
         TelephonyTimeZoneSuggestion expectedUsCountryOnlySuggestion =
@@ -722,10 +721,9 @@ public class TimeZoneSuggesterImplTest {
         // French Guiana (gf, UTC-3) and Guadeloupe (gp, UTC-4). Default is gp.
         String gfCountryCode = "gf";
         String gpCountryCode = "gp";
-        MobileCountries gfGpMobileCountries = mock(MobileCountries.class);
-        when(gfGpMobileCountries.getCountryIsoCodes())
-                .thenReturn(Set.of(gfCountryCode, gpCountryCode));
-        when(gfGpMobileCountries.getDefaultCountryIsoCode()).thenReturn(gpCountryCode);
+        MobileCountries gfGpMobileCountries =
+                MobileCountries.createForTest(
+                        "340", null, Set.of(gfCountryCode, gpCountryCode), gpCountryCode);
 
         // Country only: no suggestion as offsets differ.
         assertEquals(
@@ -756,10 +754,9 @@ public class TimeZoneSuggesterImplTest {
         // Guadeloupe (gp) and Martinique (mq) are both UTC-4. Default is gp.
         String gpCountryCode = "gp";
         String mqCountryCode = "mq";
-        MobileCountries gpMqMobileCountries = mock(MobileCountries.class);
-        when(gpMqMobileCountries.getCountryIsoCodes())
-                .thenReturn(Set.of(gpCountryCode, mqCountryCode));
-        when(gpMqMobileCountries.getDefaultCountryIsoCode()).thenReturn(gpCountryCode);
+        MobileCountries gpMqMobileCountries =
+                MobileCountries.createForTest(
+                        "340", null, Set.of(gpCountryCode, mqCountryCode), gpCountryCode);
 
         // Country only: suggests default country's zone.
         TelephonyTimeZoneSuggestion expectedGpMqCountryOnlySuggestion =

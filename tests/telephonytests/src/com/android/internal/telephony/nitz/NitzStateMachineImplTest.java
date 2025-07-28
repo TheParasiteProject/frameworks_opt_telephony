@@ -767,11 +767,8 @@ public class NitzStateMachineImplTest {
         String countryIsoCode = UNIQUE_US_ZONE_SCENARIO1.getNetworkCountryIsoCode();
         String mcc = "310";
 
-        MobileCountries mobileCountries = mock(MobileCountries.class);
-        when(mobileCountries.getCountryIsoCodes())
-                .thenReturn(Set.of(countryIsoCode));
-        when(mobileCountries.getDefaultCountryIsoCode()).thenReturn(countryIsoCode);
-        when(mobileCountries.toString()).thenReturn("MockMobileCountries[mcc=" + mcc + "]");
+        MobileCountries mobileCountries =
+                MobileCountries.createForTest(mcc, null, Set.of(countryIsoCode), countryIsoCode);
 
         Script script =
                 new Script().initializeSystemClock(ARBITRARY_SYSTEM_CLOCK_TIME).networkAvailable();
@@ -802,11 +799,9 @@ public class NitzStateMachineImplTest {
         final String defaultCountry = "gp";
 
         // Mock MobileCountries as we can't create one for a specific MCC in tests easily.
-        MobileCountries mobileCountries = mock(MobileCountries.class);
-        when(mobileCountries.getCountryIsoCodes())
-                .thenReturn(Set.of(defaultCountry, nitzCountry));
-        when(mobileCountries.getDefaultCountryIsoCode()).thenReturn(defaultCountry);
-        when(mobileCountries.toString()).thenReturn("MockMobileCountries[mcc=" + mcc + "]");
+        MobileCountries mobileCountries =
+                MobileCountries.createForTest(
+                        mcc, null, Set.of(defaultCountry, nitzCountry), defaultCountry);
 
         CountryDetectionListener mockListener = mock(CountryDetectionListener.class);
         mNitzStateMachineImpl.registerCountryDetection(mockListener);
