@@ -5157,8 +5157,8 @@ public class SatelliteControllerTest extends TelephonyTest {
                 ArgumentCaptor.forClass(IntentFilter.class);
         ArgumentCaptor<BroadcastReceiver> receiverCaptor =
                 ArgumentCaptor.forClass(BroadcastReceiver.class);
-        verify(mContext).registerReceiver(receiverCaptor.capture(), intentFilterCaptor.capture(),
-                anyInt());
+        verify(mContext, times(2)).registerReceiver(receiverCaptor.capture(),
+                intentFilterCaptor.capture(), anyInt());
 
         BroadcastReceiver receiver = receiverCaptor.getValue();
         mSatelliteControllerUT =
@@ -5175,6 +5175,8 @@ public class SatelliteControllerTest extends TelephonyTest {
             latch1.await();
         } catch (InterruptedException e) {
         }
+        moveTimeForward(100);
+        processAllMessages();
         assertTrue(mSatelliteControllerUT.isApplicationUpdated);
         mSatelliteControllerUT =
                 new TestSatelliteController(mContext, Looper.myLooper(), mFeatureFlags);
@@ -5190,6 +5192,8 @@ public class SatelliteControllerTest extends TelephonyTest {
             latch2.await();
         } catch (InterruptedException e) {
         }
+        moveTimeForward(100);
+        processAllMessages();
         assertTrue(mSatelliteControllerUT.isApplicationUpdated);
         mSatelliteControllerUT =
                 new TestSatelliteController(mContext, Looper.myLooper(), mFeatureFlags);
@@ -5205,6 +5209,8 @@ public class SatelliteControllerTest extends TelephonyTest {
             latch3.await();
         } catch (InterruptedException e) {
         }
+        moveTimeForward(100);
+        processAllMessages();
         assertTrue(mSatelliteControllerUT.isApplicationUpdated);
         mSatelliteControllerUT =
                 new TestSatelliteController(mContext, Looper.myLooper(), mFeatureFlags);
@@ -5220,6 +5226,8 @@ public class SatelliteControllerTest extends TelephonyTest {
             latch4.await();
         } catch (InterruptedException e) {
         }
+        moveTimeForward(100);
+        processAllMessages();
         assertFalse(mSatelliteControllerUT.isApplicationUpdated);
     }
 
