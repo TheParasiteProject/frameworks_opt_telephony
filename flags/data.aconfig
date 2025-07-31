@@ -30,15 +30,6 @@ flag {
   bug:"286171724"
 }
 
-# OWNER=jackyu TARGET=25Q2
-flag {
-  name: "oem_paid_private"
-  namespace: "telephony"
-  description: "Support OEM_PAID and OEM_PRIVATE networks"
-  bug: "366194627"
-  is_exported: true
-}
-
 # OWNER=gwenlin TARGET=25Q2
 flag {
   name: "incall_handover_policy"
