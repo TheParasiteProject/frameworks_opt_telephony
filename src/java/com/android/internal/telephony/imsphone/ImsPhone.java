@@ -1010,7 +1010,8 @@ public class ImsPhone extends ImsPhoneBase {
         // Get the CLIR info if needed
         imsDialArgsBuilder.setClirMode(mCT.getClirMode());
 
-        if (mDefaultPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
+        if (!mFeatureFlags.deleteCdma()
+                && mDefaultPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
             return mCT.dial(dialString, imsDialArgsBuilder.build());
         }
 

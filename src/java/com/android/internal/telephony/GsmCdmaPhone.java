@@ -178,8 +178,6 @@ public class GsmCdmaPhone extends Phone {
     private Registrant mEcmExitRespRegistrant;
     private String mEsn;
     private String mMeid;
-    // string to define how the carrier specifies its own ota sp number
-    private String mCarrierOtaSpNumSchema;
     private Boolean mUiccApplicationsEnabled = null;
     // keeps track of when we have triggered an emergency call due to the ril.test.emergencynumber
     // param being set and we should generate a simulated exit from the modem upon exit of ECbM.
@@ -196,7 +194,6 @@ public class GsmCdmaPhone extends Phone {
         }
     };
 
-    //CDMALTE
     /** PHONE_TYPE_CDMA_LTE in addition to RuimRecords needs access to SIMRecords and
      * IsimUiccRecords
      */
@@ -489,9 +486,6 @@ public class GsmCdmaPhone extends Phone {
         mCi.registerForExitEmergencyCallbackMode(this, EVENT_EXIT_EMERGENCY_CALLBACK_RESPONSE,
                 null);
         mCi.registerForModemReset(this, EVENT_MODEM_RESET, null);
-        // get the string that specifies the carrier OTA Sp number
-        mCarrierOtaSpNumSchema = TelephonyManager.from(mContext).getOtaSpNumberSchemaForPhone(
-                getPhoneId(), "");
 
         mCi.registerForVoiceRadioTechChanged(this, EVENT_VOICE_RADIO_TECH_CHANGED, null);
         mCi.registerForLceInfo(this, EVENT_LINK_CAPACITY_CHANGED, null);
@@ -3747,7 +3741,6 @@ public class GsmCdmaPhone extends Phone {
         pw.println(" isInEcm()=" + isInEcm());
         pw.println(" mEsn=" + pii(mEsn));
         pw.println(" mMeid=" + pii(mMeid));
-        pw.println(" mCarrierOtaSpNumSchema=" + mCarrierOtaSpNumSchema);
         pw.println(" isCspPlmnEnabled()=" + isCspPlmnEnabled());
         pw.println(" mManualNetworkSelectionPlmn=" + mManualNetworkSelectionPlmn);
         pw.println(
