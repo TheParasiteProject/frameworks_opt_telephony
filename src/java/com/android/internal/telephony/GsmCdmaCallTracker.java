@@ -43,7 +43,6 @@ import android.util.EventLog;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneInternalInterface.DialArgs;
-import com.android.internal.telephony.cdma.CdmaCallWaitingNotification;
 import com.android.internal.telephony.domainselection.DomainSelectionResolver;
 import com.android.internal.telephony.emergency.EmergencyStateTracker;
 import com.android.internal.telephony.flags.FeatureFlags;
@@ -366,15 +365,6 @@ public class GsmCdmaCallTracker extends CallTracker {
 
     //CDMA
     /**
-     * Handle Ecm timer to be canceled or re-started
-     */
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    private void handleEcmTimer(int action) {
-        mPhone.handleTimerInEmergencyCallbackMode(action);
-    }
-
-    //CDMA
-    /**
      * Disable data call when emergency call is connected
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -399,6 +389,7 @@ public class GsmCdmaCallTracker extends CallTracker {
      */
     private Connection dialCdma(String dialString, DialArgs dialArgs)
             throws CallStateException {
+        if (mFeatureFlags.deleteCdma()) return null;
         int clirMode = dialArgs.clirMode;
         Bundle intentExtras = dialArgs.intentExtras;
         boolean isEmergencyCall = dialArgs.isEmergency;
@@ -1039,34 +1030,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         pollCallsWhenSafe();
     }
 
-    private void dumpState() {
-        List l;
-
-        Rlog.i(LOG_TAG,"Phone State:" + mState);
-
-        Rlog.i(LOG_TAG,"Ringing call: " + mRingingCall.toString());
-
-        l = mRingingCall.getConnections();
-        for (int i = 0, s = l.size(); i < s; i++) {
-            Rlog.i(LOG_TAG,l.get(i).toString());
-        }
-
-        Rlog.i(LOG_TAG,"Foreground call: " + mForegroundCall.toString());
-
-        l = mForegroundCall.getConnections();
-        for (int i = 0, s = l.size(); i < s; i++) {
-            Rlog.i(LOG_TAG,l.get(i).toString());
-        }
-
-        Rlog.i(LOG_TAG,"Background call: " + mBackgroundCall.toString());
-
-        l = mBackgroundCall.getConnections();
-        for (int i = 0, s = l.size(); i < s; i++) {
-            Rlog.i(LOG_TAG,l.get(i).toString());
-        }
-
-    }
-
     //***** Called from GsmCdmaConnection
 
     public void hangup(GsmCdmaConnection conn) throws CallStateException {
@@ -1234,23 +1197,6 @@ public class GsmCdmaCallTracker extends CallTracker {
             }
         }
         return null;
-    }
-
-    //CDMA
-    private void notifyCallWaitingInfo(CdmaCallWaitingNotification obj) {
-        if (mCallWaitingRegistrants != null) {
-            mCallWaitingRegistrants.notifyRegistrants(new AsyncResult(null, obj, null));
-        }
-    }
-
-    //CDMA
-    private void handleCallWaitingInfo(CdmaCallWaitingNotification cw) {
-        // Create a new GsmCdmaConnection which attaches itself to ringingCall.
-        new GsmCdmaConnection(mPhone.getContext(), cw, this, mRingingCall);
-        updatePhoneState();
-
-        // Finally notify application
-        notifyCallWaitingInfo(cw);
     }
 
     private Phone.SuppService getFailedService(int what) {
@@ -1459,25 +1405,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         }
     }
 
-    //CDMA
-    /**
-     * Check and enable data call after an emergency call is dropped if it's
-     * not in ECM
-     */
-    private void checkAndEnableDataCallAfterEmergencyCallDropped() {
-        if (mIsInEmergencyCall) {
-            mIsInEmergencyCall = false;
-            boolean inEcm = mPhone.isInEcm();
-            if (Phone.DEBUG_PHONE) {
-                log("checkAndEnableDataCallAfterEmergencyCallDropped,inEcm=" + inEcm);
-            }
-            if (!inEcm) {
-                // Re-initiate data connection
-                mPhone.notifyEmergencyCallRegistrants(false);
-            }
-        }
-    }
-
     /**
      * Check the MT call to see if it's a new ring or
      * a unknown connection.
@@ -1518,6 +1445,7 @@ public class GsmCdmaCallTracker extends CallTracker {
      *         false if it is not in emergency call
      */
     public boolean isInEmergencyCall() {
+        if (mFeatureFlags.deleteCdma()) return false;
         return mIsInEmergencyCall;
     }
 
@@ -1526,6 +1454,7 @@ public class GsmCdmaCallTracker extends CallTracker {
      * {@code false} otherwise.
      */
     public boolean isInOtaspCall() {
+        if (mFeatureFlags.deleteCdma()) return false;
         return mPendingMO != null && mPendingMO.isOtaspCall()
                 || (mForegroundCall.getConnections().stream()
                 .filter(connection -> ((connection instanceof GsmCdmaConnection)
