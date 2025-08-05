@@ -2596,9 +2596,7 @@ public class ServiceStateTracker extends Handler {
             if (mIccRecords instanceof SIMRecords) {
                 mCdnr.updateEfFromUsim(null /* usim */);
             } else if (mIccRecords instanceof RuimRecords) {
-                if (!mFeatureFlags.deleteCdma()) {
-                    mCdnr.updateEfFromRuim(null /* ruim */);
-                }
+                mCdnr.updateEfFromRuim(null /* ruim */);
             }
 
             if (mUiccApplication != null) {
@@ -3627,8 +3625,7 @@ public class ServiceStateTracker extends Handler {
         CellIdentity ci = getCellIdentityFromCellInfo(getAllCellInfo());
         if (ci != null) return ci;
 
-        return (!mFeatureFlags.deleteCdma()
-                && mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA)
+        return mPhone.getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA
                 ? new CellIdentityCdma() : new CellIdentityGsm();
     }
 

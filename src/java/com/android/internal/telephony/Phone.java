@@ -667,7 +667,7 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
         mSimActivationTracker = mTelephonyComponentFactory
                 .inject(SimActivationTracker.class.getName())
                 .makeSimActivationTracker(this);
-        if (mFeatureFlags.deleteCdma() || getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
+        if (getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
             mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
         }
         //Initialize Telephony Analytics
@@ -679,7 +679,7 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * called if this device does not support FEATURE_IMS_TELEPHONY.
      */
     public void createImsPhone() {
-        if (!mFeatureFlags.deleteCdma() && getPhoneType() == PhoneConstants.PHONE_TYPE_SIP) {
+        if (getPhoneType() == PhoneConstants.PHONE_TYPE_SIP) {
             return;
         }
 
@@ -2246,7 +2246,7 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
      * @return true if there is a voice call forwarding
      */
     public boolean getCallForwardingIndicator() {
-        if (!mFeatureFlags.deleteCdma() && getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
+        if (getPhoneType() == PhoneConstants.PHONE_TYPE_CDMA) {
             Rlog.e(mLogTag, "getCallForwardingIndicator: not possible in CDMA");
             return false;
         }
@@ -2886,7 +2886,6 @@ public abstract class Phone extends Handler implements PhoneInternalInterface {
     }
 
     public boolean isInCdmaEcm() {
-        if (mFeatureFlags.deleteCdma()) return false;
         if (DomainSelectionResolver.getInstance().isDomainSelectionSupported()) {
             return EmergencyStateTracker.getInstance().isInCdmaEcm();
         }

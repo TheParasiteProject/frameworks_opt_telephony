@@ -38,7 +38,6 @@ import android.telephony.ImsiEncryptionInfo;
 import android.telephony.NetworkScanRequest;
 import android.telephony.RadioAccessSpecifier;
 import android.telephony.SignalThresholdInfo;
-import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyManager.HalService;
 import android.telephony.data.DataCallResponse;
@@ -121,6 +120,9 @@ public interface CommandsInterface {
     static final int USSD_MODE_NOTIFY        = 0;
     static final int USSD_MODE_REQUEST       = 1;
     static final int USSD_MODE_NW_RELEASE    = 2;
+    static final int USSD_MODE_LOCAL_CLIENT  = 3;
+    static final int USSD_MODE_NOT_SUPPORTED = 4;
+    static final int USSD_MODE_NW_TIMEOUT    = 5;
 
     // GSM SMS fail cause for acknowledgeLastIncomingSMS. From TS 23.040, 9.2.3.22.
     static final int GSM_SMS_FAIL_CAUSE_MEMORY_CAPACITY_EXCEEDED    = 0xD3;
@@ -132,6 +134,7 @@ public interface CommandsInterface {
     static final int CDMA_SMS_FAIL_CAUSE_INVALID_TELESERVICE_ID     = 4;
     static final int CDMA_SMS_FAIL_CAUSE_RESOURCE_SHORTAGE          = 35;
     static final int CDMA_SMS_FAIL_CAUSE_OTHER_TERMINAL_PROBLEM     = 39;
+    static final int CDMA_SMS_FAIL_CAUSE_ENCODING_PROBLEM           = 96;
 
     /** IMS voice capability */
     int IMS_MMTEL_CAPABILITY_VOICE = 1 << 0;
@@ -174,6 +177,8 @@ public interface CommandsInterface {
     void unregisterForRadioStateChanged(Handler h);
 
     void registerForVoiceRadioTechChanged(Handler h, int what, Object obj);
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+    void unregisterForVoiceRadioTechChanged(Handler h);
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     void registerForImsNetworkStateChanged(Handler h, int what, Object obj);
     void unregisterForImsNetworkStateChanged(Handler h);
@@ -225,8 +230,14 @@ public interface CommandsInterface {
      * Fires on any change in ICC status
      */
     void registerForIccStatusChanged(Handler h, int what, Object obj);
+    void unregisterForIccStatusChanged(Handler h);
+    /** Register for ICC slot status changed event */
+    void registerForIccSlotStatusChanged(Handler h, int what, Object obj);
+    /** Unregister for ICC slot status changed event */
+    void unregisterForIccSlotStatusChanged(Handler h);
 
     void registerForCallStateChanged(Handler h, int what, Object obj);
+    void unregisterForCallStateChanged(Handler h);
     /** Register for network state changed event */
     void registerForNetworkStateChanged(Handler h, int what, Object obj);
     /** Unregister from network state changed event */
@@ -237,9 +248,12 @@ public interface CommandsInterface {
     void unregisterForDataCallListChanged(Handler h);
     /** Register for the apn unthrottled event */
     void registerForApnUnthrottled(Handler h, int what, Object obj);
-
+    /** Unregister for apn unthrottled event */
+    void unregisterForApnUnthrottled(Handler h);
     /** Register for the slicing config changed event */
     void registerForSlicingConfigChanged(Handler h, int what, Object obj);
+    /** Unregister for slicing config changed event */
+    void unregisterForSlicingConfigChanged(Handler h);
 
     /** InCall voice privacy notifications */
     void registerForInCallVoicePrivacyOn(Handler h, int what, Object obj);
@@ -249,6 +263,17 @@ public interface CommandsInterface {
 
     /** Single Radio Voice Call State progress notifications */
     void registerForSrvccStateChanged(Handler h, int what, Object obj);
+    void unregisterForSrvccStateChanged(Handler h);
+
+    /**
+     * Handlers for subscription status change indications.
+     *
+     * @param h Handler for subscription status change messages.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void registerForSubscriptionStatusChanged(Handler h, int what, Object obj);
+    void unregisterForSubscriptionStatusChanged(Handler h);
 
     /**
      * fires on any change in hardware configuration.
@@ -339,6 +364,7 @@ public interface CommandsInterface {
      */
 
     void setOnUSSD(Handler h, int what, Object obj);
+    void unSetOnUSSD(Handler h);
 
     /**
      * unlike the register* methods, there's only one signal strength handler
@@ -375,6 +401,10 @@ public interface CommandsInterface {
     void registerForIccRefresh(Handler h, int what, Object obj);
     void unregisterForIccRefresh(Handler h);
 
+    @UnsupportedAppUsage
+    void setOnIccRefresh(Handler h, int what, Object obj);
+    void unsetOnIccRefresh(Handler h);
+
     /**
      * Sets the handler for RING notifications.
      * Unlike the register* methods, there's only one notification handler
@@ -385,6 +415,7 @@ public interface CommandsInterface {
      */
     @UnsupportedAppUsage
     void setOnCallRing(Handler h, int what, Object obj);
+    void unSetOnCallRing(Handler h);
 
     /**
      * Sets the handler for RESTRICTED_STATE changed notification,
@@ -396,6 +427,7 @@ public interface CommandsInterface {
      */
 
     void setOnRestrictedStateChanged(Handler h, int what, Object obj);
+    void unSetOnRestrictedStateChanged(Handler h);
 
     /**
      * Sets the handler for Supplementary Service Notifications.
@@ -407,6 +439,7 @@ public interface CommandsInterface {
      */
     @UnsupportedAppUsage
     void setOnSuppServiceNotification(Handler h, int what, Object obj);
+    void unSetOnSuppServiceNotification(Handler h);
 
     /**
      * Sets the handler for Session End Notifications for CAT.
@@ -478,6 +511,7 @@ public interface CommandsInterface {
      * @param obj User object.
      */
     void setOnSs(Handler h, int what, Object obj);
+    void unSetOnSs(Handler h);
 
     /**
      * Register for unsolicited NATT Keepalive Status Indications
@@ -489,6 +523,11 @@ public interface CommandsInterface {
     default void setOnRegistrationFailed(Handler h, int what, Object obj) {}
 
     /**
+     * @param h Handler for notification message.
+     */
+    default void unSetOnRegistrationFailed(Handler h) {}
+
+    /**
      * Sets the handler for Event Notifications for CDMA Display Info.
      * Unlike the register* methods, there's only one notification handler
      *
@@ -498,6 +537,17 @@ public interface CommandsInterface {
      */
     void registerForDisplayInfo(Handler h, int what, Object obj);
     void unregisterForDisplayInfo(Handler h);
+
+    /**
+     * Sets the handler for Event Notifications for CallWaiting Info.
+     * Unlike the register* methods, there's only one notification handler
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void registerForCallWaitingInfo(Handler h, int what, Object obj);
+    void unregisterForCallWaitingInfo(Handler h);
 
     /**
      * Sets the handler for Event Notifications for Signal Info.
@@ -548,6 +598,7 @@ public interface CommandsInterface {
      *
      */
     void registerForExitEmergencyCallbackMode(Handler h, int what, Object obj);
+    void unregisterForExitEmergencyCallbackMode(Handler h);
 
     /**
      * Registers the handler for RIL_UNSOL_RIL_CONNECT events.
@@ -562,6 +613,8 @@ public interface CommandsInterface {
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     void registerForRilConnected(Handler h, int what, Object obj);
+    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+    void unregisterForRilConnected(Handler h);
 
     /**
      * Registers the handler for RIL_UNSOL_SIM_DETACH_FROM_NETWORK_CONFIG_CHANGED events.
@@ -570,7 +623,14 @@ public interface CommandsInterface {
      * @param what User-defined message code.
      * @param obj User object.
      */
-    default void registerUiccApplicationEnablementChanged(Handler h, int what, Object obj) {}
+    default void registerUiccApplicationEnablementChanged(Handler h, int what, Object obj) {};
+
+    /**
+     * Unregisters the handler for RIL_UNSOL_SIM_DETACH_FROM_NETWORK_CONFIG_CHANGED events.
+     *
+     * @param h Handler for notification message.
+     */
+    default void unregisterUiccApplicationEnablementChanged(Handler h) {};
 
     /**
      * Supply the ICC PIN to the ICC card
@@ -610,6 +670,23 @@ public interface CommandsInterface {
     void supplyIccPinForApp(String pin, String aid, Message result);
 
     /**
+     * Supply the ICC PUK and newPin to the ICC card
+     *
+     *  returned message
+     *  retMsg.obj = AsyncResult ar
+     *  ar.exception carries exception on failure
+     *  This exception is CommandException with an error of PASSWORD_INCORRECT
+     *  if the password is incorrect
+     *
+     *  ar.result is an optional array of integers where the first entry
+     *  is the number of attempts remaining before the ICC is permanently disabled.
+     *
+     * ar.exception and ar.result are null on success
+     */
+
+    void supplyIccPuk(String puk, String newPin, Message result);
+
+    /**
      * Supply the PUK, new pin for the app with this AID on the ICC card
      *
      *  AID (Application ID), See ETSI 102.221 8.1 and 101.220 4
@@ -626,6 +703,25 @@ public interface CommandsInterface {
      */
 
     void supplyIccPukForApp(String puk, String newPin, String aid, Message result);
+
+    /**
+     * Supply the ICC PIN2 to the ICC card
+     * Only called following operation where ICC_PIN2 was
+     * returned as a a failure from a previous operation
+     *
+     *  returned message
+     *  retMsg.obj = AsyncResult ar
+     *  ar.exception carries exception on failure
+     *  This exception is CommandException with an error of PASSWORD_INCORRECT
+     *  if the password is incorrect
+     *
+     *  ar.result is an optional array of integers where the first entry
+     *  is the number of attempts remaining before the ICC will be PUK locked.
+     *
+     * ar.exception and ar.result are null on success
+     */
+
+    void supplyIccPin2(String pin2, Message result);
 
     /**
      * Supply the PIN2 for the app with this AID on the ICC card
@@ -647,6 +743,25 @@ public interface CommandsInterface {
      */
 
     void supplyIccPin2ForApp(String pin2, String aid, Message result);
+
+    /**
+     * Supply the SIM PUK2 to the SIM card
+     * Only called following operation where SIM_PUK2 was
+     * returned as a a failure from a previous operation
+     *
+     *  returned message
+     *  retMsg.obj = AsyncResult ar
+     *  ar.exception carries exception on failure
+     *  This exception is CommandException with an error of PASSWORD_INCORRECT
+     *  if the password is incorrect
+     *
+     *  ar.result is an optional array of integers where the first entry
+     *  is the number of attempts remaining before the ICC is permanently disabled.
+     *
+     * ar.exception and ar.result are null on success
+     */
+
+    void supplyIccPuk2(String puk2, String newPin2, Message result);
 
     /**
      * Supply the PUK2, newPin2 for the app with this AID on the ICC card
@@ -672,6 +787,7 @@ public interface CommandsInterface {
     // TODO: Add java doc and indicate that msg.arg1 contains the number of attempts remaining.
     void changeIccPin(String oldPin, String newPin, Message result);
     void changeIccPinForApp(String oldPin, String newPin, String aidPtr, Message result);
+    void changeIccPin2(String oldPin2, String newPin2, Message result);
     void changeIccPin2ForApp(String oldPin2, String newPin2, String aidPtr, Message result);
 
     @UnsupportedAppUsage
@@ -990,6 +1106,7 @@ public interface CommandsInterface {
     /**
      * send SMS over IMS with 3GPP2/CDMA SMS format
      * @param pdu is CDMA-SMS in internal pseudo-PDU format
+     * @param response sent when operation completes
      * @param retry indicates if this is a retry; 0 == not retry, nonzero = retry
      * @param messageRef valid field if retry is set to nonzero.
      *        Contains messageRef from RIL_SMS_Response corresponding to failed MO SMS
@@ -1676,15 +1793,17 @@ public interface CommandsInterface {
      * Sets the minimum time in milli-seconds between when RIL_UNSOL_CELL_INFO_LIST
      * should be invoked.
      *
-     * <p>The default, 0, means invoke RIL_UNSOL_CELL_INFO_LIST when any of the reported
+     * The default, 0, means invoke RIL_UNSOL_CELL_INFO_LIST when any of the reported
      * information changes. Setting the value to INT_MAX(0x7fffffff) means never issue
-     * a RIL_UNSOL_CELL_INFO_LIST.
+     * A RIL_UNSOL_CELL_INFO_LIST.
      *
-     * @param rateInMillis The minimum time in milliseconds between unsolicited cell info updates.
-     * @param response A Message object to be sent to the caller's handler once the operation
-     *                 completes. The `result.obj` will be an AsyncResult.
-     *                 `ar.exception` will contain an exception on failure or be null on success.
-     * @param workSource The calling WorkSource.
+     *
+
+     * @param rateInMillis is sent back to handler and result.obj is a AsyncResult
+     * @param response.obj is AsyncResult ar when sent to associated handler
+     *                        ar.exception carries exception on failure or null on success
+     *                        otherwise the error.
+     * @param workSource calling WorkSource
      */
     default void setCellInfoListRate(int rateInMillis, Message response, WorkSource workSource){}
 
@@ -1948,7 +2067,7 @@ public interface CommandsInterface {
     /**
      * Set allowed carriers
      *
-     * @param carrierRestrictionRules Carrie restriction rules
+     * @param carriers Allowed carriers
      * @param result Callback message contains the result of the operation
      * @param workSource calling WorkSource
      */
@@ -2070,6 +2189,13 @@ public interface CommandsInterface {
     void registerForCarrierInfoForImsiEncryption(Handler h, int what, Object obj);
 
     /**
+     * DeRegister for unsolicited Carrier Public Key.
+     *
+     * @param h Handler for notification message.
+     */
+    void unregisterForCarrierInfoForImsiEncryption(Handler h);
+
+    /**
      * Register for unsolicited Network Scan result.
      *
      * @param h Handler for notification message.
@@ -2111,6 +2237,13 @@ public interface CommandsInterface {
     void registerForEmergencyNumberList(Handler h, int what, Object obj);
 
     /**
+     * Deregister for unsolicited Emergency Number List Indications
+     *
+     * @param h Handler for notification message.
+     */
+    void unregisterForEmergencyNumberList(Handler h);
+
+    /**
      * Start sending NATT Keepalive packets on a specified data connection
      *
      * @param contextId cid that identifies the data connection for this keepalive
@@ -2135,7 +2268,7 @@ public interface CommandsInterface {
      * @param enable whether to enable or disable the modem
      * @param result a Message to return to the requester
      */
-    default void enableModem(boolean enable, Message result) {}
+    default void enableModem(boolean enable, Message result) {};
 
     /**
      * Notify CommandsInterface that whether its corresponding slot is active or not. If not,
@@ -2150,7 +2283,7 @@ public interface CommandsInterface {
      *
      * @param result a Message to return to the requester
      */
-    default void getModemStatus(Message result) {}
+    default void getModemStatus(Message result) {};
 
     /**
      * Enable or disable uicc applications on the SIM.
@@ -2206,14 +2339,14 @@ public interface CommandsInterface {
      * @param what User-defined message code.
      * @param obj User object.
      */
-    default void registerForBarringInfoChanged(Handler h, int what, Object obj) {}
+    default void registerForBarringInfoChanged(Handler h, int what, Object obj) {};
 
     /**
      * Unregisters the handler for RIL_UNSOL_BARRING_INFO_CHANGED events.
      *
      * @param h Handler for notification message.
      */
-    default void unregisterForBarringInfoChanged(Handler h) {}
+    default void unregisterForBarringInfoChanged(Handler h) {};
 
     /**
      * Get all the barring info for the current camped cell applicable to the current user.
@@ -2222,7 +2355,7 @@ public interface CommandsInterface {
      *
      * @param result Message will be sent back to handler and result.obj will be the AsycResult.
      */
-    default void getBarringInfo(Message result) {}
+    default void getBarringInfo(Message result) {};
 
     /**
      * Returns the last barring information received.
@@ -2231,7 +2364,7 @@ public interface CommandsInterface {
      */
     default @Nullable BarringInfo getLastBarringInfo() {
         return null;
-    }
+    };
 
     /**
      * Allocates a pdu session id
@@ -2241,7 +2374,7 @@ public interface CommandsInterface {
      * @param result Message will be sent back to handler and result.obj will be the AsycResult.
      *
      */
-    default void allocatePduSessionId(Message result) {}
+    default void allocatePduSessionId(Message result) {};
 
     /**
      * Release the pdu session id
@@ -2250,7 +2383,7 @@ public interface CommandsInterface {
      * @param pduSessionId The id that was allocated and should now be released.
      *
      */
-    default void releasePduSessionId(Message result, int pduSessionId) {}
+    default void releasePduSessionId(Message result, int pduSessionId) {};
 
     /**
      * Indicates that a handover has started
@@ -2258,7 +2391,7 @@ public interface CommandsInterface {
      * @param result Message that will be sent back to handler.
      * @param callId Identifier associated with the data call
      */
-    default void startHandover(Message result, int callId) {}
+    default void startHandover(Message result, int callId) {};
 
     /**
      * Indicates that a handover has been cancelled
@@ -2266,7 +2399,7 @@ public interface CommandsInterface {
      * @param result Message that will be sent back to handler.
      * @param callId Identifier associated with the data call
      */
-    default void cancelHandover(Message result, int callId) {}
+    default void cancelHandover(Message result, int callId) {};
 
     /**
      * Tells the modem if user data setting is enabled or disabled.
@@ -2277,7 +2410,7 @@ public interface CommandsInterface {
      * @param result  Message that will be sent back to handler.
      * @param enabled Whether the user mobile data is enabled.
      */
-    default void setUserDataEnabled(Message result, boolean enabled) {}
+    default void setUserDataEnabled(Message result, boolean enabled) {};
 
     /**
      * Tells the modem if user data roaming setting is enabled or disabled.
@@ -2288,7 +2421,7 @@ public interface CommandsInterface {
      * @param result  Message that will be sent back to handler.
      * @param enabled Whether the user mobile data roaming is enabled.
      */
-    default void setUserDataRoamingEnabled(Message result, boolean enabled) {}
+    default void setUserDataRoamingEnabled(Message result, boolean enabled) {};
 
     /**
      * Control the data throttling at modem.
@@ -2301,7 +2434,7 @@ public interface CommandsInterface {
      *      achieved.
      */
     default void setDataThrottling(Message result, WorkSource workSource,
-            int dataThrottlingAction, long completionWindowMillis) {}
+            int dataThrottlingAction, long completionWindowMillis) {};
 
     /**
      * Request to get the current slicing configuration including URSP rules and
@@ -2309,7 +2442,7 @@ public interface CommandsInterface {
      *
      * @param result Message that will be sent back to handler.
      */
-    default void getSlicingConfig(Message result) {}
+    default void getSlicingConfig(Message result) {};
 
     /**
      * Request to enable/disable the mock modem service.
@@ -2319,7 +2452,7 @@ public interface CommandsInterface {
      */
     default boolean setModemService(String serviceName) {
         return true;
-    }
+    };
 
     /**
      * Return the class name of the currently bound modem service.
@@ -2328,7 +2461,7 @@ public interface CommandsInterface {
      */
     default String getModemService() {
         return "default";
-    }
+    };
 
     /**
      * Request the SIM phonebook records of all activated UICC applications
@@ -2409,6 +2542,13 @@ public interface CommandsInterface {
     default void registerForNotifyAnbr(Handler h, int what, Object obj) {}
 
     /**
+     * Unregisters for notifications when ANBR is received form the network.
+     *
+     * @param h Handler to be removed from the registrant list.
+     */
+    default void unregisterForNotifyAnbr(Handler h) {}
+
+    /**
      * Registers for IMS deregistration trigger from modem.
      *
      * @param h Handler for notification message.
@@ -2416,6 +2556,13 @@ public interface CommandsInterface {
      * @param obj User object.
      */
     default void registerForTriggerImsDeregistration(Handler h, int what, Object obj) {}
+
+    /**
+     * Unregisters for IMS deregistration trigger from modem.
+     *
+     * @param h Handler to be removed from the registrant list.
+     */
+    default void unregisterForTriggerImsDeregistration(Handler h) {}
 
     /**
      * Set the UE's usage setting.
@@ -2638,9 +2785,23 @@ public interface CommandsInterface {
             @NonNull Handler h, int what, @Nullable Object obj) {}
 
     /**
+     * Unregisters for cellular identifier disclosure events.
+     *
+     * @param h Handler to be removed from the registrant list.
+     */
+    default void unregisterForCellularIdentifierDisclosures(@NonNull Handler h) {}
+
+    /**
      * Registers for security algorithm update events.
      */
     default void registerForSecurityAlgorithmUpdates(Handler h, int what, Object obj) {}
+
+    /**
+     * Unregisters for security algorithm update events.
+     *
+     * @param h Handler to be removed from the registrant list.
+     */
+    default void unregisterForSecurityAlgorithmUpdates(Handler h) {}
 
     /**
      * Set the non-terrestrial PLMN with lower priority than terrestrial networks.

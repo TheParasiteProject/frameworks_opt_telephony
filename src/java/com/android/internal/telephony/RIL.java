@@ -1427,6 +1427,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
+    public void supplyIccPuk(String puk, String newPin, Message result) {
+        supplyIccPukForApp(puk, newPin, null, result);
+    }
+
+    @Override
     public void supplyIccPukForApp(String puk, String newPin, String aid, Message result) {
         RadioSimProxy simProxy = getRadioServiceProxy(RadioSimProxy.class);
         if (!canMakeRequest("supplyIccPukForApp", simProxy, result, RADIO_HAL_VERSION_1_4)) {
@@ -1449,6 +1454,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
     }
 
     @Override
+    public void supplyIccPin2(String pin, Message result) {
+        supplyIccPin2ForApp(pin, null, result);
+    }
+
+    @Override
     public void supplyIccPin2ForApp(String pin, String aid, Message result) {
         RadioSimProxy simProxy = getRadioServiceProxy(RadioSimProxy.class);
         if (!canMakeRequest("supplyIccPin2ForApp", simProxy, result, RADIO_HAL_VERSION_1_4)) {
@@ -1466,6 +1476,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
             simProxy.supplyIccPin2ForApp(rr.mSerial, RILUtils.convertNullToEmptyString(pin),
                     RILUtils.convertNullToEmptyString(aid));
         });
+    }
+
+    @Override
+    public void supplyIccPuk2(String puk2, String newPin2, Message result) {
+        supplyIccPuk2ForApp(puk2, newPin2, null, result);
     }
 
     @Override
@@ -1514,6 +1529,11 @@ public class RIL extends BaseCommands implements CommandsInterface {
                     RILUtils.convertNullToEmptyString(newPin),
                     RILUtils.convertNullToEmptyString(aid));
         });
+    }
+
+    @Override
+    public void changeIccPin2(String oldPin2, String newPin2, Message result) {
+        changeIccPin2ForApp(oldPin2, newPin2, null, result);
     }
 
     @Override
