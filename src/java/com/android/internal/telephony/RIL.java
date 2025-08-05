@@ -1403,6 +1403,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
     @Override
     public void supplyIccPin(String pin, Message result) {
+        riljLoge("supplyIccPin: pin : " + RILUtils.getRedactedPin(pin));
         supplyIccPinForApp(pin, null, result);
     }
 
@@ -1505,7 +1506,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         if (RILJ_LOGD) {
             riljLog(rr.serialString() + "> " + RILUtils.requestToString(rr.mRequest)
-                    + " oldPin = " + oldPin + " newPin = " + newPin + " aid = " + aid);
+                    + " oldPin = " + RILUtils.getRedactedPin(oldPin) + " newPin = "
+                    + RILUtils.getRedactedPin(newPin) + " aid = " + aid);
         }
 
         radioServiceInvokeHelper(HAL_SERVICE_SIM, rr, "changeIccPinForApp", () -> {
@@ -1527,7 +1529,8 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         if (RILJ_LOGD) {
             riljLog(rr.serialString() + "> " + RILUtils.requestToString(rr.mRequest)
-                    + " oldPin = " + oldPin2 + " newPin = " + newPin2 + " aid = " + aid);
+                    + " oldPin = " + RILUtils.getRedactedPin(oldPin2) + " newPin = "
+                    + RILUtils.getRedactedPin(newPin2) + " aid = " + aid);
         }
 
         radioServiceInvokeHelper(HAL_SERVICE_SIM, rr, "changeIccPin2ForApp", () -> {
