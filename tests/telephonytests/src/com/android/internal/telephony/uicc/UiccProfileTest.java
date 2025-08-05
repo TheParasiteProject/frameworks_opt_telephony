@@ -38,10 +38,13 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.PersistableBundle;
 import android.telephony.CarrierConfigManager;
+import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.TelephonyManager;
 import android.testing.AndroidTestingRunner;
 import android.testing.TestableLooper;
+
+import androidx.test.filters.SmallTest;
 
 import com.android.internal.telephony.ISub;
 import com.android.internal.telephony.IccCardConstants.State;
@@ -108,13 +111,15 @@ public class UiccProfileTest extends TelephonyTest {
         mServiceManagerMockedServices.put("isub", mIBinder);
 
         doReturn(1).when(mMockedIsub).getSubId(0);
-        /* initially there are no application available, but the array should not be empty. */
+
+         /* initially there are no application available, but the array should not be empty. */
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_USIM,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA2");
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{umtsApp};
-        mIccCardStatus.mImsSubscriptionAppIndex =
-                mIccCardStatus.mGsmUmtsSubscriptionAppIndex = -1;
+        mIccCardStatus.mCdmaSubscriptionAppIndex =
+                mIccCardStatus.mImsSubscriptionAppIndex =
+                        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = -1;
         mIccIoResult = new IccIoResult(0x90, 0x00, IccUtils.hexStringToBytes("FF40"));
         mSimulatedCommands.setIccIoResultForApduLogicalChannel(mIccIoResult);
         mBundle = mContextFixture.getCarrierConfigBundle();
@@ -124,7 +129,7 @@ public class UiccProfileTest extends TelephonyTest {
         ArgumentCaptor<CarrierConfigManager.CarrierConfigChangeListener> listenerArgumentCaptor =
                 ArgumentCaptor.forClass(CarrierConfigManager.CarrierConfigChangeListener.class);
         mUiccProfile = new UiccProfile(mContext, mSimulatedCommands, mIccCardStatus,
-                0 /* phoneId */, mUiccCard, new Object(), mFeatureFlags);
+              0 /* phoneId */, mUiccCard, new Object(), mFeatureFlags);
         verify(mCarrierConfigManager).registerCarrierConfigChangeListener(any(),
                 listenerArgumentCaptor.capture());
         mCarrierConfigChangeListener = listenerArgumentCaptor.getAllValues().get(0);
@@ -144,6 +149,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void tesUiccProfileInfoSanity() {
         assertEquals(1, mUiccProfile.getNumApplications());
         assertNull(mUiccProfile.getUniversalPinState());
@@ -159,6 +165,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testParseAllowListMapFromString() {
         String allowList = "";
         Map<String, String> parsedMap = UiccProfile.parseToCertificateToPackageMap(allowList);
@@ -180,26 +187,34 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplication() {
         /* update app status and index */
+        IccCardApplicationStatus cdmaApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_CSIM,
+                IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA0");
         IccCardApplicationStatus imsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_ISIM,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA1");
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_USIM,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA2");
-        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp};
-        mIccCardStatus.mImsSubscriptionAppIndex = 0;
-        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
+        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{cdmaApp, imsApp, umtsApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = 0;
+        mIccCardStatus.mImsSubscriptionAppIndex = 1;
+        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 2;
         logd("Update UICC Profile Applications");
         mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
         processAllMessages();
-        assertEquals(2, mUiccProfile.getNumApplications());
+
+        assertEquals(3, mUiccProfile.getNumApplications());
+        assertTrue(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_CSIM));
         assertTrue(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_ISIM));
         assertTrue(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_USIM));
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfile() {
         int mChannelId = 1;
         mIccCardStatus.mCardState = IccCardStatus.CardState.CARDSTATE_PRESENT;
@@ -217,6 +232,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfilePinState() {
         mIccCardStatus.mUniversalPinState = IccCardStatus.PinState.PINSTATE_ENABLED_VERIFIED;
         mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
@@ -225,27 +241,35 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testInitialCardState() {
         // after updateExternalState() is called, the state will not be UNKNOWN
         assertEquals(mUiccProfile.getState(), State.NOT_READY);
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationNotReady() {
         /* update app status and index */
+        IccCardApplicationStatus cdmaApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_CSIM,
+                IccCardApplicationStatus.AppState.APPSTATE_READY, "0xA0");
         IccCardApplicationStatus imsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_ISIM,
                 IccCardApplicationStatus.AppState.APPSTATE_READY, "0xA1");
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_USIM,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA2");
-        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp};
-        mIccCardStatus.mImsSubscriptionAppIndex = 0;
-        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
+        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{cdmaApp, imsApp, umtsApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = 0;
+        mIccCardStatus.mImsSubscriptionAppIndex = 1;
+        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 2;
         logd("Update UICC Profile Applications");
         mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
         processAllMessages();
-        assertEquals(2, mUiccProfile.getNumApplications());
+
+        assertEquals(3, mUiccProfile.getNumApplications());
+
         mUiccProfile.mHandler.sendMessage(
                 mUiccProfile.mHandler.obtainMessage(UiccProfile.EVENT_APP_READY));
         waitForMs(100);
@@ -254,21 +278,28 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationAllReady() {
         /* update app status and index */
+        IccCardApplicationStatus cdmaApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_CSIM,
+                IccCardApplicationStatus.AppState.APPSTATE_READY, "0xA0");
         IccCardApplicationStatus imsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_ISIM,
                 IccCardApplicationStatus.AppState.APPSTATE_READY, "0xA1");
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_USIM,
                 IccCardApplicationStatus.AppState.APPSTATE_READY, "0xA2");
-        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp};
-        mIccCardStatus.mImsSubscriptionAppIndex = 0;
-        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
+        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{cdmaApp, imsApp, umtsApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = 0;
+        mIccCardStatus.mImsSubscriptionAppIndex = 1;
+        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 2;
         logd("Update UICC Profile Applications");
         mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
         processAllMessages();
-        assertEquals(2, mUiccProfile.getNumApplications());
+
+        assertEquals(3, mUiccProfile.getNumApplications());
+
         mUiccProfile.mHandler.sendMessage(
                 mUiccProfile.mHandler.obtainMessage(UiccProfile.EVENT_APP_READY));
         waitForMs(100);
@@ -279,6 +310,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationAllSupportedAppsReady() {
         /* update app status and index */
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
@@ -291,12 +323,15 @@ public class UiccProfileTest extends TelephonyTest {
                 IccCardApplicationStatus.AppType.APPTYPE_UNKNOWN,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA2");
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp, unknownApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
         mIccCardStatus.mImsSubscriptionAppIndex = 0;
         mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
         logd("Update UICC Profile Applications");
         mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
         processAllMessages();
+
         assertEquals(3, mUiccProfile.getNumApplications());
+
         mUiccProfile.mHandler.sendMessage(
                 mUiccProfile.mHandler.obtainMessage(UiccProfile.EVENT_APP_READY));
         waitForMs(100);
@@ -307,6 +342,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationWithDuplicateApps() {
         /* update app status and index */
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
@@ -323,6 +359,7 @@ public class UiccProfileTest extends TelephonyTest {
                 AppState.APPSTATE_DETECTED, "0xA2");
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp, unknownApp,
                 umtsAppDup};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
         mIccCardStatus.mImsSubscriptionAppIndex = 0;
         mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
         logd("Update UICC Profile Applications");
@@ -341,6 +378,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationWithDuplicateAppsInDifferentOrder() {
         /* update app status and index */
         IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
@@ -357,6 +395,7 @@ public class UiccProfileTest extends TelephonyTest {
                 AppState.APPSTATE_DETECTED, "0xA2");
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{umtsAppDup, imsApp, umtsApp,
                 unknownApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
         mIccCardStatus.mImsSubscriptionAppIndex = 0;
         mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 2;
         logd("Update UICC Profile Applications");
@@ -375,8 +414,10 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationNoApplication() {
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
         mIccCardStatus.mImsSubscriptionAppIndex = -1;
         mIccCardStatus.mGsmUmtsSubscriptionAppIndex = -1;
         logd("Update UICC Profile Applications");
@@ -394,11 +435,13 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testUpdateUiccProfileApplicationNoSupportApplication() {
         IccCardApplicationStatus unknownApp = composeUiccApplicationStatus(
                 IccCardApplicationStatus.AppType.APPTYPE_UNKNOWN,
                 IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "");
         mIccCardStatus.mApplications = new IccCardApplicationStatus[]{unknownApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
         mIccCardStatus.mImsSubscriptionAppIndex = -1;
         mIccCardStatus.mGsmUmtsSubscriptionAppIndex = -1;
         logd("Update UICC Profile Applications");
@@ -415,7 +458,36 @@ public class UiccProfileTest extends TelephonyTest {
         assertEquals(State.NOT_READY, mUiccProfile.getState());
     }
 
+    private void testWithCsimApp() {
+        /* update app status and index */
+        IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_USIM,
+                AppState.APPSTATE_READY, "0xA2");
+        IccCardApplicationStatus imsApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_ISIM,
+                AppState.APPSTATE_READY, "0xA1");
+        IccCardApplicationStatus cdmaApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_CSIM,
+                AppState.APPSTATE_DETECTED, "0xA2");
+        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp, cdmaApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = 2;
+        mIccCardStatus.mImsSubscriptionAppIndex = 0;
+        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
+
+        logd("Update UICC Profile Applications");
+        mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
+        processAllMessages();
+
+        assertEquals(3, mUiccProfile.getNumApplications());
+
+        mUiccProfile.mHandler.sendMessage(
+                mUiccProfile.mHandler.obtainMessage(UiccProfile.EVENT_APP_READY));
+        waitForMs(100);
+        processAllMessages();
+    }
+
     @Test
+    @SmallTest
     public void testUpdateExternalState() {
         // IO_ERROR
         doReturn(IccCardStatus.CardState.CARDSTATE_ERROR).when(mUiccCard).getCardState();
@@ -439,6 +511,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testCarrierConfigHandling() {
         testUpdateUiccProfileApplication();
 
@@ -469,6 +542,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testCarrierConfigHandlingForFailCase() {
         testUpdateUiccProfileApplication();
 
@@ -544,6 +618,7 @@ public class UiccProfileTest extends TelephonyTest {
     }
 
     @Test
+    @SmallTest
     public void testIsEmptyProfile() {
         testUpdateUiccProfileApplication();
         assertFalse(mUiccProfile.isEmptyProfile());
@@ -555,5 +630,46 @@ public class UiccProfileTest extends TelephonyTest {
         // If we update there's no application, then we are on empty profile.
         testUpdateUiccProfileApplicationNoApplication();
         assertTrue(mUiccProfile.isEmptyProfile());
+
+    }
+
+    private void testUpdateUiccProfileApplicationNoCsim() {
+        /* update app status and index */
+        IccCardApplicationStatus imsApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_ISIM,
+                IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA1");
+        IccCardApplicationStatus umtsApp = composeUiccApplicationStatus(
+                IccCardApplicationStatus.AppType.APPTYPE_USIM,
+                IccCardApplicationStatus.AppState.APPSTATE_UNKNOWN, "0xA2");
+        mIccCardStatus.mApplications = new IccCardApplicationStatus[]{imsApp, umtsApp};
+        mIccCardStatus.mCdmaSubscriptionAppIndex = -1;
+        mIccCardStatus.mImsSubscriptionAppIndex = 0;
+        mIccCardStatus.mGsmUmtsSubscriptionAppIndex = 1;
+        logd("Update UICC Profile Applications");
+        mUiccProfile.update(mContext, mSimulatedCommands, mIccCardStatus);
+        processAllMessages();
+
+        assertEquals(2, mUiccProfile.getNumApplications());
+        assertFalse(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_CSIM));
+        assertTrue(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_ISIM));
+        assertTrue(mUiccProfile.isApplicationOnIcc(IccCardApplicationStatus.AppType.APPTYPE_USIM));
+    }
+
+    @Test
+    @SmallTest
+    public void testSetVoiceRadioTech() {
+        // if voice rat is GSM, mCurrentAppType should be 3gpp
+        mUiccProfile.setVoiceRadioTech(ServiceState.RIL_RADIO_TECHNOLOGY_GSM);
+        assertEquals(UiccController.APP_FAM_3GPP, mUiccProfile.mCurrentAppType);
+
+        // if voice rat is CDMA, mCurrentAppType should be 3gpp2
+        mUiccProfile.setVoiceRadioTech(ServiceState.RIL_RADIO_TECHNOLOGY_IS95A);
+        assertEquals(UiccController.APP_FAM_3GPP2, mUiccProfile.mCurrentAppType);
+
+        // if voice rat is CDMA, there is no CSIM app, and there is a SIM/USIM app, then
+        // mCurrentAppType should be 3gpp
+        testUpdateUiccProfileApplicationNoCsim();
+        mUiccProfile.setVoiceRadioTech(ServiceState.RIL_RADIO_TECHNOLOGY_IS95A);
+        assertEquals(UiccController.APP_FAM_3GPP, mUiccProfile.mCurrentAppType);
     }
 }

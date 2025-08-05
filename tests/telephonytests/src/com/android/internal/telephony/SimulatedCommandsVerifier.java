@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.internal.telephony;
+package com.android.internal.telephony.test;
 
 import android.compat.annotation.UnsupportedAppUsage;
 import android.net.KeepalivePacketData;
@@ -30,6 +30,9 @@ import android.telephony.data.NetworkSliceInfo;
 import android.telephony.data.TrafficDescriptor;
 import android.telephony.emergency.EmergencyNumber;
 
+import com.android.internal.telephony.CommandsInterface;
+import com.android.internal.telephony.RadioCapability;
+import com.android.internal.telephony.UUSInfo;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.PersoSubState;
@@ -74,6 +77,11 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void registerForVoiceRadioTechChanged(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForVoiceRadioTechChanged(Handler h) {
 
     }
 
@@ -133,7 +141,27 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForIccStatusChanged(Handler h) {
+
+    }
+
+    @Override
+    public void registerForIccSlotStatusChanged(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForIccSlotStatusChanged(Handler h) {
+
+    }
+
+    @Override
     public void registerForCallStateChanged(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForCallStateChanged(Handler h) {
 
     }
 
@@ -163,6 +191,11 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForApnUnthrottled(Handler h) {
+
+    }
+
+    @Override
     public void registerForInCallVoicePrivacyOn(Handler h, int what, Object obj) {
 
     }
@@ -184,6 +217,21 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void registerForSrvccStateChanged(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForSrvccStateChanged(Handler h) {
+
+    }
+
+    @Override
+    public void registerForSubscriptionStatusChanged(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForSubscriptionStatusChanged(Handler h) {
 
     }
 
@@ -263,6 +311,11 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unSetOnUSSD(Handler h) {
+
+    }
+
+    @Override
     public void setOnSignalStrengthUpdate(Handler h, int what, Object obj) {
 
     }
@@ -293,7 +346,22 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void setOnIccRefresh(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unsetOnIccRefresh(Handler h) {
+
+    }
+
+    @Override
     public void setOnCallRing(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unSetOnCallRing(Handler h) {
 
     }
 
@@ -303,7 +371,17 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unSetOnRestrictedStateChanged(Handler h) {
+
+    }
+
+    @Override
     public void setOnSuppServiceNotification(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unSetOnSuppServiceNotification(Handler h) {
 
     }
 
@@ -363,12 +441,27 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unSetOnSs(Handler h) {
+
+    }
+
+    @Override
     public void registerForDisplayInfo(Handler h, int what, Object obj) {
 
     }
 
     @Override
     public void unregisterForDisplayInfo(Handler h) {
+
+    }
+
+    @Override
+    public void registerForCallWaitingInfo(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForCallWaitingInfo(Handler h) {
 
     }
 
@@ -413,7 +506,17 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForExitEmergencyCallbackMode(Handler h) {
+
+    }
+
+    @Override
     public void registerForRilConnected(Handler h, int what, Object obj) {
+
+    }
+
+    @Override
+    public void unregisterForRilConnected(Handler h) {
 
     }
 
@@ -428,12 +531,27 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void supplyIccPuk(String puk, String newPin, Message result) {
+
+    }
+
+    @Override
     public void supplyIccPukForApp(String puk, String newPin, String aid, Message result) {
 
     }
 
     @Override
+    public void supplyIccPin2(String pin2, Message result) {
+
+    }
+
+    @Override
     public void supplyIccPin2ForApp(String pin2, String aid, Message result) {
+
+    }
+
+    @Override
+    public void supplyIccPuk2(String puk2, String newPin2, Message result) {
 
     }
 
@@ -449,6 +567,11 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void changeIccPinForApp(String oldPin, String newPin, String aidPtr, Message result) {
+
+    }
+
+    @Override
+    public void changeIccPin2(String oldPin2, String newPin2, Message result) {
 
     }
 
@@ -822,6 +945,11 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void setLocationUpdates(boolean enable, Message response) {
+
+    }
+
+    @Override
     public void getSmscAddress(Message result) {
 
     }
@@ -1127,6 +1255,10 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForCarrierInfoForImsiEncryption(Handler h) {
+    }
+
+    @Override
     public void registerForNattKeepaliveStatus(Handler h, int what, Object obj) {
     }
 
@@ -1139,12 +1271,38 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void unregisterForEmergencyNumberList(Handler h) {
+    }
+
+    @Override
     public void startNattKeepalive(
             int contextId, KeepalivePacketData packetData, int intervalMillis, Message result) {
     }
 
     @Override
     public void stopNattKeepalive(int sessionHandle, Message result)  {
+    }
+
+    @Override
+    public void registerUiccApplicationEnablementChanged(Handler h, int what, Object obj) {}
+
+    @Override
+    public void unregisterUiccApplicationEnablementChanged(Handler h) {}
+
+    @Override
+    public void getBarringInfo(Message result) {
+    }
+
+    @Override
+    public void allocatePduSessionId(Message result) {
+    }
+
+    @Override
+    public void releasePduSessionId(Message result, int pduSessionId) {
+    }
+
+    @Override
+    public void getSlicingConfig(Message result) {
     }
 
     @Override
@@ -1177,6 +1335,26 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
 
     @Override
     public void registerForSlicingConfigChanged(Handler h, int what, Object obj) {
+    }
+
+    @Override
+    public void unregisterForSlicingConfigChanged(Handler h) {
+    }
+
+    @Override
+    public void startHandover(Message result, int callId) {
+    }
+
+    @Override
+    public void cancelHandover(Message result, int callId) {
+    }
+
+    @Override
+    public void setUserDataEnabled(Message result, boolean enabled) {
+    }
+
+    @Override
+    public void setUserDataRoamingEnabled(Message result, boolean enabled) {
     }
 
     @Override
