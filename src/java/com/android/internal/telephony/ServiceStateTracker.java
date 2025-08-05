@@ -2640,12 +2640,12 @@ public class ServiceStateTracker extends Handler {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected final void log(String s) {
-        Rlog.d(LOG_TAG, "-" + mPhone.getPhoneId() + s);
+        Rlog.d(LOG_TAG + "-" + mPhone.getPhoneId(), s);
     }
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     protected final void loge(String s) {
-        Rlog.e(LOG_TAG, "[" + mPhone.getPhoneId() + "] " + s);
+        Rlog.e(LOG_TAG + "-" + mPhone.getPhoneId(), s);
     }
 
     /**
