@@ -1631,6 +1631,8 @@ public class SatelliteController extends Handler {
                                     getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                             .setIsDemoMode(mIsDemoModeEnabled.get())
                             .setCarrierId(getSatelliteCarrierId())
+                            .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
+                            .setSessionConnectionMode(getSessionConnectTypeMetrics())
                             .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                             .setIsEmergency(argument.isEmergency);
                     mSessionProcessingTimeStamp.set(0);
@@ -2153,6 +2155,7 @@ public class SatelliteController extends Handler {
                 mProvisionMetricsStats.setResultCode(error)
                         .setIsProvisionRequest(argument.mProvisioned)
                         .setCarrierId(getSatelliteCarrierId())
+                        .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
                         .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                         .reportProvisionMetrics();
                 if (argument.mProvisioned) {
@@ -5100,6 +5103,7 @@ public class SatelliteController extends Handler {
                     .setResultCode(SatelliteManager.SATELLITE_RESULT_INVALID_TELEPHONY_STATE)
                     .setIsProvisionRequest(true)
                     .setCarrierId(getSatelliteCarrierId())
+                    .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
                     .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                     .reportProvisionMetrics();
             mControllerMetricsStats.reportProvisionCount(
@@ -5117,6 +5121,7 @@ public class SatelliteController extends Handler {
         mProvisionMetricsStats.setResultCode(result)
                 .setIsProvisionRequest(true)
                 .setCarrierId(getSatelliteCarrierId())
+                .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
                 .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                 .reportProvisionMetrics();
         mControllerMetricsStats.reportProvisionCount(result);
@@ -5145,6 +5150,7 @@ public class SatelliteController extends Handler {
         mProvisionMetricsStats.setResultCode(result)
                 .setIsProvisionRequest(false)
                 .setCarrierId(getSatelliteCarrierId())
+                .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
                 .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                 .reportProvisionMetrics();
         mControllerMetricsStats.reportDeprovisionCount(result);
@@ -6473,6 +6479,46 @@ public class SatelliteController extends Handler {
         return connectType;
     }
 
+    /** Return the global connect type of the binding satellite subscription. */
+    public int getSupportedConnectTypeMetrics() {
+        int subId = mSelectedSatelliteSubId.get();
+        return getSupportedConnectTypeMetrics(subId);
+    }
+
+    /**
+     * Return the global connect type of the binding satellite subscription.
+     * @param subId : subscription Id.
+     */
+    public int getSupportedConnectTypeMetrics(int subId) {
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            return SatelliteConstants.GLOBAL_NTN_CONNECT_TYPE_UNKNOWN;
+
+        }
+        int globalNtnConnectType = getConfigForSubId(subId).getInt(
+                KEY_CARRIER_ROAMING_NTN_CONNECT_TYPE_INT);
+        return SatelliteServiceUtils.fromSupportedConnectionMode(globalNtnConnectType);
+    }
+
+    /** Return the session connect type of the binding satellite subscription. */
+    public int getSessionConnectTypeMetrics() {
+        int subId = mSelectedSatelliteSubId.get();
+        return getSessionConnectTypeMetrics(subId);
+    }
+
+    /**
+     * Return the session connect type of the binding satellite subscription.
+     * @param subId : subscription Id.
+     */
+    public int getSessionConnectTypeMetrics(int subId) {
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            return SatelliteConstants.GLOBAL_NTN_CONNECT_TYPE_UNKNOWN;
+
+        }
+        int sessionNtnConnectType = getCarrierRoamingNtnConnectType(subId);
+        return SatelliteServiceUtils.fromSupportedConnectionMode(sessionNtnConnectType);
+    }
+
+
     protected int getCarrierRoamingNtnEmergencyCallToSatelliteHandoverType(int subId) {
         if (mFeatureFlags.vzwAstSkyloFallback()) {
             plogd("getCarrierRoamingNtnEmergencyCallToSatelliteHandoverType: Checking handover "
@@ -6789,6 +6835,8 @@ public class SatelliteController extends Handler {
                 .setSatelliteTechnology(getSupportedNtnRadioTechnology())
                 .setIsDemoMode(mIsDemoModeEnabled.get())
                 .setCarrierId(getSatelliteCarrierId())
+                .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
+                .setSessionConnectionMode(getSessionConnectTypeMetrics())
                 .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                 .reportSessionMetrics();
         mSessionStartTimeStamp.set(0);
@@ -7045,7 +7093,9 @@ public class SatelliteController extends Handler {
             satelliteApps = getSatelliteDataOptimizedApps(userId);
 
             sessionStats.onSessionStart(phone.getCarrierId(), phone,
-                    supported_satellite_services, dataPolicy, satelliteApps, mFeatureFlags);
+                    supported_satellite_services, dataPolicy, satelliteApps,
+                    getSupportedConnectTypeMetrics(subId), getSessionConnectTypeMetrics(subId),
+                    mFeatureFlags);
             mCarrierRoamingSatelliteSessionStatsMap.put(subId, sessionStats);
             mCarrierRoamingSatelliteControllerStats.onSessionStart(subId);
         } else if (lastNotifiedNtnMode && !currNtnMode) {
@@ -7427,6 +7477,8 @@ public class SatelliteController extends Handler {
                             getElapsedRealtime() - mSessionProcessingTimeStamp.get())
                     .setIsDemoMode(mIsDemoModeEnabled.get())
                     .setCarrierId(getSatelliteCarrierId())
+                    .setSupportedConnectionMode(getSupportedConnectTypeMetrics())
+                    .setSessionConnectionMode(getSessionConnectTypeMetrics())
                     .setIsNtnOnlyCarrier(isNtnOnlyCarrier())
                     .reportSessionMetrics();
         } else {
@@ -7679,7 +7731,8 @@ public class SatelliteController extends Handler {
 
         mIsNotificationShowing.set(true);
         mCarrierRoamingSatelliteControllerStats.reportCountOfSatelliteNotificationDisplayed(subId);
-        mCarrierRoamingSatelliteControllerStats.reportCarrierId(getSatelliteCarrierId());
+        mCarrierRoamingSatelliteControllerStats.reportCarrierId(getSatelliteCarrierId(),
+                getSupportedConnectTypeMetrics());
         mSessionMetricsStats.addCountOfSatelliteNotificationDisplayed();
     }
 
@@ -8445,7 +8498,8 @@ public class SatelliteController extends Handler {
 
         setSatellitePhone(selectedSubId);
         if (selectedSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-            mControllerMetricsStats.setCarrierIdInfo(getSatelliteCarrierId(), isNtnOnlyCarrier());
+            mControllerMetricsStats.setCarrierIdInfo(getSatelliteCarrierId(), isNtnOnlyCarrier(),
+                    getSupportedConnectTypeMetrics(selectedSubId));
         }
         plogd("selectBindingSatelliteSubscription: SelectedSatelliteSubId=" + selectedSubId);
     }
@@ -9793,7 +9847,8 @@ public class SatelliteController extends Handler {
                 if (satelliteConfig != null) {
                     int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
                     mControllerMetricsStats.reportCurrentVersionOfCarrierRoamingSatelliteConfig(
-                            carrierId, satelliteConfig.getSatelliteConfigDataVersion());
+                            carrierId, satelliteConfig.getSatelliteConfigDataVersion(),
+                            getSupportedConnectTypeMetrics(subId));
                 } else {
                     loge("handleCarrierRoamingConfigVersionReport: "
                             + "no satellite config by configupdater");
@@ -9812,7 +9867,8 @@ public class SatelliteController extends Handler {
                 int maxAllowedDataMode = getMaxAllowedDataMode();
                 int carrierId = SatelliteServiceUtils.getCarrierIdFromSubscription(subId);
                 mControllerMetricsStats
-                        .reportCurrentMaxAllowedDataMode(carrierId, maxAllowedDataMode);
+                        .reportCurrentMaxAllowedDataMode(carrierId, maxAllowedDataMode,
+                                getSupportedConnectTypeMetrics(subId));
             }
         } else {
             loge("handleMaxAllowedDataMetricsReport: no active subId");
@@ -9872,7 +9928,8 @@ public class SatelliteController extends Handler {
 
             CarrierReportInfo carrierInfo = reportDataPerCarrier.computeIfAbsent(
                     carrierId, key -> new CarrierReportInfo());
-            carrierInfo.aggregate(isProvisioned, isNtnOnlySubId);
+            carrierInfo.aggregate(isProvisioned, isNtnOnlySubId,
+                    getSupportedConnectTypeMetrics(subId));
         }
 
         // Report the aggregated status for each carrierId
@@ -9893,7 +9950,8 @@ public class SatelliteController extends Handler {
                 mControllerMetricsStats.setIsProvisioned(
                         carrierId,
                         info.mIsAnySubProvisioned,
-                        info.mIsNtnOnlyCarrier);
+                        info.mIsNtnOnlyCarrier,
+                        info.mSupportedConnectionMode);
             }
         }
     }
@@ -9902,13 +9960,16 @@ public class SatelliteController extends Handler {
     private static class CarrierReportInfo {
         boolean mIsAnySubProvisioned = false;
         boolean mIsNtnOnlyCarrier = false;
+        int mSupportedConnectionMode = SatelliteConstants.GLOBAL_NTN_CONNECT_TYPE_UNKNOWN;
 
-        void aggregate(boolean isProvisioned, boolean isNtnOnlyCarrier) {
+        void aggregate(boolean isProvisioned, boolean isNtnOnlyCarrier,
+                int supportedConnectionMode) {
             // if any subId for the carrier was provisioned, this carrier is provisioned
             if (isProvisioned) {
                 this.mIsAnySubProvisioned = true;
             }
             this.mIsNtnOnlyCarrier = isNtnOnlyCarrier;
+            this.mSupportedConnectionMode = supportedConnectionMode;
         }
     }
 
