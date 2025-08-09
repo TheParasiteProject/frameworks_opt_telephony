@@ -90,7 +90,6 @@ import com.android.internal.telephony.analytics.TelephonyAnalytics;
 import com.android.internal.telephony.analytics.TelephonyAnalytics.SmsMmsAnalytics;
 import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.metrics.PersistAtomsStorage;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.internal.telephony.nano.PersistAtomsProto;
 import com.android.internal.telephony.satellite.SatelliteController;
 import com.android.internal.telephony.satellite.metrics.CarrierRoamingSatelliteSessionStats;
@@ -287,8 +286,6 @@ public abstract class InboundSmsHandler extends StateMachine {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private UserManager mUserManager;
-
-    protected TelephonyMetrics mMetrics = TelephonyMetrics.getInstance();
 
     private LocalLog mLocalLog = new LocalLog(64);
     private LocalLog mCarrierServiceLocalLog = new LocalLog(8);
@@ -828,7 +825,6 @@ public abstract class InboundSmsHandler extends StateMachine {
         // In case of error, add to metrics. This is not required in case of success, as the
         // data will be tracked when the message is processed (processMessagePart).
         if (result != Intents.RESULT_SMS_HANDLED && result != Activity.RESULT_OK) {
-            mMetrics.writeIncomingSmsError(mPhone.getPhoneId(), is3gpp2(), smsSource, result);
             mPhone.getSmsStats().onIncomingSmsError(is3gpp2(), smsSource, result,
                     isEmergencyNumber(smsb.getOriginatingAddress()), 0);
             if (mPhone != null) {
@@ -1130,9 +1126,6 @@ public abstract class InboundSmsHandler extends StateMachine {
                     } else {
                         loge("processMessagePart: SmsMessage.createFromPdu returned null",
                                 tracker.getMessageId());
-                        mMetrics.writeIncomingWapPush(mPhone.getPhoneId(), tracker.getSource(),
-                                SmsConstants.FORMAT_3GPP, timestamps, false,
-                                tracker.getMessageId());
                         mPhone.getSmsStats().onIncomingSmsWapPush(tracker.getSource(),
                                 messageCount, RESULT_SMS_NULL_MESSAGE, tracker.getMessageId(),
                                 isEmergencyNumber(tracker.getAddress()), 0);
@@ -1168,8 +1161,6 @@ public abstract class InboundSmsHandler extends StateMachine {
             boolean wapPushResult =
                     result == Activity.RESULT_OK || result == Intents.RESULT_SMS_HANDLED;
             int pduLength = wapPushResult ? output.size() : 0;
-            mMetrics.writeIncomingWapPush(mPhone.getPhoneId(), tracker.getSource(),
-                    format, timestamps, wapPushResult, tracker.getMessageId());
             mPhone.getSmsStats().onIncomingSmsWapPush(tracker.getSource(), messageCount,
                     result, tracker.getMessageId(), isEmergencyNumber(tracker.getAddress()),
                     pduLength);
@@ -1189,8 +1180,6 @@ public abstract class InboundSmsHandler extends StateMachine {
         // The metrics are generated before SMS filters are invoked.
         // For messages composed by multiple parts, the metrics are generated considering the
         // characteristics of the last one.
-        mMetrics.writeIncomingSmsSession(mPhone.getPhoneId(), tracker.getSource(),
-                format, timestamps, block, tracker.getMessageId());
         mPhone.getSmsStats().onIncomingSmsSuccess(is3gpp2(), tracker.getSource(),
                 messageCount, block, tracker.getMessageId(),
                 isEmergencyNumber(tracker.getAddress()), getTotalPduLength(pdus));
@@ -2345,27 +2334,6 @@ public abstract class InboundSmsHandler extends StateMachine {
         Rlog.e(getName(), s, e);
     }
 
-    /**
-     * Build up the SMS message body from the SmsMessage array of received SMS
-     *
-     * @param msgs The SmsMessage array of the received SMS
-     * @return The text message body
-     */
-    private static String buildMessageBodyFromPdus(SmsMessage[] msgs) {
-        if (msgs.length == 1) {
-            // There is only one part, so grab the body directly.
-            return replaceFormFeeds(msgs[0].getDisplayMessageBody());
-        } else {
-            // Build up the body from the parts.
-            StringBuilder body = new StringBuilder();
-            for (SmsMessage msg: msgs) {
-                // getDisplayMessageBody() can NPE if mWrappedMessage inside is null.
-                body.append(msg.getDisplayMessageBody());
-            }
-            return replaceFormFeeds(body.toString());
-        }
-    }
-
     @Override
     public void dump(FileDescriptor fd, PrintWriter printWriter, String[] args) {
         IndentingPrintWriter pw = new IndentingPrintWriter(printWriter, "  ");
@@ -2384,11 +2352,6 @@ public abstract class InboundSmsHandler extends StateMachine {
         mCarrierServiceLocalLog.dump(fd, pw, args);
         pw.decreaseIndent();
         pw.decreaseIndent();
-    }
-
-    // Some providers send formfeeds in their messages. Convert those formfeeds to newlines.
-    private static String replaceFormFeeds(String s) {
-        return s == null ? "" : s.replace('\f', '\n');
     }
 
     @VisibleForTesting

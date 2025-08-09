@@ -46,7 +46,6 @@ import com.android.internal.telephony.PhoneInternalInterface.DialArgs;
 import com.android.internal.telephony.domainselection.DomainSelectionResolver;
 import com.android.internal.telephony.emergency.EmergencyStateTracker;
 import com.android.internal.telephony.flags.FeatureFlags;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.telephony.Rlog;
 
 import java.io.FileDescriptor;
@@ -99,8 +98,6 @@ public class GsmCdmaCallTracker extends CallTracker {
 
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public PhoneConstants.State mState = PhoneConstants.State.IDLE;
-
-    private TelephonyMetrics mMetrics = TelephonyMetrics.getInstance();
 
     // Following member variables are for CDMA only
     private RegistrantList mCallWaitingRegistrants = new RegistrantList();
@@ -329,7 +326,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         }
         mHangupPendingMO = false;
 
-        mMetrics.writeRilDial(mPhone.getPhoneId(), mPendingMO, clirMode, uusInfo);
         mPhone.getVoiceCallSessionStats().onRilDial(mPendingMO);
 
         if ( mPendingMO.getAddress() == null || mPendingMO.getAddress().length() == 0
@@ -718,7 +714,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         }
         if (mState != oldState) {
             mPhone.notifyPhoneStateChanged();
-            mMetrics.writePhoneState(mPhone.getPhoneId(), mState);
         }
     }
 
@@ -948,8 +943,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         }
 
         if (locallyDisconnectedConnections.size() > 0) {
-            mMetrics.writeRilCallList(mPhone.getPhoneId(), locallyDisconnectedConnections,
-                    getNetworkCountryIso());
             mPhone.getVoiceCallSessionStats().onRilCallListChanged(locallyDisconnectedConnections);
         }
 
@@ -1017,7 +1010,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         for (GsmCdmaConnection conn : connections) {
             if (conn != null) activeConnections.add(conn);
         }
-        mMetrics.writeRilCallList(mPhone.getPhoneId(), activeConnections, getNetworkCountryIso());
         mPhone.getVoiceCallSessionStats().onRilCallListChanged(activeConnections);
     }
 
@@ -1044,8 +1036,6 @@ public class GsmCdmaCallTracker extends CallTracker {
             mHangupPendingMO = true;
         } else {
             try {
-                mMetrics.writeRilHangup(mPhone.getPhoneId(), conn, conn.getGsmCdmaIndex(),
-                        getNetworkCountryIso());
                 mCi.hangupConnection (conn.getGsmCdmaIndex(), obtainCompleteMessage());
             } catch (CallStateException ex) {
                 // Ignore "connection not found"
@@ -1138,7 +1128,6 @@ public class GsmCdmaCallTracker extends CallTracker {
             } catch (CallStateException e) {
                 call_index = -1;
             }
-            mMetrics.writeRilHangup(mPhone.getPhoneId(), c, call_index, getNetworkCountryIso());
         }
         if (VDBG) {
             Rlog.v(LOG_TAG, "logHangupEvent logged " + call.getConnectionsCount()
@@ -1162,8 +1151,6 @@ public class GsmCdmaCallTracker extends CallTracker {
         for (Connection conn : call.getConnections()) {
             GsmCdmaConnection c = (GsmCdmaConnection) conn;
             if (!c.mDisconnected && c.getGsmCdmaIndex() == index) {
-                mMetrics.writeRilHangup(mPhone.getPhoneId(), c, c.getGsmCdmaIndex(),
-                        getNetworkCountryIso());
                 mCi.hangupConnection(index, obtainCompleteMessage());
                 return;
             }
@@ -1176,8 +1163,6 @@ public class GsmCdmaCallTracker extends CallTracker {
             for (Connection conn : call.getConnections()) {
                 GsmCdmaConnection c = (GsmCdmaConnection) conn;
                 if (!c.mDisconnected) {
-                    mMetrics.writeRilHangup(mPhone.getPhoneId(), c, c.getGsmCdmaIndex(),
-                            getNetworkCountryIso());
                     mCi.hangupConnection(c.getGsmCdmaIndex(), obtainCompleteMessage());
                 }
             }
@@ -1359,8 +1344,6 @@ public class GsmCdmaCallTracker extends CallTracker {
                 updatePhoneState();
 
                 mPhone.notifyPreciseCallStateChanged();
-                mMetrics.writeRilCallList(mPhone.getPhoneId(), mDroppedDuringPoll,
-                        getNetworkCountryIso());
                 mPhone.getVoiceCallSessionStats().onRilCallListChanged(mDroppedDuringPoll);
                 mDroppedDuringPoll.clear();
             break;

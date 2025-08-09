@@ -97,7 +97,6 @@ import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.imsphone.ImsPhone;
 import com.android.internal.telephony.metrics.RadioPowerStateStats;
 import com.android.internal.telephony.metrics.ServiceStateStats;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.internal.telephony.satellite.NtnCapabilityResolver;
 import com.android.internal.telephony.satellite.SatelliteController;
 import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
@@ -1538,8 +1537,6 @@ public class ServiceStateTracker extends Handler {
                     if (hasChanged) {
                         mPhone.notifyServiceStateChanged(mPhone.getServiceState());
                         mServiceStateChangedRegistrants.notifyRegistrants();
-                        TelephonyMetrics.getInstance().writeServiceStateChanged(
-                                mPhone.getPhoneId(), mSS);
                         mPhone.getVoiceCallSessionStats().onServiceStateChanged(mSS);
                         ImsPhone imsPhone = (ImsPhone) mPhone.getImsPhone();
                         if (imsPhone != null) {
@@ -3136,7 +3133,6 @@ public class ServiceStateTracker extends Handler {
 
             updateServiceStateToDb(mPhone.getServiceState());
 
-            TelephonyMetrics.getInstance().writeServiceStateChanged(mPhone.getPhoneId(), mSS);
             mPhone.getVoiceCallSessionStats().onServiceStateChanged(mSS);
             ImsPhone imsPhone = (ImsPhone) mPhone.getImsPhone();
             if (imsPhone != null) {
