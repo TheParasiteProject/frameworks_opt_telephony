@@ -148,7 +148,7 @@ public class ServiceStateTracker extends Handler {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private CommandsInterface mCi;
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    private UiccController mUiccController = null;
+    private UiccController mUiccController;
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     private UiccCardApplication mUiccApplication = null;
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -184,7 +184,7 @@ public class ServiceStateTracker extends Handler {
     private List<CellInfo> mLastCellInfoList = null;
     private List<PhysicalChannelConfig> mLastPhysicalChannelConfigList = null;
 
-    private final Set<Integer> mRadioPowerOffReasons = new HashSet();
+    private final Set<Integer> mRadioPowerOffReasons = new HashSet<>();
 
     // TODO - this should not be public, right now used externally GsmConnection.
     public RestrictedState mRestrictedState;
@@ -207,19 +207,20 @@ public class ServiceStateTracker extends Handler {
     @UnsupportedAppUsage
     private RegistrantList mDataRoamingOffRegistrants = new RegistrantList();
     protected SparseArray<RegistrantList> mAttachedRegistrants = new SparseArray<>();
-    protected SparseArray<RegistrantList> mDetachedRegistrants = new SparseArray();
-    private RegistrantList mVoiceRegStateOrRatChangedRegistrants = new RegistrantList();
-    private SparseArray<RegistrantList> mDataRegStateOrRatChangedRegistrants = new SparseArray<>();
+    protected SparseArray<RegistrantList> mDetachedRegistrants = new SparseArray<>();
+    private final RegistrantList mVoiceRegStateOrRatChangedRegistrants = new RegistrantList();
+    private final SparseArray<RegistrantList> mDataRegStateOrRatChangedRegistrants =
+            new SparseArray<>();
     @UnsupportedAppUsage
     private RegistrantList mNetworkAttachedRegistrants = new RegistrantList();
-    private RegistrantList mNetworkDetachedRegistrants = new RegistrantList();
-    private RegistrantList mServiceStateChangedRegistrants = new RegistrantList();
-    private RegistrantList mPsRestrictEnabledRegistrants = new RegistrantList();
-    private RegistrantList mPsRestrictDisabledRegistrants = new RegistrantList();
-    private RegistrantList mImsCapabilityChangedRegistrants = new RegistrantList();
-    private RegistrantList mNrStateChangedRegistrants = new RegistrantList();
-    private RegistrantList mNrFrequencyChangedRegistrants = new RegistrantList();
-    private RegistrantList mCssIndicatorChangedRegistrants = new RegistrantList();
+    private final RegistrantList mNetworkDetachedRegistrants = new RegistrantList();
+    private final RegistrantList mServiceStateChangedRegistrants = new RegistrantList();
+    private final RegistrantList mPsRestrictEnabledRegistrants = new RegistrantList();
+    private final RegistrantList mPsRestrictDisabledRegistrants = new RegistrantList();
+    private final RegistrantList mImsCapabilityChangedRegistrants = new RegistrantList();
+    private final RegistrantList mNrStateChangedRegistrants = new RegistrantList();
+    private final RegistrantList mNrFrequencyChangedRegistrants = new RegistrantList();
+    private final RegistrantList mCssIndicatorChangedRegistrants = new RegistrantList();
     private final RegistrantList mAirplaneModeChangedRegistrants = new RegistrantList();
     private final RegistrantList mAreaCodeChangedRegistrants = new RegistrantList();
 
@@ -307,10 +308,6 @@ public class ServiceStateTracker extends Handler {
     private List<Message> mPendingCellInfoRequests = new LinkedList<>();
     // @GuardedBy("mPendingCellInfoRequests")
     private boolean mIsPendingCellInfoRequest = false;
-
-    /** Reason for registration denial. */
-    protected static final String REGISTRATION_DENIED_GEN  = "General";
-    protected static final String REGISTRATION_DENIED_AUTH = "Authentication Failure";
 
     private CarrierDisplayNameResolver mCdnr;
 
@@ -441,7 +438,7 @@ public class ServiceStateTracker extends Handler {
             }
             mSubId = curSubId;
         }
-    };
+    }
 
     //Common
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
@@ -449,7 +446,6 @@ public class ServiceStateTracker extends Handler {
 
     private CellIdentity mCellIdentity;
     @Nullable private CellIdentity mLastKnownCellIdentity;
-    private static final int MS_PER_HOUR = 60 * 60 * 1000;
     private final NitzStateMachine mNitzState;
 
     private ServiceStateStats mServiceStateStats;
@@ -564,7 +560,6 @@ public class ServiceStateTracker extends Handler {
     private int mRegistrationState = -1;
 
     public static final String INVALID_MCC = "000";
-    public static final String DEFAULT_MNC = "00";
 
     private String mCurrentCarrier = null;
 
@@ -931,7 +926,7 @@ public class ServiceStateTracker extends Handler {
         int vrs = mSS.getState();
         if (DBG) log("notifyVoiceRegStateRilRadioTechnologyChanged: vrs=" + vrs + " rat=" + rat);
 
-        mVoiceRegStateOrRatChangedRegistrants.notifyResult(new Pair<Integer, Integer>(vrs, rat));
+        mVoiceRegStateOrRatChangedRegistrants.notifyResult(new Pair<>(vrs, rat));
     }
 
     /**
@@ -1072,21 +1067,6 @@ public class ServiceStateTracker extends Handler {
     }
 
     /**
-     * Re-register network by toggling preferred network type.
-     * This is a work-around to deregister and register network since there is
-     * no ril api to set COPS=2 (deregister) only.
-     *
-     * @param onComplete is dispatched when this is complete.  it will be
-     * an AsyncResult, and onComplete.obj.exception will be non-null
-     * on failure.
-     */
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    public void reRegisterNetwork(Message onComplete) {
-        mCi.getAllowedNetworkTypesBitmap(
-                obtainMessage(EVENT_GET_ALLOWED_NETWORK_TYPES, onComplete));
-    }
-
-    /**
      * @return the current reasons for which the radio is off.
      */
     public Set<Integer> getRadioPowerOffReasons() {
@@ -1204,7 +1184,6 @@ public class ServiceStateTracker extends Handler {
     @Override
     public void handleMessage(Message msg) {
         AsyncResult ar;
-        int[] ints;
         Message message;
 
         if (VDBG) log("received event " + msg.what);
@@ -1382,10 +1361,10 @@ public class ServiceStateTracker extends Handler {
 
                 Object[] nitzArgs = (Object[])ar.result;
                 String nitzString = (String)nitzArgs[0];
-                long nitzReceiveTimeMs = ((Long)nitzArgs[1]).longValue();
+                long nitzReceiveTimeMs = (Long) nitzArgs[1];
                 long ageMs = 0;
                 if (nitzArgs.length >= 3) {
-                    ageMs = ((Long)nitzArgs[2]).longValue();
+                    ageMs = (Long) nitzArgs[2];
                 }
 
                 setTimeFromNITZString(nitzString, nitzReceiveTimeMs, ageMs);
@@ -1814,7 +1793,7 @@ public class ServiceStateTracker extends Handler {
     }
 
     protected void handlePollStateResultMessage(int what, AsyncResult ar) {
-        int ints[];
+        int[] ints;
         switch (what) {
             case EVENT_POLL_STATE_CS_CELLULAR_REGISTRATION: {
                 NetworkRegistrationInfo networkRegState = (NetworkRegistrationInfo) ar.result;
@@ -1859,8 +1838,6 @@ public class ServiceStateTracker extends Handler {
                         networkRegState.getDataSpecificInfo();
                 int registrationState = networkRegState.getNetworkRegistrationState();
                 int serviceState = regCodeToServiceState(registrationState);
-                int newDataRat = ServiceState.networkTypeToRilRadioTechnology(
-                        networkRegState.getAccessNetworkTechnology());
 
                 if (DBG) {
                     log("handlePollStateResultMessage: PS cellular. " + networkRegState);
@@ -1966,7 +1943,7 @@ public class ServiceStateTracker extends Handler {
     /**
      * Extract the CID/CI for GSM/UTRA/EUTRA
      *
-     * @returns the cell ID (unique within a PLMN for a given tech) or -1 if invalid
+     * @return the cell ID (unique within a PLMN for a given tech) or -1 if invalid
      */
     private static long getCidFromCellIdentity(CellIdentity id) {
         if (id == null) return -1;
@@ -2193,7 +2170,7 @@ public class ServiceStateTracker extends Handler {
                 } else if (!TextUtils.isEmpty(spn) && !Objects.equals(spn, carrierName)) {
                     // Need to show both plmn and spn if both are not same.
                     String separator = mPhone.getContext().getString(
-                            com.android.internal.R.string.kg_text_message_separator).toString();
+                            com.android.internal.R.string.kg_text_message_separator);
                     carrierName = new StringBuilder().append(carrierName).append(separator)
                             .append(spn).toString();
                 }
@@ -2227,7 +2204,8 @@ public class ServiceStateTracker extends Handler {
 
     }
 
-    private @NonNull CarrierDisplayNameData getCarrierDisplayNameLegacy() {
+    @NonNull
+    private CarrierDisplayNameData getCarrierDisplayNameLegacy() {
         log("getCarrierDisplayNameLegacy+");
 
         String spn = null;
@@ -2820,7 +2798,9 @@ public class ServiceStateTracker extends Handler {
      *
      * @return a list of CellIdentity objects in *decreasing* order of preference.
      */
-    @VisibleForTesting public static @NonNull List<CellIdentity> getPrioritizedCellIdentities(
+    @VisibleForTesting
+    @NonNull
+    public static List<CellIdentity> getPrioritizedCellIdentities(
             @NonNull final ServiceState ss) {
         final List<NetworkRegistrationInfo> regInfos = ss.getNetworkRegistrationInfoList();
         if (regInfos.isEmpty()) return Collections.emptyList();
@@ -2832,7 +2812,7 @@ public class ServiceStateTracker extends Handler {
                     .comparing(NetworkRegistrationInfo::isRegistered)
                     .thenComparing((nri) -> nri.getDomain() & NetworkRegistrationInfo.DOMAIN_CS)
                     .reversed())
-            .map(nri -> nri.getCellIdentity())
+            .map(NetworkRegistrationInfo::getCellIdentity)
             .distinct()
             .collect(Collectors.toList());
     }
@@ -3127,12 +3107,10 @@ public class ServiceStateTracker extends Handler {
             tm.setNetworkOperatorNumericForPhone(mPhone.getPhoneId(), operatorNumeric);
 
             String localeOperator = null;
-            if (isInvalidOperatorNumeric(localeOperator)) {
-                for (CellIdentity cid : prioritizedCids) {
-                    if (!TextUtils.isEmpty(cid.getPlmn())) {
-                        localeOperator = cid.getPlmn();
-                        break;
-                    }
+            for (CellIdentity cid : prioritizedCids) {
+                if (!TextUtils.isEmpty(cid.getPlmn())) {
+                    localeOperator = cid.getPlmn();
+                    break;
                 }
             }
 
@@ -3551,11 +3529,9 @@ public class ServiceStateTracker extends Handler {
                 setNotification(PS_DISABLED);
             }
 
-            /**
-             * There are two kind of cs restriction, normal and emergency. So
-             * there are 4 x 4 combinations in current and new restricted states
-             * and we only need to notify when state is changed.
-             */
+             // There are two kind of cs restriction, normal and emergency. So
+             // there are 4 x 4 combinations in current and new restricted states
+             // and we only need to notify when state is changed.
             if (mRestrictedState.isCsRestricted()) {
                 if (!newRs.isAnyCsRestricted()) {
                     // remove all restriction
@@ -4066,27 +4042,6 @@ public class ServiceStateTracker extends Handler {
     }
 
     /**
-     * Registration for Airplane Mode changing.  The state of Airplane Mode will be returned
-     * {@link AsyncResult#result} as a {@link Boolean} Object.
-     * The {@link AsyncResult} will be in the notification {@link Message#obj}.
-     * @param h handler to notify
-     * @param what what code of message when delivered
-     * @param obj placed in {@link AsyncResult#userObj}
-     */
-    public void registerForAirplaneModeChanged(Handler h, int what, Object obj) {
-        mAirplaneModeChangedRegistrants.add(h, what, obj);
-    }
-
-    /**
-     * Unregister for Airplane Mode changed event.
-     *
-     * @param h The handler
-     */
-    public void unregisterForAirplaneModeChanged(Handler h) {
-        mAirplaneModeChangedRegistrants.remove(h);
-    }
-
-    /**
      * Registration point for transition into network attached.
      * @param h handler to notify
      * @param what what code of message when delivered
@@ -4120,10 +4075,6 @@ public class ServiceStateTracker extends Handler {
         }
     }
 
-    public void unregisterForNetworkDetached(Handler h) {
-        mNetworkDetachedRegistrants.remove(h);
-    }
-
     /**
      * Registration point for transition into packet service restricted zone.
      * @param h handler to notify
@@ -4139,10 +4090,6 @@ public class ServiceStateTracker extends Handler {
         }
     }
 
-    public void unregisterForPsRestrictedEnabled(Handler h) {
-        mPsRestrictEnabledRegistrants.remove(h);
-    }
-
     /**
      * Registration point for transition out of packet service restricted zone.
      * @param h handler to notify
@@ -4156,10 +4103,6 @@ public class ServiceStateTracker extends Handler {
         if (mRestrictedState.isPsRestricted()) {
             r.notifyRegistrant();
         }
-    }
-
-    public void unregisterForPsRestrictedDisabled(Handler h) {
-        mPsRestrictDisabledRegistrants.remove(h);
     }
 
     /**
@@ -4336,39 +4279,6 @@ public class ServiceStateTracker extends Handler {
         mPollingContext = new int[1];
     }
 
-    /**
-     * Return true if the network operator's country code changed.
-     */
-    private boolean networkCountryIsoChanged(String newCountryIsoCode, String prevCountryIsoCode) {
-        // Return false if the new ISO code isn't valid as we don't know where we are.
-        // Return true if the previous ISO code wasn't valid, or if it was and the new one differs.
-
-        // If newCountryIsoCode is invalid then we'll return false
-        if (TextUtils.isEmpty(newCountryIsoCode)) {
-            if (DBG) {
-                log("countryIsoChanged: no new country ISO code");
-            }
-            return false;
-        }
-
-        if (TextUtils.isEmpty(prevCountryIsoCode)) {
-            if (DBG) {
-                log("countryIsoChanged: no previous country ISO code");
-            }
-            return true;
-        }
-        return !newCountryIsoCode.equals(prevCountryIsoCode);
-    }
-
-    // Determine if the Icc card exists
-    private boolean iccCardExists() {
-        boolean iccCardExist = false;
-        if (mUiccApplication != null) {
-            iccCardExist = mUiccApplication.getState() != AppState.APPSTATE_UNKNOWN;
-        }
-        return iccCardExist;
-    }
-
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public String getSystemProperty(String property, String defValue) {
         return TelephonyManager.getTelephonyProperty(mPhone.getPhoneId(), property, defValue);
@@ -4435,11 +4345,6 @@ public class ServiceStateTracker extends Handler {
             sendMessageDelayed(
                     obtainMessage(EVENT_GET_CELL_INFO_LIST), CELL_INFO_LIST_QUERY_TIMEOUT);
         }
-    }
-
-    private void getSubscriptionInfoAndStartPollingThreads() {
-        // Get Registration Information
-        pollStateInternal(false);
     }
 
     /** Called when telecom has reported a voice service state change. */
@@ -4552,26 +4457,6 @@ public class ServiceStateTracker extends Handler {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public boolean isImsRegistered() {
         return mImsRegistered;
-    }
-    /**
-     * Verifies the current thread is the same as the thread originally
-     * used in the initialization of this instance. Throws RuntimeException
-     * if not.
-     *
-     * @exception RuntimeException if the current thread is not
-     * the thread that originally obtained this Phone instance.
-     */
-    protected void checkCorrectThread() {
-        if (Thread.currentThread() != getLooper().getThread()) {
-            throw new RuntimeException(
-                    "ServiceStateTracker must be used from within one thread");
-        }
-    }
-
-    protected boolean isCallerOnDifferentThread() {
-        boolean value = Thread.currentThread() != getLooper().getThread();
-        if (VDBG) log("isCallerOnDifferentThread: " + value);
-        return value;
     }
 
     /**
@@ -4706,7 +4591,6 @@ public class ServiceStateTracker extends Handler {
                 mNewSS.setIwlanPreferred(true);
                 log("pollStateDone: mNewSS = " + mNewSS);
             }
-            return;
         }
     }
 
@@ -4920,14 +4804,6 @@ public class ServiceStateTracker extends Handler {
     }
 
     /**
-     * Unregisters for 5G NR state changed.
-     * @param h handler to notify
-     */
-    public void unregisterForNrStateChanged(Handler h) {
-        mNrStateChangedRegistrants.remove(h);
-    }
-
-    /**
      * Registers for 5G NR frequency changed.
      * @param h handler to notify
      * @param what what code of message when delivered
@@ -4936,14 +4812,6 @@ public class ServiceStateTracker extends Handler {
     public void registerForNrFrequencyChanged(Handler h, int what, Object obj) {
         Registrant r = new Registrant(h, what, obj);
         mNrFrequencyChangedRegistrants.add(r);
-    }
-
-    /**
-     * Unregisters for 5G NR frequency changed.
-     * @param h handler to notify
-     */
-    public void unregisterForNrFrequencyChanged(Handler h) {
-        mNrFrequencyChangedRegistrants.remove(h);
     }
 
     /**
@@ -4963,28 +4831,6 @@ public class ServiceStateTracker extends Handler {
      */
     public void unregisterForCssIndicatorChanged(Handler h) {
         mCssIndicatorChangedRegistrants.remove(h);
-    }
-
-    /**
-     * Get the NR data connection context ids.
-     *
-     * @return data connection context ids.
-     */
-    @NonNull
-    public Set<Integer> getNrContextIds() {
-        Set<Integer> idSet = new HashSet<>();
-
-        if (!ArrayUtils.isEmpty(mLastPhysicalChannelConfigList)) {
-            for (PhysicalChannelConfig config : mLastPhysicalChannelConfigList) {
-                if (isNrPhysicalChannelConfig(config)) {
-                    for (int id : config.getContextIds()) {
-                        idSet.add(id);
-                    }
-                }
-            }
-        }
-
-        return idSet;
     }
 
     private void setDataNetworkTypeForPhone(int type) {
@@ -5036,14 +4882,6 @@ public class ServiceStateTracker extends Handler {
     }
 
     /**
-     * Unregisters for TAC/LAC changed event.
-     * @param h handler to notify
-     */
-    public void unregisterForAreaCodeChanged(Handler h) {
-        mAreaCodeChangedRegistrants.remove(h);
-    }
-
-    /**
      * get last known cell identity
      * If there is current registered network this value will be same as the registered cell
      * identity. If the device goes out of service the previous cell identity is cached and
@@ -5051,7 +4889,8 @@ public class ServiceStateTracker extends Handler {
      * it will be cleared and null will be returned.
      * @return last known cell identity.
      */
-    public @Nullable CellIdentity getLastKnownCellIdentity() {
+    @Nullable
+    public CellIdentity getLastKnownCellIdentity() {
         return mLastKnownCellIdentity;
     }
 
@@ -5060,7 +4899,8 @@ public class ServiceStateTracker extends Handler {
      * @return Returns the tech of ims registered. if not registered or no phone for ims, returns
      *   {@link ImsRegistrationImplBase#REGISTRATION_TECH_NONE}.
      */
-    private @ImsRegistrationImplBase.ImsRegistrationTech int getImsRegistrationTech() {
+    @ImsRegistrationImplBase.ImsRegistrationTech
+    private int getImsRegistrationTech() {
         ImsPhone imsPhone = (ImsPhone) mPhone.getImsPhone();
         if (imsPhone != null) {
             return imsPhone.getImsRegistrationTech();
