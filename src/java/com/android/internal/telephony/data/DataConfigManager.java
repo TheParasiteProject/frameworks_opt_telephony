@@ -1664,8 +1664,11 @@ public class DataConfigManager extends Handler {
         pw.println("forcedCellularTransportCapabilities=" + getForcedCellularTransportCapabilities()
                 .stream().map(DataUtils::networkCapabilityToString)
                 .collect(Collectors.joining(",")));
-        pw.println(
-                "autoDataSwitchPolicyForOppt=" + getCarrierOverriddenAutoDataSwitchPolicyForOppt());
+        if (!mFeatureFlags.monitorCarrierConfigChangeForAutoDataSwitch()) {
+            pw.println(
+                    "autoDataSwitchPolicyForOppt="
+                            + getCarrierOverriddenAutoDataSwitchPolicyForOppt());
+        }
         pw.decreaseIndent();
     }
 }
