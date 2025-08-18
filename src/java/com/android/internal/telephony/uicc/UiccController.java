@@ -67,7 +67,6 @@ import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.RadioConfig;
 import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.flags.FeatureFlags;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.internal.telephony.subscription.SubscriptionManagerService;
 import com.android.internal.telephony.uicc.euicc.EuiccCard;
 import com.android.internal.telephony.util.ArrayUtils;
@@ -221,9 +220,6 @@ public class UiccController extends Handler {
 
     // The physical slots which correspond to built-in eUICCs
     private final int[] mEuiccSlots;
-
-    // SharedPreferences key for saving the default euicc card ID
-    private static final String DEFAULT_CARD = "default_card";
 
     private static final Object mLock = new Object();
 
@@ -910,7 +906,6 @@ public class UiccController extends Handler {
                     + " slot: " + slotId + " port: " + portIndex + " sub: " + subId);
             mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
                     Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-            TelephonyMetrics.getInstance().updateSimState(phoneId, state);
         }
     }
 
@@ -951,7 +946,6 @@ public class UiccController extends Handler {
                     ? slot.getPortIndexFromPhoneId(phoneId) : -1) + " sub: " + subId);
             mContext.sendBroadcastAsUser(intent, UserHandle.ALL,
                     Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
-            TelephonyMetrics.getInstance().updateSimState(phoneId, state);
         }
     }
 

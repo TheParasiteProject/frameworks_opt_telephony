@@ -94,8 +94,6 @@ import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
 import com.android.internal.telephony.imsphone.ImsCallInfo;
 import com.android.internal.telephony.metrics.ModemRestartStats;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
-import com.android.internal.telephony.nano.TelephonyProto.SmsSession;
 import com.android.internal.telephony.satellite.SatelliteModemInterface;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus.PersoSubState;
 import com.android.internal.telephony.uicc.SimPhonebookRecord;
@@ -246,8 +244,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
     /* Worksource containing all applications causing wakelock to be held */
     private WorkSource mActiveWakelockWorkSource;
 
-    /** Telephony metrics instance for logging metrics event */
-    private TelephonyMetrics mMetrics = TelephonyMetrics.getInstance();
     /** Radio bug detector instance */
     private RadioBugDetector mRadioBugDetector = null;
 
@@ -374,7 +370,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
                         Object timeoutResponse = getResponseForTimedOutRILRequest(rr);
                         AsyncResult.forMessage(rr.mResult, timeoutResponse, null);
                         rr.mResult.sendToTarget();
-                        mMetrics.writeOnRilTimeoutResponse(mPhoneId, rr.mSerial, rr.mRequest);
                     }
 
                     decrementWakeLock(rr);
@@ -2037,8 +2032,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_MESSAGING, rr, "sendSMS", () -> {
             messagingProxy.sendSms(rr.mSerial, smscPdu, pdu);
-            mMetrics.writeRilSendSms(mPhoneId, rr.mSerial, SmsSession.Event.Tech.SMS_GSM,
-                    SmsSession.Event.Format.SMS_FORMAT_3GPP, getOutgoingSmsMessageId(result));
         });
     }
 
@@ -2077,8 +2070,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_MESSAGING, rr, "sendSMSExpectMore", () -> {
             messagingProxy.sendSmsExpectMore(rr.mSerial, smscPdu, pdu);
-            mMetrics.writeRilSendSms(mPhoneId, rr.mSerial, SmsSession.Event.Tech.SMS_GSM,
-                    SmsSession.Event.Format.SMS_FORMAT_3GPP, getOutgoingSmsMessageId(result));
         });
     }
 
@@ -2340,7 +2331,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_VOICE, rr, "acceptCall", () -> {
             voiceProxy.acceptCall(rr.mSerial);
-            mMetrics.writeRilAnswer(mPhoneId, rr.mSerial);
         });
     }
 
@@ -2362,7 +2352,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_DATA, rr, "deactivateDataCall", () -> {
             dataProxy.deactivateDataCall(rr.mSerial, cid, reason);
-            mMetrics.writeRilDeactivateDataCall(mPhoneId, rr.mSerial, cid, reason);
         });
     }
 
@@ -2870,7 +2859,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
                     + " networkType = " + networkType);
         }
         mAllowedNetworkTypesBitmask = RadioAccessFamily.getRafFromNetworkType(networkType);
-        mMetrics.writeSetPreferredNetworkType(mPhoneId, networkType);
 
         radioServiceInvokeHelper(HAL_SERVICE_NETWORK, rr, "setPreferredNetworkType", () -> {
             networkProxy.setPreferredNetworkTypeBitmap(rr.mSerial, mAllowedNetworkTypesBitmask);
@@ -3570,8 +3558,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_MESSAGING, rr, "sendImsGsmSms", () -> {
             messagingProxy.sendImsSms(rr.mSerial, smscPdu, pdu, null, retry, messageRef);
-            mMetrics.writeRilSendSms(mPhoneId, rr.mSerial, SmsSession.Event.Tech.SMS_IMS,
-                    SmsSession.Event.Format.SMS_FORMAT_3GPP, getOutgoingSmsMessageId(result));
         });
     }
 
@@ -3591,8 +3577,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
         radioServiceInvokeHelper(HAL_SERVICE_MESSAGING, rr, "sendImsCdmaSms", () -> {
             messagingProxy.sendImsSms(rr.mSerial, null, null, pdu, retry, messageRef);
-            mMetrics.writeRilSendSms(mPhoneId, rr.mSerial, SmsSession.Event.Tech.SMS_IMS,
-                    SmsSession.Event.Format.SMS_FORMAT_3GPP2, getOutgoingSmsMessageId(result));
         });
     }
 
@@ -5423,7 +5407,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
 
     private void processResponseCleanUp(RILRequest rr, int rilError, int responseType, Object ret) {
         if (rr != null) {
-            mMetrics.writeOnRilSolicitedResponse(mPhoneId, rr.mSerial, rilError, rr.mRequest, ret);
             if (responseType == RadioResponseType.SOLICITED) {
                 decrementWakeLock(rr);
             }
@@ -5808,17 +5791,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
         return s;
     }
 
-    void writeMetricsCallRing(char[] response) {
-        mMetrics.writeRilCallRing(mPhoneId, response);
-    }
 
     void writeMetricsSrvcc(int state) {
-        mMetrics.writeRilSrvcc(mPhoneId, state);
         PhoneFactory.getPhone(mPhoneId).getVoiceCallSessionStats().onRilSrvccStateChanged(state);
     }
 
     void writeMetricsModemRestartEvent(String reason) {
-        mMetrics.writeModemRestartEvent(mPhoneId, reason);
         // Write metrics to statsd. Generate metric only when modem reset is detected by the
         // first instance of RIL to avoid duplicated events.
         if (mPhoneId == 0) {

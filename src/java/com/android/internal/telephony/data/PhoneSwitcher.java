@@ -56,8 +56,6 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyRegistryManager;
-import android.telephony.ims.ImsReasonInfo;
-import android.telephony.ims.ImsRegistrationAttributes;
 import android.telephony.ims.RegistrationManager;
 import android.telephony.ims.stub.ImsRegistrationImplBase;
 import android.util.ArrayMap;
@@ -81,7 +79,6 @@ import com.android.internal.telephony.data.DataNetworkController.NetworkRequestL
 import com.android.internal.telephony.data.DataSettingsManager.DataSettingsManagerCallback;
 import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.imsphone.ImsPhone;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 import com.android.internal.telephony.nano.TelephonyProto.TelephonyEvent;
 import com.android.internal.telephony.nano.TelephonyProto.TelephonyEvent.DataSwitch;
 import com.android.internal.telephony.subscription.SubscriptionInfoInternal;
@@ -341,7 +338,7 @@ public class PhoneSwitcher extends Handler {
             mAutoDataSwitchCallback;
 
     private final ConnectivityManager mConnectivityManager;
-    private int mImsRegistrationTech = REGISTRATION_TECH_NONE;
+
     @VisibleForTesting
     public final SparseIntArray mImsRegistrationRadioTechMap = new SparseIntArray();
     @NonNull
@@ -378,26 +375,6 @@ public class PhoneSwitcher extends Handler {
             mAutoDataSwitchController.updateDefaultNetworkCapabilities(null);
         }
     }
-
-    private final RegistrationManager.RegistrationCallback mRegistrationCallback =
-            new RegistrationManager.RegistrationCallback() {
-        @Override
-        public void onRegistered(@NonNull ImsRegistrationAttributes attributes) {
-            int imsRegistrationTech = attributes.getRegistrationTechnology();
-            if (imsRegistrationTech != mImsRegistrationTech) {
-                mImsRegistrationTech = imsRegistrationTech;
-                sendMessage(obtainMessage(EVENT_IMS_RADIO_TECH_CHANGED));
-            }
-        }
-
-        @Override
-        public void onUnregistered(@NonNull ImsReasonInfo info) {
-            if (mImsRegistrationTech != REGISTRATION_TECH_NONE) {
-                mImsRegistrationTech = REGISTRATION_TECH_NONE;
-                sendMessage(obtainMessage(EVENT_IMS_RADIO_TECH_CHANGED));
-            }
-        }
-    };
 
     private final DefaultNetworkCallback mDefaultNetworkCallback = new DefaultNetworkCallback();
 
@@ -467,24 +444,6 @@ public class PhoneSwitcher extends Handler {
             return true;
         } else {
             return false;
-        }
-    }
-
-    private void registerForImsRadioTechChange(Context context, int phoneId) {
-        try {
-            mImsRegisterCallback.setCallback(context, phoneId, mRegistrationCallback, this::post);
-            mIsRegisteredForImsRadioTechChange = true;
-        } catch (ImsException imsException) {
-            mIsRegisteredForImsRadioTechChange = false;
-        }
-    }
-
-    private void registerForImsRadioTechChange() {
-        // register for radio tech change to listen to radio tech handover.
-        if (!mIsRegisteredForImsRadioTechChange) {
-            for (int i = 0; i < mActiveModemCount; i++) {
-                registerForImsRadioTechChange(mContext, i);
-            }
         }
     }
 
@@ -637,14 +596,6 @@ public class PhoneSwitcher extends Handler {
 
         logl("PhoneSwitcher started");
     }
-
-    private final BroadcastReceiver mDefaultDataChangedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Message msg = PhoneSwitcher.this.obtainMessage(EVENT_PRIMARY_DATA_SUB_CHANGED);
-            msg.sendToTarget();
-        }
-    };
 
     private final BroadcastReceiver mSimStateIntentReceiver = new BroadcastReceiver() {
         @Override
@@ -1794,7 +1745,6 @@ public class PhoneSwitcher extends Handler {
         DataSwitch dataSwitch = new DataSwitch();
         dataSwitch.state = state;
         dataSwitch.reason = reason;
-        TelephonyMetrics.getInstance().writeDataSwitch(subId, dataSwitch);
     }
 
     /**
