@@ -447,42 +447,29 @@ public class CarrierServiceBindHelper {
         private void maybeDisableCarrierNetworkChangeNotification() {
             TelephonyRegistryManager telephonyRegistryManager =
                     mContext.getSystemService(TelephonyRegistryManager.class);
-            // TODO(b/333571417): Consolidate to using the ForPhoneAndSubId variant during cleanup.
             int subscriptionId = SubscriptionManager.getSubscriptionId(mPhoneId);
-            if (subscriptionId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                telephonyRegistryManager.notifyCarrierNetworkChange(subscriptionId, false);
-                return;
-            }
-
-            if (!Flags.cleanupCarrierNetworkChangeByPhoneid()) {
-                logdWithLocalLog(
-                        "No valid subscription found when trying to disable carrierNetworkChange"
-                                + " for phoneId: "
-                                + mPhoneId);
-            } else {
-                logdWithLocalLog(
-                        "Disabling carrierNetworkChange for phoneId: " + mPhoneId);
-                telephonyRegistryManager.notifyCarrierNetworkChange(
-                        mPhoneId, subscriptionId, false);
-            }
+            logdWithLocalLog(
+                    "Disabling carrierNetworkChange for [phoneId, subId]: ["
+                            + mPhoneId
+                            + ", "
+                            + subscriptionId
+                            + "]");
+            telephonyRegistryManager.notifyCarrierNetworkChange(
+                    mPhoneId, subscriptionId, false);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             logdWithLocalLog("Disconnected from carrier app: " + name.flattenToString());
             connected = false;
-            if (Flags.disableCarrierNetworkChangeOnCarrierAppLost()) {
-                maybeDisableCarrierNetworkChangeNotification();
-            }
+            maybeDisableCarrierNetworkChangeNotification();
         }
 
         @Override
         public void onBindingDied(ComponentName name) {
             logdWithLocalLog("Binding from carrier app died: " + name.flattenToString());
             connected = false;
-            if (Flags.disableCarrierNetworkChangeOnCarrierAppLost()) {
-                maybeDisableCarrierNetworkChangeNotification();
-            }
+            maybeDisableCarrierNetworkChangeNotification();
         }
 
         @Override
