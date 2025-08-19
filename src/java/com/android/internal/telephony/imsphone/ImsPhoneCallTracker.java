@@ -3326,8 +3326,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
 
         int code = maybeRemapReasonCode(reasonInfo);
 
-        if (mFeatureFlags.remapDisconnectCauseSipRequestCancelled() &&
-                code == ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED) {
+        if (code == ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED) {
             return DisconnectCause.NORMAL;
         }
 

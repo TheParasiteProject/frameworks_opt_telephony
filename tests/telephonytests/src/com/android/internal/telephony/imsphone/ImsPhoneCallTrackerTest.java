@@ -1480,8 +1480,6 @@ public class ImsPhoneCallTrackerTest extends TelephonyTest {
     @Test
     @SmallTest
     public void testSipRequestCancelled() {
-        doReturn(true).when(mFeatureFlags).remapDisconnectCauseSipRequestCancelled();
-
         assertEquals(DisconnectCause.NORMAL,
                 mCTUT.getDisconnectCauseFromReasonInfo(
                         new ImsReasonInfo(ImsReasonInfo.CODE_SIP_REQUEST_CANCELLED, 0),
