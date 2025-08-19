@@ -9240,7 +9240,12 @@ public class SatelliteController extends Handler {
         return mFeatureFlags;
     }
 
-    private boolean isSatelliteDisabled() {
+    /**
+     * Get whether satellite modem is disabled.
+     *
+     * @return {@code true} if the satellite modem is disabled and {@code false} otherwise.
+     */
+    public boolean isSatelliteDisabled() {
         return ((mIsSatelliteEnabled != null) && !mIsSatelliteEnabled.get());
     }
 
