@@ -2940,6 +2940,14 @@ public abstract class SMSDispatcher extends Handler {
                 default:
                     String message = "SMS failed";
                     Rlog.d(TAG, message + " with error " + error + ", errorCode " + errorCode);
+                    SatelliteController satelliteController = SatelliteController.getInstance();
+                    if (satelliteController != null) {
+                        if (satelliteController.isSatelliteBeingDisabled()) {
+                            Rlog.d(TAG, "isSatelliteBeingDisabled() are true, "
+                                    + "skip reporting anomaly");
+                            return;
+                        }
+                    }
                     AnomalyReporter.reportAnomaly(
                             generateUUID(error, errorCode), message, mCarrierId);
             }
