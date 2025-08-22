@@ -1477,6 +1477,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                 SatelliteProtoEnums.SATELLITE_ENTITLEMENT_STATUS_ENABLED;
         mSatelliteEntitlement1.isRetry = false;
         mSatelliteEntitlement1.count = 1;
+        mSatelliteEntitlement1.httpStatusCode = 404;
 
         mSatelliteEntitlement2 = new SatelliteEntitlement();
         mSatelliteEntitlement2.carrierId = 2;
@@ -1486,6 +1487,7 @@ public class PersistAtomsStorageTest extends TelephonyTest {
                 SatelliteProtoEnums.SATELLITE_ENTITLEMENT_STATUS_DISABLED;
         mSatelliteEntitlement2.isRetry = true;
         mSatelliteEntitlement2.count = 1;
+        mSatelliteEntitlement2.httpStatusCode = 500;
 
         mSatelliteEntitlements = new SatelliteEntitlement[] {mSatelliteEntitlement1,
                 mSatelliteEntitlement2};
