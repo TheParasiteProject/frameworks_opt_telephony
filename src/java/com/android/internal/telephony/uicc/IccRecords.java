@@ -57,7 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * {@hide}
+ * @hide
  */
 public abstract class IccRecords extends Handler implements IccConstants {
     private static final String LOG_TAG = "IccRecords";

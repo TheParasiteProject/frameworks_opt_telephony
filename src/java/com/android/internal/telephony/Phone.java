@@ -149,7 +149,7 @@ import java.util.stream.Collectors;
  * from a single application thread. This should be the same thread that
  * originally called PhoneFactory to obtain the interface.
  *
- *  {@hide}
+ * @hide
  *
  */
 
