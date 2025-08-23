@@ -89,7 +89,6 @@ import com.android.internal.telephony.SmsResponse;
 import com.android.internal.telephony.TelephonyTest;
 import com.android.internal.telephony.TelephonyTestUtils;
 import com.android.internal.telephony.TestApplication;
-import com.android.internal.telephony.flags.Flags;
 import com.android.internal.telephony.satellite.SatelliteController;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.uicc.IsimUiccRecords;
@@ -481,10 +480,6 @@ public class GsmSmsDispatcherTest extends TelephonyTest {
     @Test
     @SmallTest
     public void testSendSmsByCarrierApp_FailureWithReason() throws Exception {
-        if (!Flags.temporaryFailuresInCarrierMessagingService()) {
-            return;
-        }
-        doReturn(true).when(mFeatureFlags).temporaryFailuresInCarrierMessagingService();
         int resultCode =
                 sendSmsWithCarrierAppResponse(
                         CarrierMessagingService.SEND_STATUS_RESULT_ERROR_NO_SERVICE);
