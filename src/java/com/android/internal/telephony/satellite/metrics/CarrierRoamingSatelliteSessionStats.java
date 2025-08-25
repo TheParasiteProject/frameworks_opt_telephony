@@ -494,19 +494,20 @@ public class CarrierRoamingSatelliteSessionStats {
         for (Map.Entry<String, Long> entry : map2.entrySet()) {
             String key = entry.getKey();
             Long currentDataUsageBytes = entry.getValue();
+            long dataUsageDuringSession;
 
-            // Check if the key from Map2 exists in Map1
+            // Check if the package exists in the session-start map
             if (mPerAppDataUsageOnSessionStartMap.containsKey(key)) {
-                Long initialDataUsageBytes =
-                        mPerAppDataUsageOnSessionStartMap.get(key);
-                // If available, find the difference (Map2 - Map1)
-                satelliteSessionUsageMap.put(key,
-                        currentDataUsageBytes
-                                - initialDataUsageBytes);
+                long initialDataUsageBytes = mPerAppDataUsageOnSessionStartMap.get(key);
+                dataUsageDuringSession = currentDataUsageBytes - initialDataUsageBytes;
             } else {
-                // If Map2 key is not found in Map1,
-                // add Map2 key and its corresponding value to the new map
-                satelliteSessionUsageMap.put(key, currentDataUsageBytes);
+                // If not in the start map, usage is the current value
+                dataUsageDuringSession = currentDataUsageBytes;
+            }
+
+            // Only store positive data usage values
+            if (dataUsageDuringSession > 0) {
+                satelliteSessionUsageMap.put(key, dataUsageDuringSession);
             }
         }
         return satelliteSessionUsageMap;
