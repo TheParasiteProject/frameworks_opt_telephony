@@ -2773,6 +2773,7 @@ public class SatelliteStats {
         private static @SatelliteConstants.SatelliteGlobalConnectType int sSupportedConnectionMode;
         private final int mCountOfSessionConnectionModeAutomatic;
         private final int mCountOfSessionConnectionModeManual;
+        private final int mServiceDataPolicy;
 
         private CarrierRoamingSatelliteControllerStatsParams(Builder builder) {
             this.mConfigDataSource = builder.mConfigDataSource;
@@ -2824,6 +2825,9 @@ public class SatelliteStats {
             if (builder.mSupportedConnectionMode.isPresent()) {
                 sSupportedConnectionMode = builder.mSupportedConnectionMode.get();
             }
+
+            this.mServiceDataPolicy = builder.mServiceDataPolicy;
+
         }
 
         public int getConfigDataSource() {
@@ -2886,6 +2890,10 @@ public class SatelliteStats {
             return mCountOfSessionConnectionModeManual;
         }
 
+        public int getServiceDataPolicy() {
+            return mServiceDataPolicy;
+        }
+
         /**
          * A builder class to create {@link CarrierRoamingSatelliteControllerStatsParams}
          * data structure class
@@ -2906,6 +2914,8 @@ public class SatelliteStats {
             private Optional<Integer> mSupportedConnectionMode = Optional.empty();
             private int mCountOfSessionConnectionModeAutomatic = 0;
             private int mCountOfSessionConnectionModeManual = 0;
+            private int mServiceDataPolicy =
+                    SatelliteConstants.SATELLITE_ENTITLEMENT_SERVICE_POLICY_UNKNOWN;
 
             /**
              * Sets configDataSource value of {@link CarrierRoamingSatelliteControllerStats} atom
@@ -3037,6 +3047,15 @@ public class SatelliteStats {
             }
 
             /**
+             * Sets serviceDataPolicy value of {@link CarrierRoamingSatelliteControllerStats} atom
+             * then returns Builder class
+             */
+            public Builder setServiceDataPolicy(int serviceDataPolicy) {
+                this.mServiceDataPolicy = serviceDataPolicy;
+                return this;
+            }
+
+            /**
              * Returns CarrierRoamingSatelliteControllerStatsParams, which contains whole component
              * of {@link CarrierRoamingSatelliteControllerStats} atom
              */
@@ -3071,7 +3090,8 @@ public class SatelliteStats {
                     && mCountOfSessionConnectionModeAutomatic == that
                     .getCountOfSessionConnectionModeAutomatic()
                     && mCountOfSessionConnectionModeManual == that
-                    .getCountOfSessionConnectionModeManual();
+                    .getCountOfSessionConnectionModeManual()
+                    && mServiceDataPolicy == that.getServiceDataPolicy();
         }
 
         @Override
@@ -3107,6 +3127,7 @@ public class SatelliteStats {
                     + mCountOfSessionConnectionModeAutomatic
                     + ", countOfSessionConnectionModeManual="
                     + mCountOfSessionConnectionModeManual
+                    + ", serviceDataPolicy=" + mServiceDataPolicy
                     + ")";
         }
     }
@@ -3892,6 +3913,7 @@ public class SatelliteStats {
         proto.countOfSessionConnectionModeAutomatic =
                 param.getCountOfSessionConnectionModeAutomatic();
         proto.countOfSessionConnectionModeManual = param.getCountOfSessionConnectionModeManual();
+        proto.serviceDataPolicy = param.mServiceDataPolicy;
         if (DBG) logd("onCarrierRoamingSatelliteControllerStatsMetrics: " + param);
         mAtomsStorage.addCarrierRoamingSatelliteControllerStats(proto);
     }
