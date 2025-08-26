@@ -3406,7 +3406,7 @@ public class SubscriptionManagerService extends ISub.Stub {
      */
     @Override
     @RequiresPermission(Manifest.permission.READ_PRIVILEGED_PHONE_STATE)
-    public int[] getActiveSubIdList(boolean visibleOnly) {
+    @NonNull public int[] getActiveSubIdList(boolean visibleOnly) {
         enforcePermissions("getActiveSubIdList", Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
 
         if (!mContext.getResources().getBoolean(
@@ -3427,7 +3427,8 @@ public class SubscriptionManagerService extends ISub.Stub {
      *             accessible to the caller.
      * @return List of the active subscription id.
      */
-    private int[] getActiveSubIdListAsUser(boolean visibleOnly, @NonNull final UserHandle user) {
+    @NonNull private int[] getActiveSubIdListAsUser(
+            boolean visibleOnly, @NonNull final UserHandle user) {
         return mSlotIndexToSubId.values().stream()
                 .filter(subId -> {
                     SubscriptionInfoInternal subInfo = mSubscriptionDatabaseManager
