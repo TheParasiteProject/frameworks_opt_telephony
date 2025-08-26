@@ -122,6 +122,8 @@ public class CarrierRoamingSatelliteSessionStats {
     private long[] mPerAppSatelliteDataConsumedBytesArray = new long[]{0L};
     private static final int MAX_SATELLITE_TOP_APPS_TRACKED = 5;
     private int[] mSatelliteAppsUidArray = new int[MAX_SATELLITE_TOP_APPS_TRACKED];
+    private @SatelliteConstants.SatelliteGlobalConnectType int mSupportedConnectionMode;
+    private @SatelliteConstants.SatelliteSessionConnectType int mSessionConnectionMode;
 
     private final ConnectivityManager.NetworkCallback mNetworkCallback =
             new ConnectivityManager.NetworkCallback() {
@@ -304,7 +306,7 @@ public class CarrierRoamingSatelliteSessionStats {
     /** Log carrier roaming satellite session start */
     public void onSessionStart(
             int carrierId, Phone phone, int[] supportedServices, int serviceDataPolicy,
-            List<String> satelliteApps,
+            List<String> satelliteApps, int supportedConnectionMode, int sessionConnectionMode,
             @NonNull FeatureFlags featureFlags) {
         mPhone = phone;
         mContext = mPhone.getContext();
@@ -316,6 +318,8 @@ public class CarrierRoamingSatelliteSessionStats {
         onConnectionStart(mPhone);
         mDataUsageOnSessionStartBytes = getDataUsage();
         logd("current data consumed: " + mDataUsageOnSessionStartBytes);
+        mSupportedConnectionMode = supportedConnectionMode;
+        mSessionConnectionMode = sessionConnectionMode;
         mFeatureFlags = featureFlags;
         registerForSatelliteDataNetworkCallback();
         if (mFeatureFlags.satelliteDataMetrics()) {
@@ -812,6 +816,8 @@ public class CarrierRoamingSatelliteSessionStats {
         SatelliteStats.CarrierRoamingSatelliteSessionParams params =
                 new SatelliteStats.CarrierRoamingSatelliteSessionParams.Builder()
                         .setCarrierId(mCarrierId)
+                        .setSupportedConnectionMode(mSupportedConnectionMode)
+                        .setSessionConnectionMode(mSessionConnectionMode)
                         .setIsNtnRoamingInHomeCountry(mIsNtnRoamingInHomeCountry)
                         .setTotalSatelliteModeTimeSec(totalSatelliteModeTimeSec)
                         .setNumberOfSatelliteConnections(numberOfSatelliteConnections)
@@ -856,6 +862,8 @@ public class CarrierRoamingSatelliteSessionStats {
 
     private void initializeParams() {
         mCarrierId = TelephonyManager.UNKNOWN_CARRIER_ID;
+        mSupportedConnectionMode = SatelliteConstants.GLOBAL_NTN_CONNECT_TYPE_UNKNOWN;
+        mSessionConnectionMode = SatelliteConstants.SESSION_NTN_CONNECT_TYPE_UNKNOWN;
         mIsNtnRoamingInHomeCountry = false;
         mCountOfIncomingSms = 0;
         mCountOfOutgoingSms = 0;

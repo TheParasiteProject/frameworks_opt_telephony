@@ -25,6 +25,7 @@ import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.metrics.SatelliteStats;
 import com.android.internal.telephony.satellite.SatelliteConstants;
+import com.android.internal.telephony.satellite.SatelliteController;
 
 public class EntitlementMetricsStats {
     private static final String TAG = EntitlementMetricsStats.class.getSimpleName();
@@ -38,7 +39,6 @@ public class EntitlementMetricsStats {
     private boolean mIsAllowedServiceEntitlement;
     private int[] mEntitlementServiceType;
     private int mEntitlementDataPolicy;
-
     private EntitlementMetricsStats() {}
 
     /**
@@ -94,6 +94,8 @@ public class EntitlementMetricsStats {
                         .setIsAllowedServiceEntitlement(mIsAllowedServiceEntitlement)
                         .setEntitlementServiceType(mEntitlementServiceType)
                         .setEntitlementDataPolicy(mEntitlementDataPolicy)
+                        .setSupportedConnectionMode(SatelliteController.getInstance()
+                                .getSupportedConnectTypeMetrics(mSubId))
                         .build();
         SatelliteStats.getInstance().onSatelliteEntitlementMetrics(entitlementParams);
         logd("reportEntitlementMetrics: " + entitlementParams);
