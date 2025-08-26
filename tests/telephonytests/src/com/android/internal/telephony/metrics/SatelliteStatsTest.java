@@ -644,6 +644,7 @@ public class SatelliteStatsTest extends TelephonyTest {
                         .setEntitlementStatus(2)
                         .setIsRetry(true)
                         .setCount(5)
+                        .setHttpStatusCode(404)
                         .build();
 
         mSatelliteStats.onSatelliteEntitlementMetrics(param);
@@ -658,6 +659,7 @@ public class SatelliteStatsTest extends TelephonyTest {
         assertEquals(param.getEntitlementStatus(), stats.entitlementStatus);
         assertEquals(param.getIsRetry(), stats.isRetry);
         assertEquals(param.getCount(), stats.count);
+        assertEquals(param.getHttpStatusCode(), stats.httpStatusCode);
 
         verifyNoMoreInteractions(mPersistAtomsStorage);
     }

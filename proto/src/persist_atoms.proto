@@ -908,6 +908,7 @@ message SatelliteEntitlement {
     repeated int32 entitlement_service_type = 7;
     optional int32 entitlement_data_policy = 8;
     optional int32 supported_connection_mode = 9;
+    optional int32 http_status_code = 10;
 }
 
 message SatelliteConfigUpdater {

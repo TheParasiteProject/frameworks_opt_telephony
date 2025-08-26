@@ -3125,6 +3125,7 @@ public class SatelliteStats {
         private final int[] mEntitlementServiceType;
         private final int mEntitlementDataPolicy;
         private final @SatelliteConstants.SatelliteGlobalConnectType int mSupportedConnectionMode;
+        private final int mHttpStatusCode;
 
         private SatelliteEntitlementParams(Builder builder) {
             this.mCarrierId = builder.mCarrierId;
@@ -3136,6 +3137,7 @@ public class SatelliteStats {
             this.mEntitlementServiceType = builder.mEntitlementServiceType;
             this.mEntitlementDataPolicy = builder.mEntitlementDataPolicy;
             this.mSupportedConnectionMode = builder.mSupportedConnectionMode;
+            this.mHttpStatusCode = builder.mHttpStatusCode;
         }
 
         public int getCarrierId() {
@@ -3174,6 +3176,10 @@ public class SatelliteStats {
             return mSupportedConnectionMode;
         }
 
+        public int getHttpStatusCode() {
+            return mHttpStatusCode;
+        }
+
         /**
          * A builder class to create {@link SatelliteEntitlementParams} data structure class
          */
@@ -3189,6 +3195,7 @@ public class SatelliteStats {
                     SatelliteConstants.SATELLITE_ENTITLEMENT_SERVICE_POLICY_UNKNOWN;
             private @SatelliteConstants.SatelliteGlobalConnectType int mSupportedConnectionMode =
                     SatelliteConstants.GLOBAL_NTN_CONNECT_TYPE_UNKNOWN;
+            private int mHttpStatusCode = 0;
 
             /**
              * Sets carrierId value of {@link SatelliteEntitlement} atom
@@ -3273,6 +3280,15 @@ public class SatelliteStats {
             }
 
             /**
+             * Sets httpStatusCode value of {@link SatelliteEntitlement} atom
+             * then returns Builder class.
+             */
+            public Builder setHttpStatusCode(int httpStatusCode) {
+                this.mHttpStatusCode = httpStatusCode;
+                return this;
+            }
+
+            /**
              * Returns SatelliteEntitlementParams, which contains whole component of
              * {@link SatelliteEntitlement} atom
              */
@@ -3290,10 +3306,11 @@ public class SatelliteStats {
                     + ", entitlementStatus=" + mEntitlementStatus
                     + ", isRetry=" + mIsRetry
                     + ", count=" + mCount
-                    + ",isAllowedServiceEntitlement=" + mIsAllowedServiceEntitlement
-                    + ",entitlementServiceType=" + Arrays.toString(mEntitlementServiceType)
-                    + ",entitlementServicePolicy=" + mEntitlementDataPolicy
+                    + ", isAllowedServiceEntitlement=" + mIsAllowedServiceEntitlement
+                    + ", entitlementServiceType=" + Arrays.toString(mEntitlementServiceType)
+                    + ", entitlementServicePolicy=" + mEntitlementDataPolicy
                     + ", supportedConnectionMode=" + mSupportedConnectionMode
+                    + ", HttpStatusCode=" + mHttpStatusCode
                     + ")";
         }
     }
@@ -3899,6 +3916,7 @@ public class SatelliteStats {
         proto.entitlementServiceType = param.getEntitlementServiceType();
         proto.entitlementDataPolicy = param.getEntitlementDataPolicy();
         proto.supportedConnectionMode = param.getSupportedConnectionMode();
+        proto.httpStatusCode = param.getHttpStatusCode();
         if (DBG) logd("onSatelliteEntitlementMetrics: " + param);
         mAtomsStorage.addSatelliteEntitlementStats(proto);
     }

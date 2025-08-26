@@ -1732,7 +1732,8 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 stats.isAllowedServiceEntitlement,
                 stats.entitlementServiceType,
                 stats.entitlementDataPolicy,
-                stats.supportedConnectionMode);
+                stats.supportedConnectionMode,
+                stats.httpStatusCode);
     }
 
     private static StatsEvent buildStatsEvent(SatelliteConfigUpdater stats) {
