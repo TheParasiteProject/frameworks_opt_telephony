@@ -1520,7 +1520,7 @@ public abstract class InboundSmsHandler extends StateMachine {
 
         for (SmsMessage message: messages) {
             if (message != null && message.getDisplayMessageBody() != null
-                    && Telephony.Sms.shouldCheckForOtp(mContext, message.getDisplayMessageBody())) {
+                    && Telephony.Sms.shouldCheckForOtp(message.getDisplayMessageBody())) {
                 return true;
             }
         }
