@@ -1293,6 +1293,23 @@ public class AutoDataSwitchControllerTest extends TelephonyTest {
         verifyNoMoreInteractions(mMockedPhoneSwitcherCallback);
     }
 
+    @Test
+    public void testConstructor_nullCarrierConfigManager_shouldNotCrash() {
+        doReturn(true).when(mFeatureFlags).monitorCarrierConfigChangeForAutoDataSwitch();
+        doReturn(null).when(mContext).getSystemService(Context.CARRIER_CONFIG_SERVICE);
+        clearInvocations(mCarrierConfigManager);
+
+        try {
+            new AutoDataSwitchController(mContext, Looper.myLooper(),
+                    mPhoneSwitcher, mFeatureFlags, mMockedPhoneSwitcherCallback);
+            verify(mCarrierConfigManager, never()).registerCarrierConfigChangeListener(any(),
+                    any());
+        } finally {
+            doReturn(mCarrierConfigManager).when(mContext).getSystemService(
+                    Context.CARRIER_CONFIG_SERVICE);
+        }
+    }
+
     /**
      * Trigger conditions
      * 1. service state changes
