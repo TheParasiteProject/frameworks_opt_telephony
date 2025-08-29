@@ -41,6 +41,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.ParcelUuid;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.telephony.AccessNetworkConstants;
@@ -52,6 +53,7 @@ import android.telephony.SignalStrength;
 import android.telephony.SubscriptionInfo;
 import android.telephony.TelephonyDisplayInfo;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.IndentingPrintWriter;
 import android.util.LocalLog;
 
@@ -70,7 +72,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -1316,17 +1320,36 @@ public class AutoDataSwitchController extends Handler {
     /**
      * Exclude opportunistic profiles for switch when ANY of condition below is fulfilled:
      * - Feature flag is disabled
-     * - Not only one primary (visible) profile is active
+     * - No active primary (visible) and opportunistic profiles in the same group
      * - Primary profile doesn't override carrier config to enable the feature
      */
-    // TODO(b/441306664): restrict OPPT switch only between subs in the same sub group
     private boolean shouldExcludeOpportunisticForSwitch() {
-        final boolean excludeOppt =  !sFeatureFlags.macroBasedOpportunisticNetworks()
-                || mSubscriptionManagerService.getActiveSubIdList(true /*visibleOnly*/).length != 1
-                || getOpptSwitchPolicyForPrimaryPhone()
-                == OPP_AUTO_DATA_SWITCH_POLICY_DISABLED;
-        if (!excludeOppt) log("OPPT switch included!");
-        return excludeOppt;
+        if (!sFeatureFlags.macroBasedOpportunisticNetworks()) {
+            log("OPPT switch excluded: feature flag is disabled!");
+            return true;
+        }
+
+        if (getOpptSwitchPolicyForPrimaryPhone() == OPP_AUTO_DATA_SWITCH_POLICY_DISABLED) {
+            log("OPPT switch excluded: primary phone doesn't enable the feature!");
+            return true;
+        }
+
+        final List<SubscriptionInfo> infos =
+                mSubscriptionManagerService.getActiveSubscriptionInfoList(
+                        mContext.getOpPackageName(),
+                        mContext.getAttributionTag(), true /* mIsForAllUserProfiles */);
+        Set<ParcelUuid> primarySubs = new ArraySet<>();
+        Set<ParcelUuid> oppSubs = new ArraySet<>();
+        for (SubscriptionInfo si : infos) {
+            if (si.getGroupUuid() == null) continue;
+            if (si.isOpportunistic()) {
+                oppSubs.add(si.getGroupUuid());
+            } else {
+                primarySubs.add(si.getGroupUuid());
+            }
+        }
+        primarySubs.retainAll(oppSubs);
+        return primarySubs.isEmpty();
     }
 
     /**
