@@ -904,6 +904,7 @@ public class PersistAtomsStorage {
                     stats.countOfSessionConnectionModeAutomatic;
             existingStats.countOfSessionConnectionModeManual +=
                     stats.countOfSessionConnectionModeManual;
+            existingStats.serviceDataPolicy = stats.serviceDataPolicy;
         } else {
             mAtoms.carrierRoamingSatelliteControllerStats = insertAtRandomPlace(
                     mAtoms.carrierRoamingSatelliteControllerStats, stats, mMaxNumSatelliteStats);

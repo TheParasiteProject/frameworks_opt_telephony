@@ -140,6 +140,17 @@ public class CarrierRoamingSatelliteControllerStats {
                         .build());
     }
 
+    /** Report satellite supported data mode */
+    public void reportServiceDataPolicy(int subId, int dataPolicy) {
+        mSatelliteStats.onCarrierRoamingSatelliteControllerStatsMetrics(
+                new SatelliteStats.CarrierRoamingSatelliteControllerStatsParams.Builder()
+                        .setServiceDataPolicy(dataPolicy)
+                        .setCarrierId(getCarrierIdFromSubscription(subId))
+                        .setIsMultiSim(isMultiSim())
+                        .setIsNbIotNtn(SatelliteServiceUtils.isNbIotNtn(subId))
+                        .build());
+    }
+
     /** Log carrier roaming satellite session start */
     public void onSessionStart(int subId) {
         List<Long> sessionStartTimeListForSubscription = mSessionStartTimeMap.getOrDefault(subId,
