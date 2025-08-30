@@ -1718,7 +1718,8 @@ public class MetricsCollector implements StatsManager.StatsPullAtomCallback {
                 stats.isNbIotNtn,
                 stats.supportedConnectionMode,
                 stats.countOfSessionConnectionModeAutomatic,
-                stats.countOfSessionConnectionModeManual);
+                stats.countOfSessionConnectionModeManual,
+                stats.serviceDataPolicy);
     }
 
     private static StatsEvent buildStatsEvent(SatelliteEntitlement stats) {

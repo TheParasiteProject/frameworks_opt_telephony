@@ -6076,6 +6076,11 @@ public class SatelliteController extends Handler {
                 plogd("mMergedPlmnListPerCarrier is updated by Entitlement");
                 mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                         SatelliteConstants.CONFIG_DATA_SOURCE_ENTITLEMENT);
+                // update service data policy configured for the device
+                int dataPolicy = mapDataPolicyForMetrics(getSatelliteDataSupportMode(subId));
+                plogd("supported satellite data mode reported: " + dataPolicy);
+                mCarrierRoamingSatelliteControllerStats.reportServiceDataPolicy(
+                        subId, dataPolicy);
                 return;
             }
         }
@@ -6091,6 +6096,11 @@ public class SatelliteController extends Handler {
                 mMergedPlmnListPerCarrier.put(subId, plmnList);
                 mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                         SatelliteConstants.CONFIG_DATA_SOURCE_CONFIG_UPDATER);
+                // update service data policy configured for the device
+                int dataPolicy = mapDataPolicyForMetrics(getSatelliteDataSupportMode(subId));
+                plogd("supported satellite data mode reported: " + dataPolicy);
+                mCarrierRoamingSatelliteControllerStats.reportServiceDataPolicy(
+                        subId, dataPolicy);
                 return;
             }
         }
@@ -6104,6 +6114,11 @@ public class SatelliteController extends Handler {
                     + String.join(",", carrierPlmnList));
             mCarrierRoamingSatelliteControllerStats.reportConfigDataSource(subId,
                     SatelliteConstants.CONFIG_DATA_SOURCE_CARRIER_CONFIG);
+            // update service data policy configured for the device
+            int dataPolicy = mapDataPolicyForMetrics(getSatelliteDataSupportMode(subId));
+            plogd("supported satellite data mode reported: " + dataPolicy);
+            mCarrierRoamingSatelliteControllerStats.reportServiceDataPolicy(
+                    subId, dataPolicy);
         } else {
             carrierPlmnList = new ArrayList<>();
             plogd("Empty mMergedPlmnListPerCarrier");
