@@ -3,14 +3,6 @@ container: "system"
 
 # OWNER=forestchoi TARGET=24Q3
 flag {
-    name: "ap_domain_selection_enabled"
-    namespace: "telephony"
-    description: "This flag controls AP domain selection feature."
-    bug:"258112541"
-}
-
-# OWNER=forestchoi TARGET=24Q3
-flag {
     name: "use_aosp_domain_selection_service"
     namespace: "telephony"
     description: "This flag controls AOSP's domain selection service supported."
