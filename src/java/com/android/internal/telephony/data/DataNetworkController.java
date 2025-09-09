@@ -470,9 +470,7 @@ public class DataNetworkController extends Handler {
     };
 
     private boolean hasCalling() {
-        if (!TelephonyCapabilities.minimalTelephonyCdmCheck(mFeatureFlags)) return true;
-        return mPhone.getContext().getPackageManager().hasSystemFeature(
-            PackageManager.FEATURE_TELEPHONY_CALLING);
+        return TelephonyCapabilities.supportsTelephonyCalling(mFeatureFlags, mPhone.getContext());
     }
 
     /**
