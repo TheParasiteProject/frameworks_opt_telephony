@@ -2400,7 +2400,7 @@ public class DataNetwork extends StateMachine {
         mNetworkAgent.markConnected();
         // Update NetworkAgent in QosCallbackTracker so that QoS callbacks on the new network agent
         // properly reach to the callback tracker.
-        if (mFlags.qosUpdateNetworkAgent() && mQosCallbackTracker != null) {
+        if (mQosCallbackTracker != null) {
             mQosCallbackTracker.updateNetworkAgent(mNetworkAgent);
         }
         notifyPreciseDataConnectionState();
