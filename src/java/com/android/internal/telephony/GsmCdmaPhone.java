@@ -266,6 +266,7 @@ public class GsmCdmaPhone extends Phone {
     private @ServiceState.RegState int mTelecomVoiceServiceStateOverride =
             ServiceState.STATE_OUT_OF_SERVICE;
 
+    private CarrierKeyDownloadManager mCDM;
     private CarrierInfoManager mCIM;
 
     private final ImsManagerFactory mImsManagerFactory;
@@ -502,6 +503,8 @@ public class GsmCdmaPhone extends Phone {
         }
         mContext.registerReceiver(mBroadcastReceiver, filter,
                 android.Manifest.permission.MODIFY_PHONE_STATE, null, Context.RECEIVER_EXPORTED);
+
+        mCDM = new CarrierKeyDownloadManager(this);
 
         mCIM = new CarrierInfoManager();
 
