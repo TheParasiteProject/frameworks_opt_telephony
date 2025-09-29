@@ -2962,8 +2962,7 @@ public class GsmCdmaPhone extends Phone {
 
             case EVENT_SET_VM_NUMBER_DONE:
                 ar = (AsyncResult)msg.obj;
-                if (mSimRecords != null && IccVmNotSupportedException.class
-                        .isInstance(ar.exception)) {
+                if (ar.exception instanceof IccVmNotSupportedException) {
                     storeVoiceMailNumber(mVmNumber);
                     ar.exception = null;
                 }
@@ -2973,7 +2972,6 @@ public class GsmCdmaPhone extends Phone {
                     onComplete.sendToTarget();
                 }
                 break;
-
 
             case EVENT_GET_CALL_FORWARD_DONE:
                 ar = (AsyncResult)msg.obj;
